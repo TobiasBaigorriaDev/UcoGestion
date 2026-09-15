@@ -1,0 +1,359 @@
+# MVP Sistema de Gestión Comercial SaaS — ESTADO: CERRADO
+
+> D01 y D02 incorporadas por autorización explícita del usuario. Especificación cerrada para planificación y build.
+
+## Resumen
+
+Plataforma web/PWA multi-tenant para gestionar la operación comercial de pequeñas y medianas empresas, con POS online y continuidad offline limitada.
+
+## Requisitos funcionales
+
+- **RF-01**: Cuando un administrador de plataforma cree una organización, el sistema debe crearla junto con su primera sucursal y su usuario OWNER mediante un onboarding asistido.
+- **RF-02**: Cuando una persona no pertenezca a una organización, el sistema no debe permitirle consultar ni operar datos de dicha organización.
+- **RF-03**: Cuando un usuario pertenezca a más de una organización, el sistema debe permitirle seleccionar y cambiar su organización activa entre sus membresías vigentes.
+- **RF-04**: Cuando se procese una autorización o acceso de datos, el sistema debe validar la organización activa y la membresía correspondiente en el backend.
+- **RF-05**: Cuando se cree una organización argentina, el sistema debe configurar `ARS` como moneda base predeterminada.
+- **RF-06**: Cuando una organización tenga cualquier referencia histórica comercial, monetaria o de inventario, el sistema no debe permitir modificar su moneda base aunque la operación haya sido anulada, compensada o revertida.
+- **RF-07**: Cuando una organización aún no tenga ninguna referencia histórica operativa, el sistema debe permitir únicamente a OWNER modificar su moneda base. La operación queda sujeta además a las restricciones de preservación offline de RF-302–RF-306.
+- **RF-08**: Cuando ADMIN modifique la configuración de su organización, el sistema debe permitirle actualizar solo datos comerciales no estructurales.
+- **RF-09**: Cuando OWNER modifique la zona horaria de una organización, el sistema debe conservar sin alteración los timestamps históricos almacenados.
+- **RF-10**: Cuando un usuario se autentique, el sistema debe usar correo electrónico único global y contraseña.
+- **RF-11**: Cuando un usuario solicite recuperar su contraseña, el sistema debe permitirle restablecerla mediante correo electrónico.
+- **RF-12**: Cuando el sistema almacene o procese una contraseña, el sistema no debe conservarla ni transmitirla en texto plano.
+- **RF-13**: Cuando OWNER o ADMIN incorpore a un usuario, el sistema debe enviar una invitación por correo con rol y sucursales asignadas.
+- **RF-14**: Cuando la invitación corresponda a una cuenta existente, el sistema debe crear una membresía al ser aceptada sin crear una cuenta duplicada.
+- **RF-15**: Cuando la invitación corresponda a un correo sin cuenta, el sistema debe requerir la aceptación y el establecimiento de contraseña antes del acceso.
+- **RF-16**: Cuando se emita una invitación, el sistema debe utilizar un token único, de un solo uso y con vencimiento.
+- **RF-17**: Cuando OWNER o ADMIN revoque una invitación pendiente, el sistema debe impedir su aceptación posterior.
+- **RF-18**: Cuando ADMIN gestione usuarios, el sistema no debe permitirle crear, modificar ni asignar el rol OWNER.
+- **RF-19**: Cuando un usuario sea desactivado o se revoque su membresía, el sistema debe retirar su acceso online inmediato a la organización sin eliminar su historial.
+- **RF-20**: Cuando una membresía se revoque, el sistema debe conservar la fecha/hora efectiva y los datos necesarios para identificar cuándo cada dispositivo conoció la revocación.
+- **RF-21**: Cuando se autorice una acción, el sistema debe aplicar los roles fijos OWNER, ADMIN, CASHIER y EMPLOYEE sobre la membresía de la organización.
+- **RF-22**: Cuando el usuario sea OWNER, el sistema debe otorgarle control completo sobre todas las sucursales de su organización.
+- **RF-23**: Cuando el usuario sea ADMIN, el sistema debe permitirle administrar la operación comercial y usuarios no propietarios únicamente dentro de sus sucursales asignadas.
+- **RF-24**: Cuando el usuario sea CASHIER, el sistema debe limitarlo a POS, clientes y operaciones de su propia sesión de caja sin acceso a costos, márgenes, compras ni información financiera global.
+- **RF-25**: Cuando el usuario sea EMPLOYEE, el sistema debe limitarlo a catálogo, inventario, recepción de mercadería y transferencias autorizadas, sin permisos financieros ni de caja.
+- **RF-26**: Cuando se intente anular una venta confirmada, el sistema debe permitirlo únicamente a OWNER y ADMIN.
+- **RF-27**: Cuando se cree una sucursal, el sistema debe exigir un nombre único dentro de la organización.
+- **RF-28**: Cuando OWNER desactive una sucursal con sesiones abiertas u operaciones offline pendientes o en conflicto, el sistema debe bloquear la desactivación.
+- **RF-29**: Cuando se desactive una sucursal con historial, el sistema debe conservar sus datos históricos e impedir nuevas operaciones en ella.
+- **RF-30**: Cuando se administre una caja, el sistema debe permitir a OWNER y ADMIN crear, renombrar y desactivar cajas con nombre único dentro de la sucursal.
+- **RF-31**: Cuando se desactive una caja, el sistema debe impedir nuevas aperturas y conservar íntegramente su historial.
+- **RF-32**: Cuando se cree un ítem de catálogo, el sistema debe admitir los tipos PRODUCT y SERVICE.
+- **RF-33**: Cuando se configure un PRODUCT, el sistema debe permitir habilitar o deshabilitar su control de inventario.
+- **RF-34**: Cuando se configure un SERVICE, el sistema no debe permitirle control de inventario.
+- **RF-35**: Cuando se cree un ítem, el sistema debe exigir un nombre y asignarle un identificador interno único.
+- **RF-36**: Cuando se informe un SKU o código de barras, el sistema debe exigir su unicidad dentro de la organización.
+- **RF-37**: Cuando se creen ítems con nombres iguales o similares, el sistema no debe bloquear su creación por el nombre y debe poder advertir posibles duplicados en la interfaz.
+- **RF-38**: Cuando un producto tenga código de barras, el sistema debe permitir encontrarlo y agregarlo al POS mediante entrada de teclado de un lector compatible.
+- **RF-39**: Cuando se cree un producto con control de inventario, el sistema debe iniciar su stock en cero para cada sucursal.
+- **RF-40**: Cuando se cargue mercadería existente, el sistema debe incorporarla mediante un ajuste positivo con motivo `INVENTARIO_INICIAL`.
+- **RF-41**: Cuando un ítem use una unidad `UNIT`, el sistema debe aceptar únicamente cantidades enteras.
+- **RF-42**: Cuando un ítem use una unidad fraccionable, el sistema debe aceptar cantidades de hasta tres decimales en stock y operaciones.
+- **RF-43**: Cuando se registre una cantidad o importe de negocio, el sistema debe usar aritmética decimal exacta y no tipos binarios de punto flotante.
+- **RF-44**: Cuando persista un importe comercial, el sistema debe normalizarlo a dos decimales con redondeo decimal `HALF_UP`.
+- **RF-45**: Cuando calcule una línea de venta o compra, el sistema debe multiplicar cantidad por precio/costo y redondear el resultado monetario de la línea a dos decimales.
+- **RF-46**: Cuando se modifique el precio de catálogo, el sistema debe conservar sin cambios los precios históricos usados en ventas anteriores.
+- **RF-47**: Cuando OWNER o ADMIN aplique un descuento a una venta, el sistema debe permitir un único descuento global por porcentaje o importe fijo.
+- **RF-48**: Cuando se aplique un descuento global, el sistema debe impedir importes negativos o superiores al subtotal de la venta.
+- **RF-49**: Cuando CASHIER o EMPLOYEE intente modificar precios o aplicar descuentos, el sistema debe rechazar la acción.
+- **RF-50**: Cuando se gestione una categoría de catálogo o gasto, el sistema debe mantener ambos dominios separados y aislados por organización.
+- **RF-51**: Cuando se cree un producto o servicio, el sistema debe permitir que no tenga categoría de catálogo.
+- **RF-52**: Cuando se registre un gasto, el sistema debe exigir una categoría de gasto activa y válida.
+- **RF-53**: Cuando una categoría tenga referencias históricas, el sistema debe impedir su eliminación física y permitir su desactivación.
+- **RF-54**: Cuando un producto, servicio o categoría no tenga referencias operativas, el sistema debe permitir su eliminación física para corregir un alta errónea. La operación queda sujeta además a las restricciones de preservación offline de RF-302–RF-306.
+- **RF-55**: Cuando un producto, servicio o categoría tenga referencias operativas, el sistema debe impedir su eliminación física y permitir su desactivación.
+- **RF-56**: Cuando un ítem esté desactivado, el sistema debe impedir su uso en nuevas ventas, compras y ajustes y conservarlo en el historial.
+- **RF-57**: Cuando se configure un mínimo de stock, el sistema debe permitir definirlo opcionalmente por producto y sucursal.
+- **RF-58**: Cuando el stock de un producto sea menor o igual a su mínimo configurado, el sistema debe identificarlo como stock bajo para esa sucursal.
+- **RF-59**: Cuando un producto no tenga mínimo configurado, el sistema no debe generar alerta de stock bajo para él.
+- **RF-60**: Cuando se confirme un ajuste manual, el sistema debe registrar organización, sucursal, producto, usuario, cantidad, tipo/motivo, fecha/hora y observación opcional.
+- **RF-61**: Cuando se confirme un ajuste negativo, el sistema debe rechazarlo si produciría stock negativo.
+- **RF-62**: Cuando se confirme un ajuste, el sistema debe generar su movimiento de inventario y actualizar existencias de forma atómica.
+- **RF-63**: Cuando se detecte un error en un ajuste confirmado, el sistema no debe permitir editarlo ni eliminarlo y debe requerir un ajuste compensatorio.
+- **RF-64**: Cuando OWNER, ADMIN o EMPLOYEE confirme una transferencia, el sistema debe permitir transferir únicamente entre dos sucursales activas, distintas y de la misma organización a las que tenga acceso.
+- **RF-65**: Cuando se confirme una transferencia, el sistema debe rechazarla completamente si cualquier producto no tiene stock suficiente en origen.
+- **RF-66**: Cuando se confirme una transferencia válida, el sistema debe descontar en origen y acreditar en destino en una única operación atómica sin generar movimientos financieros.
+- **RF-67**: Cuando se detecte un error en una transferencia confirmada, el sistema no debe permitir anularla ni modificarla y debe requerir una transferencia compensatoria.
+- **RF-68**: Cuando se cree un cliente, el sistema debe exigir solo nombre o razón social.
+- **RF-69**: Cuando se informe un documento, CUIT o identificador fiscal de cliente, el sistema debe exigir su unicidad dentro de la organización.
+- **RF-70**: Cuando se cree un proveedor, el sistema debe exigir solo nombre o razón social.
+- **RF-71**: Cuando se informe un CUIT o identificador fiscal de proveedor, el sistema debe exigir su unicidad dentro de la organización.
+- **RF-72**: Cuando se cree una venta, el sistema debe crearla y confirmarla en una única operación sin estado de borrador.
+- **RF-73**: Cuando se confirme una venta, el sistema debe asociarla a una sesión de caja abierta de la misma sucursal.
+- **RF-74**: Cuando CASHIER confirme una venta, el sistema debe exigir que use una sesión abierta por ese mismo CASHIER.
+- **RF-75**: Cuando se confirme una venta con productos controlados por inventario y conexión disponible, el sistema debe rechazarla si no hay stock suficiente en la sucursal.
+- **RF-76**: Cuando se confirme una venta con ítems sin control de inventario, el sistema no debe validar ni modificar existencias para dichos ítems.
+- **RF-77**: Cuando se confirme una venta, el sistema debe permitir asociar opcionalmente un cliente y tratar la ausencia como consumidor final sin crear un cliente ficticio.
+- **RF-78**: Cuando se confirme una venta con total mayor que cero, el sistema debe exigir que quede totalmente pagada con uno o más medios habilitados para la organización.
+- **RF-79**: Cuando se cobre en efectivo un importe recibido superior al efectivo aplicado, el sistema debe calcular y registrar el vuelto sin alterar el total de venta ni el efecto neto de caja.
+- **RF-80**: Cuando se confirme una venta, el sistema debe guardar subtotal, descuento, total, ítems, precios unitarios, pagos y vuelto como valores históricos persistidos.
+- **RF-81**: Cuando se confirme una venta, el sistema debe generar un comprobante digital interno identificado como “Comprobante no fiscal”.
+- **RF-82**: Cuando falle, se desconecte o no exista una impresora, el sistema no debe impedir ni revertir la confirmación de una venta.
+- **RF-83**: Cuando se consulte una venta confirmada, el sistema debe permitir visualizar su comprobante y generar o descargar su versión PDF e imprimirla opcionalmente.
+- **RF-84**: Cuando OWNER o ADMIN anule una venta, el sistema debe cambiar su estado a anulada y conservar íntegros la venta y sus registros originales.
+- **RF-85**: Cuando se anule una venta, el sistema debe exigir usuario, fecha/hora y motivo y debe prohibir modificar o eliminar sus ítems originales.
+- **RF-86**: Cuando se anule una venta, el sistema debe revertir los movimientos de inventario correspondientes mediante efectos trazables.
+- **RF-87**: Cuando se anule una venta, el sistema debe registrar reintegros con los mismos medios e importes de los pagos originales.
+- **RF-88**: Cuando una anulación incluya efectivo, el sistema debe exigir una sesión de caja abierta válida de la misma sucursal y registrar una salida de efectivo.
+- **RF-89**: Cuando una anulación no incluya efectivo, el sistema no debe exigir una sesión de caja exclusivamente por los reintegros no efectivos.
+- **RF-90**: Cuando no exista sesión válida para reintegrar la parte en efectivo, el sistema debe bloquear la anulación completa.
+- **RF-91**: Cuando se abra una sesión de caja online, el sistema debe registrar caja, sucursal, usuario, fecha/hora y monto inicial.
+- **RF-92**: Cuando una caja ya tenga una sesión abierta normal, el sistema debe rechazar una nueva apertura online para esa caja.
+- **RF-93**: Cuando OWNER o ADMIN abra, cierre o mueva efectivo, el sistema debe permitirlo solo en cajas de sucursales dentro de su alcance.
+- **RF-94**: Cuando CASHIER abra, cierre o mueva efectivo, el sistema debe permitirlo solo en su propia sesión abierta.
+- **RF-95**: Cuando EMPLOYEE intente operar una sesión o movimiento de caja, el sistema debe rechazar la acción.
+- **RF-96**: Cuando se registre un ingreso o retiro manual de efectivo, el sistema debe exigir importe y motivo y asociarlo a una sesión abierta.
+- **RF-97**: Cuando se cierre una sesión de caja, el sistema debe calcular el efectivo esperado desde el estado consolidado del servidor usando monto inicial, efectivo aplicado a ventas, reintegros, gastos, pagos de compras e ingresos/retiros manuales aplicables.
+- **RF-98**: Cuando se cierre una sesión con diferencia distinta de cero, el sistema debe permitir el cierre, exigir motivo u observación y crear una revisión inmutable en estado `PENDING_REVIEW`.
+- **RF-99**: Cuando un movimiento de caja esté confirmado, el sistema no debe permitir editarlo ni eliminarlo y debe requerir uno compensatorio para corregirlo.
+- **RF-100**: Cuando se confirme una compra, el sistema debe exigir proveedor, sucursal, uno o más productos, cantidades y costos unitarios.
+- **RF-101**: Cuando se confirme una compra, el sistema debe incrementar el stock de los productos con inventario y generar los movimientos correspondientes de forma atómica.
+- **RF-102**: Cuando una compra se confirme sin pago, el sistema debe marcarla como `PENDING_PAYMENT` sin impedir el ingreso de mercadería.
+- **RF-103**: Cuando OWNER o ADMIN pague una compra `PENDING_PAYMENT`, el sistema debe aceptar un único pago total exactamente igual al saldo pendiente y cambiar la compra a `PAID`.
+- **RF-104**: Cuando se pague una compra en efectivo, el sistema debe exigir una sesión de caja abierta válida de la misma sucursal y registrar la salida de efectivo.
+- **RF-105**: Cuando se pague una compra mediante un medio no efectivo, el sistema no debe modificar el efectivo esperado ni exigir una caja abierta.
+- **RF-106**: Cuando OWNER o ADMIN anule una compra confirmada, el sistema debe exigir motivo y cambiarla a `CANCELLED` sin eliminar ni modificar sus datos originales.
+- **RF-107**: Cuando se anule una compra, el sistema debe bloquearla si no hay stock suficiente para revertir todos los productos controlados por inventario.
+- **RF-108**: Cuando se anule una compra pagada en efectivo, el sistema debe exigir una sesión abierta válida de la misma sucursal y registrar un ingreso de efectivo por el mismo importe.
+- **RF-109**: Cuando se anule una compra pagada por un medio no efectivo, el sistema debe registrar administrativamente su reversión sin integrar proveedores externos de pago.
+- **RF-110**: Cuando se registre un gasto, el sistema debe exigir categoría activa, concepto, importe, medio de pago, sucursal, usuario y fecha/hora.
+- **RF-111**: Cuando se registre un gasto en efectivo, el sistema debe exigir una sesión de caja abierta válida de la misma sucursal y registrar una salida de efectivo.
+- **RF-112**: Cuando se registre un gasto con medio no efectivo, el sistema no debe modificar el saldo esperado de una caja.
+- **RF-113**: Cuando OWNER o ADMIN configure medios de pago, el sistema debe permitir activar o desactivar efectivo, débito, crédito, transferencia y QR para la organización.
+- **RF-114**: Cuando el dispositivo esté previamente autorizado, sincronizado y cuente con credencial offline vigente, el sistema debe permitir abrir una sesión de caja sin conexión.
+- **RF-115**: Cuando se abra una sesión offline, el sistema debe registrar localmente usuario, caja, sucursal, dispositivo, fecha/hora, monto inicial e identificador único pendiente de sincronización.
+- **RF-116**: Cuando un dispositivo no haya sido autorizado, sincronizado y autenticado online previamente, el sistema no debe permitirle iniciar operaciones offline.
+- **RF-117**: Cuando el dispositivo opere offline, el sistema debe permitir consultar el catálogo sincronizado, crear ventas y registrar sus cobros con datos persistentes locales.
+- **RF-118**: Cuando se opere offline, el sistema no debe permitir configuraciones, usuarios, compras, proveedores, gastos, ajustes, anulaciones, cierre definitivo de caja, reportes ni otras mutaciones administrativas.
+- **RF-119**: Cuando una credencial offline supere 72 horas desde su última validación y sincronización online exitosa, el sistema debe impedir nuevas aperturas y ventas offline sin eliminar operaciones pendientes.
+- **RF-120**: Cuando se recupere conectividad, el sistema debe sincronizar automáticamente las operaciones pendientes de forma idempotente.
+- **RF-121**: Cuando una venta offline sincronizada produzca o amplíe stock negativo, el sistema debe aceptar la venta y crear o actualizar idempotentemente una incidencia de inventario por producto y sucursal.
+- **RF-122**: Cuando se sincronice una venta offline con catálogo cambiado o ítem posteriormente desactivado, el sistema debe conservar los ítems y precios históricos usados por el dispositivo y registrar la discrepancia relevante.
+- **RF-123**: Cuando un dispositivo conozca localmente la desactivación de un ítem, el sistema debe impedir su uso en nuevas ventas offline.
+- **RF-124**: Cuando una apertura offline entre en conflicto con una sesión incompatible de la misma caja, el sistema debe marcar la sesión offline como `CONFLICTED` y conservar ambas sesiones y sus operaciones.
+- **RF-125**: Cuando OWNER o ADMIN resuelva una sesión `CONFLICTED` dentro de su alcance, el sistema debe permitir una conciliación manual con efectivo contado, diferencia, motivo u observación y resultado auditable.
+- **RF-126**: Cuando se concilie una sesión `CONFLICTED`, el sistema no debe fusionar sesiones, reasignar ventas ni generar automáticamente movimientos compensatorios para ocultar diferencias.
+- **RF-127**: Cuando OWNER o ADMIN autorice un dispositivo POS, el sistema debe registrar organización, sucursal, estado, fecha, autorizador y último contacto/sincronización.
+- **RF-128**: Cuando se revoque un dispositivo POS y este conozca la revocación, el sistema debe impedir nuevas operaciones offline y conservar/sincronizar las operaciones legítimas pendientes. Se aplican además las garantías de entrega opaca de RF-309–RF-316.
+- **RF-129**: Cuando una membresía revocada sea conocida por un dispositivo, el sistema debe impedir nuevas operaciones offline para ella y conservar las operaciones legítimas anteriores. Se aplican además las garantías de entrega opaca de RF-309–RF-316.
+- **RF-130**: Cuando se registre una operación offline, el sistema debe conservar fecha/hora declarada por el dispositivo y fecha/hora de recepción o sincronización del servidor.
+- **RF-131**: Cuando se reciba un reintento por doble clic, fallo de red o sincronización, el sistema debe usar una clave de idempotencia y devolver el resultado original sin duplicar documentos, pagos ni movimientos.
+- **RF-132**: Cuando una operación que afecta datos relacionados falle en cualquiera de sus pasos, el sistema debe revertir completamente sus cambios mediante una transacción de backend.
+- **RF-133**: Cuando una operación sea rechazada o falle, el sistema debe mostrar un mensaje claro y accionable sin exponer información sensible.
+- **RF-134**: Cuando se produzca un error o una operación técnica crítica, el sistema debe generar logs estructurados con contexto suficiente y sin secretos ni credenciales.
+- **RF-135**: Cuando se supervise la plataforma, el sistema debe exponer health checks de aplicación y conectividad con dependencias críticas.
+- **RF-136**: Cuando se supervise la plataforma, el sistema debe recopilar métricas de disponibilidad, tasa de errores, rendimiento y sincronización offline.
+- **RF-137**: Cuando existan fallas persistentes de backend, base de datos, errores o sincronización offline, el sistema debe generar alertas automáticas tras permitir reintentos recuperables.
+- **RF-138**: Cuando se ejecute la estrategia de respaldo, el sistema debe realizar backups automáticos diarios de base de datos con retención mínima de 30 días y almacenamiento independiente del primario.
+- **RF-139**: Cuando se produzca un desastre, el sistema debe disponer de un procedimiento documentado y probado periódicamente para apuntar a un RPO máximo de 24 horas y RTO objetivo de 8 horas.
+- **RF-140**: Cuando una acción relevante de seguridad, administración, inventario, ventas, compras, gastos o caja se complete, el sistema debe crear un evento de auditoría inmutable con actor, organización, fecha/hora, entidad, acción y contexto aplicable.
+- **RF-141**: Cuando se guarden valores antes/después en auditoría, el sistema debe limitarse a la información necesaria y no debe almacenar contraseñas, tokens, credenciales ni secretos.
+- **RF-142**: Cuando OWNER o ADMIN consulte el dashboard, el sistema debe mostrar ventas, cantidad de ventas, ticket promedio, medios de pago, gastos, compras, más vendidos, stock bajo y resumen de cajas según filtros autorizados.
+- **RF-143**: Cuando se calcule el resultado operativo del dashboard, el sistema debe mostrar ventas menos gastos sin presentarlo como utilidad contable.
+- **RF-144**: Cuando CASHIER consulte información operativa, el sistema debe limitarla a sus ventas y sesiones de caja.
+- **RF-145**: Cuando EMPLOYEE consulte información operativa, el sistema debe limitarla a catálogo e inventario de sus sucursales autorizadas.
+- **RF-146**: Cuando se consulte un reporte, el sistema debe ofrecer reportes de ventas, inventario actual, movimientos de inventario, caja, compras y gastos.
+- **RF-147**: Cuando se exporte un reporte, el sistema debe permitir visualización en pantalla y exportación CSV y PDF únicamente para los datos filtrados y autorizados.
+- **RF-148**: Cuando OWNER consulte reportes, el sistema debe permitirle abarcar todas las sucursales de su organización.
+- **RF-149**: Cuando ADMIN consulte reportes, el sistema debe limitarlo a sus sucursales asignadas.
+- **RF-150**: Cuando CASHIER o EMPLOYEE consulte reportes, el sistema debe limitarlo a la información operativa permitida por su rol y sucursales.
+- **RF-151**: Cuando se acceda a cualquier API protegida, el sistema debe exigir autenticación, autorización backend, validación y normalización de entradas y límites de tasa apropiados.
+- **RF-152**: Cuando se utilice el MVP en computadora, notebook, tablet o teléfono móvil, el sistema debe presentar una interfaz web responsive y funcional.
+- **RF-153**: Cuando se use una función principal, el sistema debe permitir operación por teclado con orden lógico y foco visible.
+- **RF-154**: Cuando se presente un formulario, control, icono interactivo o error, el sistema debe proporcionar semántica, etiquetas, contraste y estados accesibles sin comunicar información importante solo con color.
+- **RF-155**: Cuando se solicite el cierre definitivo de una sesión, el sistema debe bloquearlo si existe una operación offline pendiente, fallida, en reintento o un conflicto sin resolver que pueda modificar su efectivo esperado.
+- **RF-156**: Cuando el dispositivo propietario complete la sincronización final verificable de una sesión, el sistema debe recalcular su efectivo esperado desde el estado consolidado del servidor antes de aceptar el efectivo contado.
+- **RF-157**: Cuando comience el cierre definitivo, el sistema debe bloquear atómicamente la sesión para impedir nuevas ventas, cobros, gastos, movimientos de efectivo y operaciones offline hasta completar o abortar el cierre.
+- **RF-158**: Cuando una sesión esté en estado `CONFLICTED`, el sistema no debe permitir su cierre normal y debe exigir la conciliación manual de OWNER o ADMIN.
+- **RF-159**: Cuando un ítem tenga cualquier referencia operativa histórica, el sistema no debe permitir cambiar `type`, `trackInventory` ni `baseUnit`, aunque su stock actual sea cero.
+- **RF-160**: Cuando un ítem no tenga ninguna referencia operativa histórica, el sistema debe permitir a OWNER o ADMIN cambiar `type`, `trackInventory` o `baseUnit` únicamente si la combinación resultante respeta las invariantes del dominio. La operación queda sujeta además a las restricciones de preservación offline de RF-302–RF-306.
+- **RF-161**: Cuando un cambio estructural sea necesario sobre un ítem con historial, el sistema debe exigir la desactivación del ítem anterior y la creación de uno nuevo.
+- **RF-162**: Cuando se cree una sucursal después de existir productos controlados por inventario, el sistema debe iniciar en cero el stock de esos productos sin generar movimientos.
+- **RF-163**: Cuando se consulte o modifique stock, el sistema debe tratarlo como resultado de movimientos válidos y no debe permitir editar directamente la existencia actual.
+- **RF-164**: Cuando operaciones online concurrentes afecten el mismo producto y sucursal, el sistema debe serializar o coordinar la validación y modificación dentro de la misma transacción para que prevalezca la primera confirmación válida.
+- **RF-165**: Cuando una operación concurrente pierda disponibilidad por una confirmación previa, el sistema debe reevaluarla contra el nuevo saldo y rechazarla completamente si ya no puede cumplirse.
+- **RF-166**: Cuando una operación con varios ítems falle por concurrencia o falta de stock en cualquiera de ellos, el sistema no debe aplicar efectos parciales sobre los restantes.
+- **RF-167**: Cuando una venta offline se haya creado con la última configuración válida conocida antes de una desactivación, el sistema debe aceptarla aunque la sucursal, caja o medio de pago esté inactivo al sincronizar.
+- **RF-168**: Cuando el dispositivo ya conozca la desactivación de una sucursal, caja o medio de pago, el sistema debe impedir su uso en nuevas operaciones offline.
+- **RF-169**: Cuando se determine la legitimidad temporal de una operación offline, el sistema debe usar identidad de dispositivo, versión de configuración y conocimiento del cambio además de las fechas declaradas por el dispositivo.
+- **RF-170**: Cuando una operación offline use una configuración obsoleta legítima, el sistema debe conservar sus referencias originales y registrar la discrepancia sin reasignarla a otros recursos.
+- **RF-171**: Cuando se persistan datos offline sensibles, el sistema debe almacenarlos cifrados o protegidos mediante un mecanismo equivalente apropiado para la PWA.
+- **RF-172**: Cuando se almacenen credenciales offline, el sistema debe vincularlas exclusivamente al usuario, organización y dispositivo autorizado y no debe persistir contraseñas, tokens reutilizables ni secretos en texto plano.
+- **RF-173**: Cuando cambie el usuario activo del dispositivo, el sistema debe impedir que herede información privada o capacidades offline de otra identidad. Se aplican además las garantías de entrega opaca de RF-309–RF-316.
+- **RF-174**: Cuando un usuario cierre sesión, el sistema debe invalidar su sesión y credenciales locales para nuevas operaciones sin eliminar operaciones legítimas pendientes de sincronización. Se aplican además las garantías de entrega opaca de RF-309–RF-316.
+- **RF-175**: Cuando una operación pendiente sobreviva a un cierre de sesión o revocación, el sistema debe conservarla protegida y asociada al actor y dispositivo originales hasta recibir confirmación idempotente del servidor. Se aplican además las garantías de entrega opaca de RF-309–RF-316.
+- **RF-176**: Cuando todas las operaciones pendientes hayan sido confirmadas por el servidor, el sistema debe eliminar o inutilizar los datos transaccionales locales que ya no sean necesarios para la continuidad offline. Se aplican además las garantías de entrega opaca de RF-309–RF-316.
+- **RF-177**: Cuando un dispositivo conozca su revocación, el sistema debe limitarlo a sincronizar operaciones legítimas anteriores y eliminar o inutilizar los datos sensibles al concluir esa sincronización. Se aplican además las garantías de entrega opaca de RF-309–RF-316.
+- **RF-178**: Cuando una organización permanezca activa, el sistema debe exigir que conserve al menos una membresía OWNER activa.
+- **RF-179**: Cuando un OWNER activo invite a otro OWNER, el sistema debe activar los permisos del nuevo propietario únicamente después de la aceptación de la invitación.
+- **RF-180**: Cuando ADMIN, CASHIER o EMPLOYEE intente crear, promover, degradar o revocar una membresía OWNER, el sistema debe rechazar la acción.
+- **RF-181**: Cuando una operación de rol o membresía fuera a dejar una organización activa sin OWNER activo, el sistema debe rechazarla sin considerar invitaciones pendientes.
+- **RF-182**: Cuando existan varios OWNER activos, el sistema debe permitir que uno degrade o desactive a otro solo si al finalizar permanece al menos un OWNER activo.
+- **RF-183**: Cuando un administrador de plataforma intervenga excepcionalmente sobre una membresía OWNER, el sistema debe exigir una acción explícita y auditada.
+- **RF-184**: Cuando ADMIN gestione una membresía no propietaria, el sistema debe impedir que conceda sucursales fuera de su propio alcance o retire acceso global que pertenezca a sucursales fuera de él.
+- **RF-185**: Cuando OWNER confirme una compra, el sistema debe permitirle registrarla como `PENDING_PAYMENT` o como `PAID` en cualquier sucursal de la organización.
+- **RF-186**: Cuando ADMIN confirme una compra, el sistema debe permitirle registrarla como `PENDING_PAYMENT` o como `PAID` únicamente en sus sucursales asignadas.
+- **RF-187**: Cuando EMPLOYEE confirme una recepción de mercadería, el sistema debe crear una compra `PENDING_PAYMENT` en una sucursal asignada sin generar pagos ni movimientos financieros.
+- **RF-188**: Cuando CASHIER intente crear, confirmar, pagar o anular una compra, el sistema debe rechazar la acción.
+- **RF-189**: Cuando una compra se confirme como `PAID`, el sistema debe confirmar compra, inventario y pago en una única operación y revertir todo si falla el pago.
+- **RF-190**: Cuando OWNER o ADMIN registre un ajuste en una sucursal autorizada, el sistema debe permitirle usar ajustes positivos, negativos, compensatorios y el motivo `INVENTARIO_INICIAL`.
+- **RF-191**: Cuando EMPLOYEE registre un ajuste en una sucursal asignada, el sistema debe permitirle usar `CONTEO_FISICO`, `ROTURA`, `PERDIDA`, `VENCIMIENTO`, `CORRECCION` u `OTRO`.
+- **RF-192**: Cuando EMPLOYEE intente usar `INVENTARIO_INICIAL`, el sistema debe rechazar el ajuste.
+- **RF-193**: Cuando CASHIER intente crear o confirmar un ajuste de inventario, el sistema debe rechazar la acción.
+- **RF-194**: Cuando OWNER confirme una venta, el sistema debe permitirle usar una sesión propia o de otro usuario desde el dispositivo operativo de esa sesión en cualquier sucursal activa.
+- **RF-195**: Cuando ADMIN confirme una venta, el sistema debe permitirle usar una sesión propia o de otro usuario desde el dispositivo operativo de esa sesión únicamente en sus sucursales asignadas.
+- **RF-196**: Cuando CASHIER confirme una venta, el sistema debe exigir simultáneamente que sea titular de la sesión y que opere desde el dispositivo asociado a ella.
+- **RF-197**: Cuando EMPLOYEE intente confirmar una venta o registrar un cobro, el sistema debe rechazar la acción.
+- **RF-198**: Cuando el actor de una venta sea distinto del usuario que abrió la sesión, el sistema debe conservar ambas identidades y auditar la intervención sin transferir la titularidad.
+- **RF-199**: Cuando una diferencia de caja sea cero, el sistema debe cerrar la sesión sin crear una revisión pendiente.
+- **RF-200**: Cuando una diferencia esté `PENDING_REVIEW`, el sistema debe permitir revisarla a OWNER o a ADMIN dentro de su alcance y cambiarla únicamente a `REVIEWED`.
+- **RF-201**: Cuando exista otro OWNER o ADMIN activo con alcance suficiente, el sistema no debe permitir que el responsable del cierre revise su propia diferencia.
+- **RF-202**: Cuando no exista otro revisor activo con alcance suficiente, el sistema debe permitir excepcionalmente la autorrevisión con justificación obligatoria y marca `SELF_REVIEW`.
+- **RF-203**: Cuando una diferencia se marque `REVIEWED`, el sistema debe registrar revisor, fecha/hora, transición y nota opcional sin modificar importes, cierre ni movimientos.
+- **RF-204**: Cuando una corrección real de efectivo sea necesaria después de revisar una diferencia, el sistema debe exigir una nueva operación trazable en una sesión abierta sin alterar la diferencia histórica.
+- **RF-205**: Cuando se registre cualquier precio, costo, venta, compra, gasto, pago, movimiento o sesión de caja, el sistema debe expresarlo en la moneda base ISO 4217 de la organización.
+- **RF-206**: Cuando la moneda base ya esté bloqueada por historial operativo, el sistema no debe convertir, reinterpretar ni recalcular importes históricos para cambiarla.
+- **RF-207**: Cuando OWNER registre un gasto, el sistema debe permitirle usar medios efectivos o no efectivos en cualquier sucursal y cualquier sesión válida desde su dispositivo operativo.
+- **RF-208**: Cuando ADMIN registre un gasto, el sistema debe permitirle usar medios efectivos o no efectivos únicamente en sus sucursales y sesiones válidas desde su dispositivo operativo.
+- **RF-209**: Cuando CASHIER registre un gasto, el sistema debe aceptar únicamente efectivo contra una sesión abierta por él y desde el dispositivo operativo de esa sesión.
+- **RF-210**: Cuando EMPLOYEE intente registrar un gasto, el sistema debe rechazar la acción.
+- **RF-211**: Cuando OWNER o ADMIN administre clientes, el sistema debe permitir crear, consultar, editar, desactivar, reactivar y eliminar sin historial cualquier cliente de la organización.
+- **RF-212**: Cuando CASHIER opere con clientes, el sistema debe permitir crear, consultar y editar únicamente nombre, contacto, documento, dirección y notas, sin desactivar, reactivar ni eliminar.
+- **RF-213**: Cuando EMPLOYEE intente acceder al módulo general de clientes, el sistema debe rechazar el acceso.
+- **RF-214**: Cuando un cliente esté inactivo, el sistema debe conservarlo en el historial e impedir su selección para nuevas ventas.
+- **RF-215**: Cuando OWNER o ADMIN administre proveedores, el sistema debe permitir crear, consultar, editar, desactivar, reactivar y eliminar sin historial cualquier proveedor de la organización.
+- **RF-216**: Cuando EMPLOYEE registre una recepción autorizada, el sistema debe permitirle consultar proveedores en modo de solo lectura.
+- **RF-217**: Cuando CASHIER intente acceder al módulo general de proveedores, el sistema debe rechazar el acceso.
+- **RF-218**: Cuando un proveedor esté inactivo, el sistema debe conservarlo en el historial e impedir su selección para nuevas compras.
+- **RF-219**: Cuando un cliente o proveedor tenga cualquier referencia histórica, el sistema no debe permitir su eliminación física aunque la operación relacionada haya sido anulada o revertida.
+- **RF-220**: Cuando ADMIN acceda a una ficha maestra global de cliente o proveedor, el sistema debe permitirle administrarla sin conceder acceso a operaciones de sucursales fuera de su alcance.
+- **RF-221**: Cuando OWNER o ADMIN administre el catálogo maestro, el sistema debe permitirle crear, editar, activar, desactivar y eliminar sin historial ítems y categorías de toda la organización. La operación queda sujeta además a las restricciones de preservación offline de RF-302–RF-306.
+- **RF-222**: Cuando CASHIER o EMPLOYEE consulte el catálogo, el sistema debe mostrarle ítems activos, precio vigente y categorías necesarias sin permitir modificaciones.
+- **RF-223**: Cuando EMPLOYEE necesite contexto histórico o de inventario, el sistema debe permitirle consultar ítems inactivos de sus sucursales autorizadas.
+- **RF-224**: Cuando CASHIER consulte catálogo o POS, el sistema no debe mostrarle costos de compras ni información de márgenes.
+- **RF-225**: Cuando EMPLOYEE confirme una compra `PENDING_PAYMENT`, el sistema debe permitirle ingresar y visualizar sus costos unitarios solo dentro de esa compra.
+- **RF-226**: Cuando se consulte el catálogo o dashboard del MVP, el sistema no debe exponer un costo comercial vigente ni calcular o mostrar margen o rentabilidad.
+- **RF-227**: Cuando se configure un umbral mínimo, el sistema debe permitir a OWNER hacerlo para cualquier sucursal y a ADMIN o EMPLOYEE solo para sus sucursales asignadas.
+- **RF-228**: Cuando CASHIER consulte un producto visible en su POS, el sistema debe permitirle ver su stock, umbral y alerta de stock bajo sin modificarlos.
+- **RF-229**: Cuando se consulte stock, el sistema debe permitir a OWNER abarcar todas las sucursales y limitar a ADMIN, EMPLOYEE y CASHIER a sus sucursales asignadas.
+- **RF-230**: Cuando se abra una sesión de caja, el sistema debe asociarla obligatoriamente a un único dispositivo operativo autorizado durante toda su vigencia.
+- **RF-231**: Cuando una sesión esté abierta, el sistema debe aceptar nuevas operaciones POS y de efectivo únicamente desde su dispositivo operativo asociado.
+- **RF-232**: Cuando otro dispositivo intente originar una operación sobre una sesión abierta, el sistema debe rechazarla como conflicto aunque el actor sea OWNER o ADMIN.
+- **RF-233**: Cuando cambie el usuario en el dispositivo operativo, el sistema debe conservar el mismo dispositivo de sesión y registrar como actor real al usuario autorizado que ejecuta cada operación.
+- **RF-234**: Cuando el dispositivo operativo solicite cerrar la sesión, el sistema debe exigir una confirmación final versionada de que no conserva operaciones pendientes, fallidas o en reintento.
+- **RF-235**: Cuando el dispositivo operativo sea declarado irrecuperable antes de la sincronización final, el sistema debe impedir el cierre normal y permitir únicamente el cierre excepcional `CLOSED_WITH_UNRECOVERED_DEVICE`.
+- **RF-236**: Cuando se solicite `CLOSED_WITH_UNRECOVERED_DEVICE`, el sistema debe permitirlo solo a OWNER o ADMIN dentro de su alcance con confirmación explícita y motivo obligatorio.
+- **RF-237**: Cuando se ejecute el cierre por dispositivo irrecuperable, el sistema debe conservar dispositivo, último contacto, operaciones recibidas, efectivo esperado conocido, efectivo contado opcional y diferencia observada opcional.
+- **RF-238**: Cuando una sesión cierre por dispositivo irrecuperable, el sistema debe marcar permanentemente `operational_data_completeness=UNKNOWN` sin inventar ventas, pagos, stock ni movimientos compensatorios.
+- **RF-239**: Cuando una sesión alcance `CLOSED_WITH_UNRECOVERED_DEVICE`, el sistema debe liberarla como estado final para permitir una nueva sesión de la caja sin ocultar la incertidumbre histórica.
+- **RF-240**: Cuando aparezcan posteriormente operaciones legítimas del dispositivo declarado irrecuperable, el sistema debe aceptarlas idempotentemente, vincularlas a la sesión excepcional y conservar el snapshot original del cierre.
+- **RF-241**: Cuando se incorporen operaciones recuperadas tardíamente, el sistema debe recalcular valores conocidos derivados, marcar `LATE_RECOVERED_OPERATIONS` y exigir revisión de OWNER o ADMIN sin convertir la sesión en un cierre normal.
+- **RF-242**: Cuando una salida de efectivo normal supere el efectivo esperado disponible, el sistema debe bloquearla sin efectos parciales.
+- **RF-243**: Cuando un gasto, pago de compra, retiro o reintegro en efectivo sea bloqueado por falta de efectivo esperado, el sistema debe exigir primero un ingreso trazable o el uso de otra sesión válida permitida por el rol.
+- **RF-244**: Cuando el usuario ingrese cantidades de ventas, compras, ajustes o transferencias, el sistema debe exigir magnitudes estrictamente positivas con la precisión admitida por la unidad.
+- **RF-245**: Cuando se registre un ajuste, el sistema debe representar su dirección mediante `INCREASE` o `DECREASE` y no mediante una cantidad negativa.
+- **RF-246**: Cuando se configure un precio de venta o costo unitario de compra, el sistema debe permitir cero y prohibir valores negativos y más de dos decimales.
+- **RF-247**: Cuando se ingrese un descuento porcentual, el sistema debe exigir un valor entre cero y cien inclusive.
+- **RF-248**: Cuando se ingrese un descuento fijo, el sistema debe exigir un valor entre cero y el subtotal inclusive.
+- **RF-249**: Cuando una venta tenga total mayor que cero, el sistema debe exigir pagos aplicados estrictamente positivos cuya suma coincida exactamente con el total.
+- **RF-250**: Cuando una venta tenga total cero por precios gratuitos o descuento válido, el sistema debe confirmarla sin crear una línea de pago de importe cero.
+- **RF-251**: Cuando se registre un reintegro o reversión, el sistema debe guardar una magnitud positiva y representar la dirección mediante el tipo de operación.
+- **RF-252**: Cuando se registre un gasto, depósito o retiro manual, el sistema debe exigir un importe estrictamente positivo y no debe aceptar signos negativos para invertir su efecto.
+- **RF-253**: Cuando se abra o cierre una caja, el sistema debe aceptar efectivo inicial y contado mayores o iguales a cero y prohibir valores negativos.
+- **RF-254**: Cuando se confirme una venta online, el sistema debe calcular y validar en backend los precios vigentes, cantidades, descuentos y total sin confiar en importes enviados por el cliente.
+- **RF-255**: Cuando el precio cambie entre la preparación y la confirmación online, el sistema debe rechazar esa confirmación, informar el nuevo total y exigir aceptación explícita antes de reintentar.
+- **RF-256**: Cuando se confirme una venta offline, el sistema debe usar únicamente precios pertenecientes a la versión de catálogo sincronizada y verificable del dispositivo.
+- **RF-257**: Cuando OWNER o ADMIN confirme una compra de total cero, el sistema debe permitir marcarla `PAID` sin crear un pago de importe cero.
+- **RF-258**: Cuando se intente pagar una compra `PENDING_PAYMENT` de total mayor que cero, el sistema debe exigir un único pago positivo exactamente igual al total pendiente.
+- **RF-259**: Cuando una compra ya esté `CANCELLED`, el sistema no debe permitir una segunda anulación.
+- **RF-260**: Cuando se revierta una compra o venta, el sistema debe usar los medios históricos originales aunque hayan sido desactivados para nuevas operaciones.
+- **RF-261**: Cuando OWNER o ADMIN detecte un gasto confirmado erróneo, el sistema debe permitir una anulación total, inmutable y auditada con motivo obligatorio.
+- **RF-262**: Cuando se anule un gasto en efectivo, el sistema debe exigir una sesión abierta válida de la misma sucursal y registrar un ingreso compensatorio atómico por el importe original.
+- **RF-263**: Cuando se anule un gasto no efectivo, el sistema debe registrar una reversión administrativa sin modificar ninguna caja.
+- **RF-264**: Cuando un gasto ya esté anulado, el sistema no debe permitir editarlo, eliminarlo ni anularlo otra vez.
+- **RF-265**: Cuando se valide unicidad de SKU, código de barras o identificador fiscal, el sistema debe normalizar el valor y considerar todos los registros no eliminados de la organización, incluidos los inactivos.
+- **RF-266**: Cuando se valide unicidad de nombres de sucursal o caja, el sistema debe ignorar espacios periféricos y diferencias de mayúsculas y considerar los registros no eliminados dentro de su alcance de unicidad.
+- **RF-267**: Cuando se confirme una venta online u offline, el sistema debe asignarle un identificador global único e inmutable apto para idempotencia.
+- **RF-268**: Cuando una venta se origine offline, el sistema debe emitir una referencia local visible y conservarla después de asignar la referencia definitiva del servidor.
+- **RF-269**: Cuando se confirme una venta o compra, el sistema debe guardar snapshots de identificación de sus ítems, unidad, categoría aplicable, precio o costo y moneda usados en ese momento.
+- **RF-270**: Cuando se genere un comprobante no fiscal, el sistema debe usar snapshots de los datos comerciales de organización, sucursal y cliente aplicables al momento de la venta.
+- **RF-271**: Cuando se almacene una fecha operativa online, el sistema debe persistir un timestamp absoluto y presentarlo según la zona horaria de la organización.
+- **RF-272**: Cuando se sincronice una operación offline, el sistema debe conservar separadamente `occurred_at` del dispositivo y `received_at` del servidor sin usar el reloj local como única prueba de legitimidad.
+- **RF-273**: Cuando se sincronice una cola offline, el sistema debe procesar primero las dependencias, incluida la apertura de sesión antes que sus ventas, y conservar pendientes los dependientes si falla la dependencia.
+- **RF-274**: Cuando una sincronización individual falle, el sistema debe mantener la operación local sin modificar, mostrar su estado y permitir reintentos automáticos y manuales seguros.
+- **RF-275**: Cuando se pierda la respuesta de una operación cuyo resultado sea incierto, el sistema debe reintentar con la misma clave de idempotencia antes de crear una nueva operación.
+- **RF-276**: Cuando una clave de idempotencia ya esté asociada a una operación, el sistema debe devolver el resultado original si el payload coincide y rechazar su reutilización con un payload diferente.
+- **RF-277**: Cuando se cree una operación offline pendiente, el sistema debe sellarla contra modificaciones posteriores y detectar alteraciones antes de aceptarla como legítima.
+- **RF-278**: Cuando el servidor detecte una operación offline manipulada o creada después de que el dispositivo conoció una revocación, el sistema no debe aplicarla al negocio y debe conservar evidencia de seguridad para auditoría.
+- **RF-279**: Cuando la PWA se actualice o cambie su caché, el sistema debe preservar la cola de operaciones pendientes y no debe activar una versión incompatible antes de asegurar su migración.
+- **RF-280**: Cuando el POS funcione offline, el sistema debe limitar las ventas a consumidor final y no debe cachear, crear ni editar el padrón de clientes.
+- **RF-281**: Cuando OWNER o ADMIN aplique descuentos offline, el sistema debe validar su permiso desde la última autorización vigente y registrar el descuento para validación posterior.
+- **RF-282**: Cuando un usuario consulte la auditoría de una organización, el sistema debe permitir acceso completo a OWNER, acceso acotado a ADMIN según recursos globales administrables y sucursales asignadas, y denegar el módulo a CASHIER y EMPLOYEE.
+- **RF-283**: Cuando una operación de negocio requiera auditoría obligatoria, el sistema debe confirmar el evento de auditoría en la misma unidad atómica o impedir la confirmación del negocio.
+- **RF-284**: Cuando un administrador de plataforma realice provisioning o recuperación excepcional, el sistema debe aplicar mínimo privilegio, no conceder acceso operativo ordinario a datos tenant y auditar cualquier intervención excepcional.
+- **RF-285**: Cuando una entidad tenant se relacione con otra, el sistema debe validar en backend que ambas pertenezcan a la misma organización y no debe aceptar identificadores cruzados entre tenants.
+- **RF-286**: Cuando un reporte o dashboard calcule totales, el sistema debe excluir del neto las ventas, compras y gastos anulados y conservarlos visibles con su estado en consultas históricas.
+- **RF-287**: Cuando se filtre un reporte por período, el sistema debe interpretar los límites según la zona horaria de la organización y mantener resultados reproducibles con timestamps históricos.
+- **RF-288**: Cuando se exporte CSV, el sistema debe neutralizar valores capaces de ejecutar fórmulas sin alterar el contenido informativo del reporte.
+- **RF-289**: Cuando se ejecute el MVP, el sistema debe soportar las dos últimas versiones estables de Chrome, Edge, Firefox y Safari, con instalación PWA y modo offline donde el navegador ofrezca las capacidades requeridas.
+- **RF-290**: Cuando una sesión `CONFLICTED` sea conciliada por OWNER o ADMIN, el sistema debe finalizarla como `CLOSED_CONFLICT_RESOLVED` conservando separadas todas las sesiones y operaciones originales.
+- **RF-291**: Cuando una sesión alcance cualquier estado final, el sistema no debe permitir nuevas operaciones asociadas salvo la incorporación auditada de operaciones tardías legítimas prevista para `CLOSED_WITH_UNRECOVERED_DEVICE`.
+- **RF-292**: Si una caja tiene una sesión en `OPEN`, `CLOSING` o `CONFLICTED`, el sistema no debe permitir otra apertura normal online hasta que la situación activa alcance un estado final.
+- **RF-293**: Cuando una invitación permanezca sin aceptar durante siete días, el sistema debe marcarla `EXPIRED` e impedir el uso de su token.
+- **RF-294**: Cuando se reenvíe una invitación, el sistema debe invalidar el token anterior y no debe crear una membresía duplicada.
+- **RF-295**: Cuando se confirme una venta de total cero, el sistema debe exigir igualmente sesión válida, permisos, stock y generación de comprobante.
+- **RF-296**: Cuando se cree una incidencia offline de inventario, el sistema debe marcarla `OPEN` mientras el stock consolidado permanezca negativo y vincular ventas, dispositivos, stock anterior/posterior y faltante máximo.
+- **RF-297**: Cuando una compra o ajuste positivo lleve el stock afectado a cero o más, el sistema debe cambiar la incidencia correspondiente a `PENDING_REVIEW` y vincular los movimientos correctivos.
+- **RF-298**: Cuando una nueva venta offline vuelva a dejar negativo el mismo producto y sucursal antes de resolver la incidencia, el sistema debe agregarla a la incidencia y devolverla a `OPEN`.
+- **RF-299**: Cuando una incidencia esté `PENDING_REVIEW`, el sistema debe permitir a OWNER o ADMIN dentro de su alcance marcarla `RESOLVED` con nota obligatoria.
+- **RF-300**: Cuando el stock consolidado continúe negativo, el sistema no debe permitir marcar la incidencia como `RESOLVED`.
+- **RF-301**: Cuando EMPLOYEE corrija stock mediante un ajuste autorizado, el sistema no debe permitirle resolver administrativamente la incidencia offline.
+
+- **RF-302**: Cuando un dispositivo autorizado para operar offline pueda conservar operaciones desconocidas creadas bajo una configuración anterior, el sistema debe bloquear cambios de moneda base, type, trackInventory y baseUnit y la eliminación física de maestros referenciables por esas operaciones hasta demostrar mediante sincronización y checkpoint confirmados la ausencia de pendientes relevantes. La posibilidad de historial desconocido no equivale a historial confirmado.
+- **RF-303**: Cuando se use un checkpoint para permitir un cambio estructural o eliminación, el sistema debe demostrar que abarca todos los dispositivos y autorizaciones offline relevantes, que sus operaciones anteriores fueron confirmadas y que no pueden originarse nuevas operaciones con la configuración anterior durante el cambio. Un checkpoint antiguo, cola servidor vacía, expiración o revocación por sí solos no demuestran ausencia de pendientes.
+- **RF-304**: Cuando se declare irrecuperable un dispositivo que pueda conservar operaciones desconocidas, el sistema debe mantener las restricciones estructurales y de eliminación y conservar las versiones históricas necesarias; la declaración y el cierre excepcional no equivalen a sincronización ni liberan esas restricciones.
+- **RF-305**: Cuando OWNER solicite cambiar la moneda base, el sistema debe exigir simultáneamente ausencia de historial operativo conocido y ausencia demostrada de operaciones desconocidas en cualquier dispositivo offline que haya podido operar con la moneda actual. Si un dispositivo con posible historial desconocido fue declarado irrecuperable, la moneda queda bloqueada permanentemente para esa organización durante el MVP, incluso si el dispositivo reaparece.
+- **RF-306**: Cuando un producto u otro maestro esté expuesto a un dispositivo con posibles operaciones pendientes relevantes, el sistema debe permitir su desactivación conforme a los permisos y demás precondiciones del recurso, pero impedir su eliminación física y el cambio de semántica estructural hasta demostrar ausencia de tales pendientes. Si se confirma historial, se mantienen los bloqueos históricos aunque ya no haya pendientes.
+- **RF-307**: Cuando se reciban operaciones legítimas tardías, el sistema debe interpretarlas y aplicarlas con las referencias, moneda, unidad, tipo y control de inventario de la versión verificable bajo la cual fueron creadas, sin reinterpretarlas con la configuración actual ni reasignarlas a otros recursos.
+- **RF-308**: Cuando una restricción por posible historial offline impida un cambio administrativo, el sistema debe informar el motivo y distinguir historial confirmado, incertidumbre pendiente de sincronización y bloqueo permanente de moneda por dispositivo irrecuperable, sin exponer datos fuera del alcance del actor.
+
+- **RF-309**: Cuando se confirme localmente una operación offline, el sistema debe persistir atómicamente tanto el registro cifrado legible por su identidad como un sobre de transporte inmutable cifrado para el servidor y apto para entrega posterior sin desbloquear los datos; si no puede crear o guardar ambos, no debe confirmar la operación local.
+- **RF-310**: Cuando se construya un sobre de transporte offline, el sistema debe incluir el payload firmado y su contexto histórico dentro del cifrado para el servidor, excluir contraseñas, sesiones online y credenciales bearer reutilizables, y conservar identificador y versión de la clave necesarios para descifrarlo.
+- **RF-311**: Cuando el usuario cierre sesión, cambie la identidad activa o sea revocado, el sistema debe retirar el acceso local y la capacidad de crear operaciones para esa identidad, pero puede conservar una capacidad de dispositivo limitada a enviar automáticamente sobres opacos ya sellados y recibir sus ACK definitivos.
+- **RF-312**: Cuando otra identidad use el mismo dispositivo, el sistema no debe permitirle consultar, descifrar, modificar, cancelar ni conocer el contenido, actor, organización o recursos de sobres ajenos; puede activar una sincronización genérica que los entregue como datos opacos.
+- **RF-313**: Cuando se entregue un sobre sin una sesión online vigente del actor original, el servidor debe exigir prueba fresca de posesión de la clave no exportable del dispositivo y validar certificado de dispositivo, firma, grant histórico, secuencia, cadena, configuración y conocimiento de revocación dentro del tenant original.
+- **RF-314**: Cuando el canal de entrega funcione después de logout o revocación, el sistema debe limitarlo a sobres ya sellados y respuestas ACK mínimas autenticadas; no debe conceder lectura de datos tenant, recibos, catálogo, estado comercial detallado ni creación de nuevas operaciones.
+- **RF-315**: Cuando un sobre no obtenga un ACK definitivo verificable por un fallo recuperable, rotación de claves o respuesta incierta, el sistema debe conservarlo byte por byte y reintentar de forma idempotente. Las claves servidor necesarias no pueden retirarse mientras puedan existir sobres pendientes cifrados con ellas.
+- **RF-316**: Cuando se reciba un ACK definitivo verificable, el sistema debe eliminar o inutilizar atómicamente el sobre de transporte y los datos locales ya innecesarios. Un rechazo de seguridad definitivo debe impedir reintentos de negocio y conservar solo la evidencia local mínima que permita informar el estado sin revelar el payload a otra identidad.
+
+## Fuera de alcance
+
+- Auto-registro público y onboarding autoservicio de organizaciones.
+- Roles personalizados y permisos configurables.
+- Devoluciones parciales de ventas y devoluciones parciales a proveedores.
+- Pagos parciales, cuotas, cuentas corrientes, vencimientos y múltiples pagos de compras.
+- Ventas fiadas, pagos posteriores y cuentas corrientes de clientes.
+- Transferencias con despacho, recepción, estado en tránsito o diferencias de recepción.
+- Operación offline para funciones distintas de apertura de caja y POS; cierre definitivo y anulaciones offline.
+- Aplicaciones nativas para Windows, Android o iOS.
+- Autenticación con proveedores externos y MFA.
+- Facturación electrónica, ARCA, CAE, IVA, impuestos, integración bancaria, pagos online y devoluciones reales ante procesadores.
+- Contabilidad, reportes fiscales/contables, balance, valuación avanzada y rentabilidad contable.
+- Listas de precios, promociones automáticas, descuentos por ítem, precios por cliente y reglas comerciales avanzadas.
+- Generación, impresión y gestión avanzada de etiquetas o códigos de barras.
+- Conversión de unidades, presentaciones múltiples y equivalencias.
+- Multimoneda, conversiones y tipos de cambio.
+- Constructor de reportes, reportes programados y envío automático por correo.
+- Gestión automatizada de planes, suscripciones y cobro del SaaS a organizaciones.
+- IA, alta disponibilidad avanzada, replicación multi-región y recuperación instantánea.
+- Certificación formal WCAG o auditoría externa completa de accesibilidad.
+- Costo comercial vigente de catálogo, cálculo de margen y vistas de rentabilidad.
+- Gestión de clientes y padrón de datos personales durante la operación offline.
+- Edición de gastos confirmados, anulaciones parciales de gastos y reversión mediante importes negativos.
+- Migración de moneda base después de existir historial operativo.
+
+## Autocritica
+
+El POS offline, la conciliación de cajas conflictivas y la sincronización idempotente son los riesgos técnicos principales del MVP y requerirán diseño y pruebas especialmente rigurosos.
+La arquitectura concreta, proveedores de infraestructura, herramientas de observabilidad y mecanismo de respaldo deben decidirse en la fase de diseño respetando los requisitos establecidos.
