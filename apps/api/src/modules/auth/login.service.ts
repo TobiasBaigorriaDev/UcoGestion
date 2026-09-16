@@ -1,0 +1,72 @@
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+
+import type { Pool } from 'pg';
+
+import { normalizeEmail } from './global-user.repository.js';
+import { verifyPassword } from './password.js';
+
+type GlobalIdentityDatabase = Pick<Pool, 'query'>;
+
+interface LoginInput {
+  readonly email: string;
+  readonly password: string;
+}
+
+interface StoredUser {
+  readonly id: string;
+  readonly password_hash: string;
+  readonly password_hash_version: number;
+}
+
+export interface LoginResult {
+  readonly token: string;
+}
+
+const dummyPasswordHash = {
+  hash: '$argon2id$v=19$m=65536,p=1,t=3$NI20O7nx7YpkLnxkLcdSYQ$rB+21+RrxHfrPa+kbg6jJOMI6ukgUnsKY+xIvuIUJt0',
+  version: 1,
+};
+
+export class InvalidCredentialsError extends Error {
+  readonly code = 'INVALID_CREDENTIALS';
+
+  constructor() {
+    super('Correo o contraseña inválidos.');
+    this.name = 'InvalidCredentialsError';
+  }
+}
+
+export class LoginService {
+  constructor(private readonly database: GlobalIdentityDatabase) {}
+
+  async execute(input: LoginInput): Promise<LoginResult> {
+    const email = normalizeEmail(input.email);
+    const result = await this.database.query<StoredUser>(
+      'SELECT id, password_hash, password_hash_version FROM users WHERE email_normalized = $1',
+      [email],
+    );
+    const user = result.rows[0];
+    const passwordHash = user
+      ? { hash: user.password_hash, version: user.password_hash_version }
+      : dummyPasswordHash;
+
+    let passwordMatches = false;
+    try {
+      passwordMatches = await verifyPassword(input.password, passwordHash);
+    } catch {
+      // A malformed stored hash must not make account existence observable.
+    }
+    if (!user || !passwordMatches) {
+      throw new InvalidCredentialsError();
+    }
+
+    const token = randomBytes(32).toString('base64url');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    await this.database.query(
+      `INSERT INTO auth_sessions (id, user_id, token_hash, idle_expires_at, absolute_expires_at)
+       VALUES ($1, $2, $3, now() + interval '12 hours', now() + interval '7 days')`,
+      [randomUUID(), user.id, tokenHash],
+    );
+    return { token };
+  }
+}

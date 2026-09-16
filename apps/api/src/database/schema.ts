@@ -17,6 +17,20 @@ export const users = pgTable(
   (table) => [unique('users_email_normalized_key').on(table.emailNormalized)],
 );
 
+export const authSessions = pgTable(
+  'auth_sessions',
+  {
+    id: uuid().primaryKey(),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    tokenHash: text('token_hash').notNull(),
+    idleExpiresAt: timestamp('idle_expires_at', { withTimezone: true }).notNull(),
+    absoluteExpiresAt: timestamp('absolute_expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique('auth_sessions_token_hash_key').on(table.tokenHash)],
+);
+
 export const organizations = pgTable('organizations', {
   id: uuid().primaryKey(),
   baseCurrency: text('base_currency').notNull(),
