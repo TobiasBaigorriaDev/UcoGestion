@@ -68,3 +68,26 @@ export const auditEvents = pgTable('audit_events', {
   contextData: jsonb('context_data').notNull().default({}),
   occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const outboxJobs = pgTable(
+  'outbox_jobs',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    jobKey: text('job_key').notNull(),
+    jobType: text('job_type').notNull(),
+    payload: jsonb().notNull(),
+    actorUserId: uuid('actor_user_id').notNull(),
+    branchId: uuid('branch_id'),
+    authorizationClass: text('authorization_class').notNull(),
+    status: text().notNull().default('PENDING'),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    availableAt: timestamp('available_at', { withTimezone: true }).notNull().defaultNow(),
+    leaseId: uuid('lease_id'),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+    lastErrorCode: text('last_error_code'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => [unique('outbox_jobs_organization_job_key_key').on(table.organizationId, table.jobKey)],
+);

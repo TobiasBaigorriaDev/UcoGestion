@@ -8,6 +8,7 @@
     { "idx": 3, "version": "7", "when": 3, "tag": "0003_database_roles", "breakpoints": true },
     { "idx": 4, "version": "7", "when": 4, "tag": "0004_tenant_rls", "breakpoints": true },
     { "idx": 5, "version": "7", "when": 5, "tag": "0005_idempotency_records", "breakpoints": true },
-    { "idx": 6, "version": "7", "when": 6, "tag": "0006_audit_events", "breakpoints": true }
+    { "idx": 6, "version": "7", "when": 6, "tag": "0006_audit_events", "breakpoints": true },
+    { "idx": 7, "version": "7", "when": 7, "tag": "0007_outbox_jobs", "breakpoints": true }
   ]
 }
