@@ -22,7 +22,7 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T010: Implementar validadores monetarios de magnitud, escala y rangos mediante property tests [RF-246, RF-247, RF-248, RF-252, RF-253]
 - [x] T011: Implementar Quantity para UNIT y unidades fraccionables mediante property tests [RF-41, RF-42, RF-244, RF-245]
 - [x] T012: Implementar reglas puras de pagos, total cero y reversiones con signos positivos [RF-249, RF-250, RF-251]
-- [ ] T013: Definir el contrato application/problem+json y verificar serialización, fieldErrors y traceId [RF-133, RF-151]
+- [x] T013: Definir el contrato application/problem+json y verificar serialización, fieldErrors y traceId [RF-133, RF-151]
 - [ ] T014: Configurar Drizzle, migraciones versionadas y prueba desde base vacía y versión anterior [RF-132, RF-151]
 - [ ] T015: Crear las tablas tenant base con organization_id, UUID, timestamptz y FKs compuestas [RF-02, RF-04, RF-285]
 - [ ] T016: Crear los roles DB separados uco_app/plataforma y probar ausencia de BYPASSRLS y ownership tenant [RF-02, RF-284]
