@@ -24,7 +24,7 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T012: Implementar reglas puras de pagos, total cero y reversiones con signos positivos [RF-249, RF-250, RF-251]
 - [x] T013: Definir el contrato application/problem+json y verificar serialización, fieldErrors y traceId [RF-133, RF-151]
 - [x] T014: Configurar Drizzle, migraciones versionadas y prueba desde base vacía y versión anterior [RF-132, RF-151]
-- [ ] T015: Crear las tablas tenant base con organization_id, UUID, timestamptz y FKs compuestas [RF-02, RF-04, RF-285]
+- [x] T015: Crear las tablas tenant base con organization_id, UUID, timestamptz y FKs compuestas [RF-02, RF-04, RF-285]
 - [ ] T016: Crear los roles DB separados uco_app/plataforma y probar ausencia de BYPASSRLS y ownership tenant [RF-02, RF-284]
 - [ ] T017: Implementar TenantTransaction con BEGIN, SET LOCAL y liberación segura del PoolClient [RF-04, RF-132]
 - [ ] T018: Aplicar RLS default-deny a las tablas base y probar acceso sin contexto y cross-tenant [RF-02, RF-04, RF-285]
