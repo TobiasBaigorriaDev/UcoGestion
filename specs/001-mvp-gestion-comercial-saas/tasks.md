@@ -45,7 +45,7 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T029: Crear users globales con email normalizado único y password hash versionado Argon2id [RF-10, RF-12]
 - [x] T030: Implementar login no enumerable con sesión opaca y hash SHA-256 del token [RF-10, RF-12]
 - [x] T031: Emitir cookie __Host-uco_session con atributos seguros y probar que nunca expone el token persistido [RF-12, RF-151]
-- [ ] T032: Aplicar expiración idle/absoluta y rehash transparente en autenticación [RF-10, RF-12]
+- [x] T032: Aplicar expiración idle/absoluta y rehash transparente en autenticación [RF-10, RF-12]
 - [ ] T033: Revalidar usuario y membresía en cada request protegido e invalidar acceso revocado [RF-04, RF-19]
 - [ ] T034: Implementar logout y revocación de sesiones sin eliminar historial [RF-19]
 - [ ] T035: Implementar CSRF synchronizer, Origin, Sec-Fetch-Site y JSON estricto para mutaciones [RF-151]

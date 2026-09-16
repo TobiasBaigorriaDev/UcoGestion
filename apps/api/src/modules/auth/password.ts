@@ -1,4 +1,4 @@
-import { argon2id, hash, verify } from 'argon2';
+import { argon2id, hash, needsRehash, verify } from 'argon2';
 
 export const PASSWORD_HASH_VERSION = 1;
 
@@ -29,4 +29,8 @@ export async function verifyPassword(password: string, stored: PasswordHash): Pr
   }
 
   return verify(stored.hash, password);
+}
+
+export function needsPasswordRehash(stored: PasswordHash): boolean {
+  return stored.version !== PASSWORD_HASH_VERSION || needsRehash(stored.hash, passwordHashParameters);
 }

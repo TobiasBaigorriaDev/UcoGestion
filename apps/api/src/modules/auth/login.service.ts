@@ -3,9 +3,9 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
 
 import { normalizeEmail } from './global-user.repository.js';
-import { verifyPassword } from './password.js';
+import { hashPassword, needsPasswordRehash, verifyPassword } from './password.js';
 
-type GlobalIdentityDatabase = Pick<Pool, 'query'>;
+type GlobalIdentityDatabase = Pick<Pool, 'connect' | 'query'>;
 
 interface LoginInput {
   readonly email: string;
@@ -60,13 +60,42 @@ export class LoginService {
       throw new InvalidCredentialsError();
     }
 
+    const replacementHash = needsPasswordRehash(passwordHash)
+      ? await hashPassword(input.password)
+      : null;
     const token = randomBytes(32).toString('base64url');
     const tokenHash = createHash('sha256').update(token).digest('hex');
-    await this.database.query(
-      `INSERT INTO auth_sessions (id, user_id, token_hash, idle_expires_at, absolute_expires_at)
-       VALUES ($1, $2, $3, now() + interval '12 hours', now() + interval '7 days')`,
-      [randomUUID(), user.id, tokenHash],
-    );
+    const client = await this.database.connect();
+    try {
+      await client.query('BEGIN');
+      const locked = await client.query<StoredUser>(
+        'SELECT id, password_hash, password_hash_version FROM users WHERE id = $1 FOR UPDATE',
+        [user.id],
+      );
+      if (
+        locked.rows[0]?.password_hash !== user.password_hash
+        || locked.rows[0]?.password_hash_version !== user.password_hash_version
+      ) {
+        throw new InvalidCredentialsError();
+      }
+      if (replacementHash) {
+        await client.query(
+          'UPDATE users SET password_hash = $1, password_hash_version = $2 WHERE id = $3',
+          [replacementHash.hash, replacementHash.version, user.id],
+        );
+      }
+      await client.query(
+        `INSERT INTO auth_sessions (id, user_id, token_hash, idle_expires_at, absolute_expires_at)
+         VALUES ($1, $2, $3, now() + interval '12 hours', now() + interval '7 days')`,
+        [randomUUID(), user.id, tokenHash],
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
     return { token };
   }
 }

@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 
 import { AuthController } from './auth.controller.js';
 import { LoginService } from './login.service.js';
+import { SessionAuthenticationService } from './session-authentication.service.js';
 
 @Injectable()
 class GlobalAuthDatabase implements OnModuleDestroy {
@@ -22,6 +23,12 @@ class GlobalAuthDatabase implements OnModuleDestroy {
       useFactory: (database: GlobalAuthDatabase) => new LoginService(database.pool),
       inject: [GlobalAuthDatabase],
     },
+    {
+      provide: SessionAuthenticationService,
+      useFactory: (database: GlobalAuthDatabase) => new SessionAuthenticationService(database.pool),
+      inject: [GlobalAuthDatabase],
+    },
   ],
+  exports: [SessionAuthenticationService],
 })
 export class AuthModule {}

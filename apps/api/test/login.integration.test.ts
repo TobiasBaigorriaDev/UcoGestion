@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { argon2id, hash } from 'argon2';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -65,5 +66,33 @@ describe('global login', () => {
     }
     expect({ code: missing.code, message: missing.message }).toEqual({ code: wrong.code, message: wrong.message });
     expect(after.rows[0]?.count).toBe(before.rows[0]?.count);
+  });
+
+  it('transparently upgrades an older Argon2id cost after valid password authentication', async () => {
+    const user = await createGlobalUser(pool, {
+      email: 'rehash@example.com',
+      password: 'upgrade-password',
+    });
+    const oldHash = await hash('upgrade-password', {
+      type: argon2id,
+      version: 0x13,
+      memoryCost: 8_192,
+      timeCost: 2,
+      parallelism: 1,
+    });
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [oldHash, user.id]);
+
+    await expect(login.execute({ email: user.email, password: 'wrong-password' })).rejects.toBeInstanceOf(InvalidCredentialsError);
+    const before = await pool.query<{ password_hash: string }>('SELECT password_hash FROM users WHERE id = $1', [user.id]);
+    expect(before.rows[0]?.password_hash).toBe(oldHash);
+
+    await login.execute({ email: user.email, password: 'upgrade-password' });
+    const after = await pool.query<{ password_hash: string; password_hash_version: number }>(
+      'SELECT password_hash, password_hash_version FROM users WHERE id = $1',
+      [user.id],
+    );
+    expect(after.rows[0]?.password_hash).toMatch(/^\$argon2id\$v=19\$m=65536,p=1,t=3\$/);
+    expect(after.rows[0]?.password_hash).not.toBe(oldHash);
+    expect(after.rows[0]?.password_hash_version).toBe(1);
   });
 });
