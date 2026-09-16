@@ -19,9 +19,13 @@
   },
   "devDependencies": {
     "@nestjs/testing": "^12.0.3",
+    "@testcontainers/postgresql": "12.1.0",
+    "@types/pg": "8.23.1",
     "@types/supertest": "^7.2.1",
     "@uconext/config": "workspace:*",
+    "pg": "8.23.0",
     "supertest": "^7.2.2",
+    "testcontainers": "12.1.0",
     "vitest": "^4.0.18"
   }
 }

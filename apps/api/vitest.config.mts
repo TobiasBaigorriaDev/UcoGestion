@@ -1,3 +1,13 @@
+import { defineConfig } from 'vitest/config';
 import { createVitestConfig } from '../../vitest.config.mts';
 
-export default createVitestConfig(['test/**/*.test.ts']);
+const sharedConfig = createVitestConfig(['test/**/*.test.ts']);
+
+export default defineConfig({
+  ...sharedConfig,
+  test: {
+    ...sharedConfig.test,
+    hookTimeout: 120_000,
+    testTimeout: 120_000,
+  },
+});
