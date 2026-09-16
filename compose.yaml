@@ -1,6 +1,33 @@
 name: uconext
 
 services:
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_PASSWORD: uconext_development
+      MINIO_ROOT_USER: uconext_development
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio-data:/data
+
+  mailpit:
+    image: axllent/mailpit:v1.27.7
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    command: ['--config=/etc/otelcol-contrib/config.yaml']
+    ports:
+      - '4317:4317'
+      - '4318:4318'
+    volumes:
+      - ./observability/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -19,4 +46,5 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
 volumes:
+  minio-data:
   postgres-data:

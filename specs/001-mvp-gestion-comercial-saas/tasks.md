@@ -16,7 +16,7 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T004: Crear el esqueleto Next.js App Router con una prueba de render responsive del shell mínimo [RF-152]
 - [x] T005: Configurar Testcontainers PostgreSQL y demostrar rollback real en una prueba de integración [RF-132]
 - [x] T006: Configurar Compose de desarrollo para PostgreSQL y verificar readiness desde el API [RF-135]
-- [ ] T007: Agregar MinIO, Mailpit y OTel Collector al Compose con checks de configuración reproducibles [RF-134, RF-135]
+- [x] T007: Agregar MinIO, Mailpit y OTel Collector al Compose con checks de configuración reproducibles [RF-134, RF-135]
 - [ ] T008: Definir contratos compartidos de UUID, timestamp UTC y decimal string con pruebas de validación [RF-43, RF-151, RF-271]
 - [ ] T009: Implementar Money canónico con decimal.js y redondeo HALF_UP mediante property tests [RF-43, RF-44]
 - [ ] T010: Implementar validadores monetarios de magnitud, escala y rangos mediante property tests [RF-246, RF-247, RF-248, RF-252, RF-253]
