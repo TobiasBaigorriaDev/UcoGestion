@@ -1,10 +1,14 @@
-import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, Header, ServiceUnavailableException } from '@nestjs/common';
 
+import { MetricsService } from './core/observability/metrics.service.js';
 import { DatabaseReadinessService } from './database-readiness.service.js';
 
 @Controller()
 export class AppController {
-  constructor(private readonly databaseReadiness: DatabaseReadinessService) {}
+  constructor(
+    private readonly databaseReadiness: DatabaseReadinessService,
+    private readonly metrics: MetricsService,
+  ) {}
 
   @Get()
   getDescriptor() {
@@ -12,6 +16,11 @@ export class AppController {
       service: 'uconext-api',
       version: 'v1',
     };
+  }
+
+  @Get('health/live')
+  getLiveness() {
+    return { status: 'live' };
   }
 
   @Get('health/ready')
@@ -24,5 +33,11 @@ export class AppController {
       database: 'ready',
       status: 'ready',
     };
+  }
+
+  @Get('metrics')
+  @Header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
+  async getMetrics(): Promise<string> {
+    return this.metrics.render();
   }
 }
