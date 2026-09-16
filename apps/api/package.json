@@ -1,0 +1,27 @@
+{
+  "name": "@uconext/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint --config ../../eslint.config.mjs src test",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "test": "vitest run --config vitest.config.mts",
+    "build": "tsc --project tsconfig.build.json",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.0.3",
+    "@nestjs/core": "^12.0.3",
+    "@nestjs/platform-express": "^12.0.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^12.0.3",
+    "@types/supertest": "^7.2.1",
+    "@uconext/config": "workspace:*",
+    "supertest": "^7.2.2",
+    "vitest": "^4.0.18"
+  }
+}

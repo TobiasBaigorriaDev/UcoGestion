@@ -1,0 +1,23 @@
+{
+  "name": "uconext",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24.15.0",
+    "pnpm": ">=11.19.0"
+  },
+  "scripts": {
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test && node --test test/workspace.smoke.test.mjs",
+    "build": "turbo run build"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "eslint": "^10.10.0",
+    "turbo": "^2.6.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

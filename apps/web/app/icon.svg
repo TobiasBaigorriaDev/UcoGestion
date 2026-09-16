@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="UcoNext">
+  <rect width="64" height="64" rx="16" fill="#166534"/>
+  <path d="M17 17h9v20c0 5 2 8 6 8s6-3 6-8V17h9v20c0 10-6 16-15 16S17 47 17 37V17Z" fill="#fff"/>
+</svg>

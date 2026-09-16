@@ -10,10 +10,10 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 
 ## 1. Fundación
 
-- [ ] T001: Inicializar pnpm workspaces, Turborepo y scripts raíz con una prueba smoke del workspace [RF-151]
-- [ ] T002: Crear configuración TypeScript estricta, ESLint y Vitest compartida y verificarla sobre un paquete mínimo [RF-151]
-- [ ] T003: Crear el esqueleto NestJS con `/api/v1` y una prueba Supertest de arranque [RF-135, RF-151]
-- [ ] T004: Crear el esqueleto Next.js App Router con una prueba de render responsive del shell mínimo [RF-152]
+- [x] T001: Inicializar pnpm workspaces, Turborepo y scripts raíz con una prueba smoke del workspace [RF-151]
+- [x] T002: Crear configuración TypeScript estricta, ESLint y Vitest compartida y verificarla sobre un paquete mínimo [RF-151]
+- [x] T003: Crear el esqueleto NestJS con `/api/v1` y una prueba Supertest de arranque [RF-135, RF-151]
+- [x] T004: Crear el esqueleto Next.js App Router con una prueba de render responsive del shell mínimo [RF-152]
 - [ ] T005: Configurar Testcontainers PostgreSQL y demostrar rollback real en una prueba de integración [RF-132]
 - [ ] T006: Configurar Compose de desarrollo para PostgreSQL y verificar readiness desde el API [RF-135]
 - [ ] T007: Agregar MinIO, Mailpit y OTel Collector al Compose con checks de configuración reproducibles [RF-134, RF-135]

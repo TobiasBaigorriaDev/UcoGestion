@@ -1,0 +1,96 @@
+.page {
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.header,
+.shell {
+  width: min(100%, 80rem);
+  margin-inline: auto;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-block: 0.75rem 2.5rem;
+}
+
+.brand {
+  color: #166534;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-decoration: none;
+}
+
+.navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+.navigation a {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
+
+.navigation a:hover {
+  color: #166534;
+}
+
+.shell {
+  display: grid;
+  align-items: center;
+  min-height: calc(100vh - 9rem);
+}
+
+.introduction {
+  max-width: 44rem;
+  padding: clamp(1.5rem, 7vw, 4rem);
+  border: 1px solid rgb(255 255 255 / 50%);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 78%);
+  box-shadow: 0 8px 32px 0 rgb(15 23 42 / 5%);
+}
+
+.introduction h1 {
+  max-width: 18ch;
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.introduction p {
+  max-width: 60ch;
+  margin: 1.25rem 0 0;
+  color: #475569;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+@media (min-width: 48rem) {
+  .page {
+    padding: 2rem;
+  }
+
+  .header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-block-end: 3.5rem;
+  }
+
+  .navigation {
+    gap: 1.5rem;
+  }
+}

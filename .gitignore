@@ -1,0 +1,10 @@
+node_modules/
+.turbo/
+.playwright-cli/
+output/playwright/
+coverage/
+dist/
+.next/
+.env
+.env.local
+!.env.example

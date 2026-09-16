@@ -1,0 +1,44 @@
+:root {
+  color-scheme: light;
+  background: #f8fafc;
+  color: #0f172a;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: #f8fafc;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: #22c55e;
+  color: #052e16;
+}
+
+:focus-visible {
+  outline: 3px solid #15803d;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
