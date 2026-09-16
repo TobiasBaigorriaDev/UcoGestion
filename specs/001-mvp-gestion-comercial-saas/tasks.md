@@ -35,7 +35,7 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T023: Implementar dispatcher global de outbox con función segura de privilegio mínimo y ejecutar cada job tenant en una TenantTransaction reautorizada; probar SKIP LOCKED, lease, backoff, dead-letter y job_key [RF-132, RF-140, RF-151]
 - [x] T024: Configurar Pino JSON con request/trace IDs y pruebas de redacción de secretos [RF-134, RF-141]
 - [x] T025: Exponer health live/ready, métricas base y trazas OTLP con pruebas de disponibilidad [RF-135, RF-136]
-- [ ] T026: Agregar pipe Zod, paginación por cursor, límites, filtros allowlist y snapshot OpenAPI [RF-133, RF-151]
+- [x] T026: Agregar pipe Zod, paginación por cursor, límites, filtros allowlist y snapshot OpenAPI [RF-133, RF-151]
 - [ ] T027: Implementar If-Match/version para CRUD y respuesta Problem Details de conflicto [RF-133, RF-151]
 - [ ] T028: Configurar CSP con nonce, cabeceras defensivas y HTTPS obligatorio en web/API [RF-151, RF-154]
 - [ ] T234: Configurar CI desde fundación: lint/typecheck/tests/migraciones/build y E2E existentes; incorporar cada suite al crearse, sin skips ni placeholders verdes. Programar ejecución ampliada offline al disponer del flujo [RF-132, RF-135, RF-151, RF-289] (Depende de T001–T028)

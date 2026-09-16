@@ -1,0 +1,76 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
+{
+  "components": {
+    "schemas": {},
+  },
+  "info": {
+    "contact": {},
+    "description": "Contrato HTTP versionado del MVP UcoNext.",
+    "title": "UcoNext API",
+    "version": "v1",
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1": {
+      "get": {
+        "operationId": "AppController_getDescriptor",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "App",
+        ],
+      },
+    },
+    "/api/v1/health/live": {
+      "get": {
+        "operationId": "AppController_getLiveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "App",
+        ],
+      },
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "operationId": "AppController_getReadiness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "App",
+        ],
+      },
+    },
+    "/api/v1/metrics": {
+      "get": {
+        "operationId": "AppController_getMetrics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "App",
+        ],
+      },
+    },
+  },
+  "servers": [],
+  "tags": [],
+}
+`;
