@@ -28,7 +28,7 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T016: Crear los roles DB separados uco_app/plataforma y probar ausencia de BYPASSRLS y ownership tenant [RF-02, RF-284]
 - [x] T017: Implementar TenantTransaction con BEGIN, SET LOCAL y liberación segura del PoolClient [RF-04, RF-132]
 - [x] T018: Aplicar RLS default-deny a las tablas base y probar acceso sin contexto y cross-tenant [RF-02, RF-04, RF-285]
-- [ ] T019: Implementar hash canónico e idempotency record ligado a actor, branch y clase de autorización; autorizar replay antes de devolver respuesta y detectar conflicto de payload [RF-02, RF-04, RF-131, RF-275, RF-276]
+- [x] T019: Implementar hash canónico e idempotency record ligado a actor, branch y clase de autorización; autorizar replay antes de devolver respuesta y detectar conflicto de payload [RF-02, RF-04, RF-131, RF-275, RF-276]
 - [ ] T020: Probar idempotencia concurrente con dos conexiones y una única confirmación, más negativos de replay por otro actor, branch, tenant o permiso revocado [RF-02, RF-04, RF-131, RF-132, RF-276, RF-285]
 - [ ] T021: Crear audit_events append-only con allowlist y trigger defensivo de UPDATE/DELETE [RF-140, RF-141]
 - [ ] T022: Hacer obligatoria la auditoría dentro de TenantTransaction y probar rollback conjunto [RF-140, RF-283]
