@@ -29,6 +29,19 @@ describe('TenantTransaction', () => {
           requestId: 'request-1',
           userId: '00000000-0000-4000-8000-000000000002',
         },
+        {
+          action: 'probe.failed',
+          after: {},
+          afterAllowlist: [],
+          before: {},
+          beforeAllowlist: [],
+          branchId: null,
+          context: {},
+          contextAllowlist: [],
+          entityId: '00000000-0000-4000-8000-000000000003',
+          entityType: 'probe',
+          operationId: 'operation-1',
+        },
         async (client) => {
           const context = await client.query<{ organization_id: string }>(
             "SELECT current_setting('app.organization_id') AS organization_id",

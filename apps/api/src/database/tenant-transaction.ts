@@ -1,16 +1,21 @@
 import type { Pool, PoolClient } from 'pg';
 
+import { AuditEventWriter, type AuditEventInput } from '../core/audit/audit-event-writer.js';
+
 export interface TenantTransactionContext {
   readonly organizationId: string;
   readonly requestId: string;
   readonly userId: string;
 }
 
+export type TenantAuditEvent = Omit<AuditEventInput, 'actorUserId' | 'organizationId' | 'requestId'>;
+
 export class TenantTransaction {
   constructor(private readonly pool: Pool) {}
 
   async run<TResult>(
     context: TenantTransactionContext,
+    auditEvent: TenantAuditEvent,
     operation: (client: PoolClient) => Promise<TResult>,
   ): Promise<TResult> {
     const client = await this.pool.connect();
@@ -22,6 +27,12 @@ export class TenantTransaction {
       await client.query("SELECT set_config('app.request_id', $1, true)", [context.requestId]);
 
       const result = await operation(client);
+      await new AuditEventWriter(client).append({
+        ...auditEvent,
+        actorUserId: context.userId,
+        organizationId: context.organizationId,
+        requestId: context.requestId,
+      });
       await client.query('COMMIT');
       return result;
     } catch (error) {

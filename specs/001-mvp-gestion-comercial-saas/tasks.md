@@ -31,7 +31,7 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T019: Implementar hash canónico e idempotency record ligado a actor, branch y clase de autorización; autorizar replay antes de devolver respuesta y detectar conflicto de payload [RF-02, RF-04, RF-131, RF-275, RF-276]
 - [x] T020: Probar idempotencia concurrente con dos conexiones y una única confirmación, más negativos de replay por otro actor, branch, tenant o permiso revocado [RF-02, RF-04, RF-131, RF-132, RF-276, RF-285]
 - [x] T021: Crear audit_events append-only con allowlist y trigger defensivo de UPDATE/DELETE [RF-140, RF-141]
-- [ ] T022: Hacer obligatoria la auditoría dentro de TenantTransaction y probar rollback conjunto [RF-140, RF-283]
+- [x] T022: Hacer obligatoria la auditoría dentro de TenantTransaction y probar rollback conjunto [RF-140, RF-283]
 - [ ] T023: Implementar dispatcher global de outbox con función segura de privilegio mínimo y ejecutar cada job tenant en una TenantTransaction reautorizada; probar SKIP LOCKED, lease, backoff, dead-letter y job_key [RF-132, RF-140, RF-151]
 - [ ] T024: Configurar Pino JSON con request/trace IDs y pruebas de redacción de secretos [RF-134, RF-141]
 - [ ] T025: Exponer health live/ready, métricas base y trazas OTLP con pruebas de disponibilidad [RF-135, RF-136]
