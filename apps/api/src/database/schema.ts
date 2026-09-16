@@ -5,6 +5,18 @@ export const schemaMigrationsProbe = pgTable('schema_migrations_probe', {
   version: integer().notNull().default(1),
 });
 
+export const users = pgTable(
+  'users',
+  {
+    id: uuid().primaryKey(),
+    emailNormalized: text('email_normalized').notNull(),
+    passwordHash: text('password_hash').notNull(),
+    passwordHashVersion: integer('password_hash_version').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique('users_email_normalized_key').on(table.emailNormalized)],
+);
+
 export const organizations = pgTable('organizations', {
   id: uuid().primaryKey(),
   baseCurrency: text('base_currency').notNull(),

@@ -44,4 +44,16 @@ test('declares a pnpm and Turborepo workspace with the required root scripts', (
   ]) {
     assert.ok(existsSync(resolve(repositoryRoot, workspacePackage)));
   }
+
+  const ciWorkflowPath = resolve(repositoryRoot, '.github/workflows/ci.yaml');
+  assert.ok(existsSync(ciWorkflowPath), 'missing .github/workflows/ci.yaml');
+
+  const ciWorkflowContent = readFileSync(ciWorkflowPath, 'utf8');
+  assert.match(ciWorkflowContent, /pnpm install --frozen-lockfile/);
+  assert.match(ciWorkflowContent, /pnpm run lint/);
+  assert.match(ciWorkflowContent, /pnpm run typecheck/);
+  assert.match(ciWorkflowContent, /pnpm run test/);
+  assert.match(ciWorkflowContent, /pnpm run build/);
+  assert.match(ciWorkflowContent, /actions\/checkout@v4/);
+  assert.match(ciWorkflowContent, /pnpm\/action-setup@v4/);
 });

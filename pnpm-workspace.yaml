@@ -3,6 +3,7 @@ packages:
   - 'packages/*'
 allowBuilds:
   '@scarf/scarf': false
+  argon2: true
   cpu-features: false
   esbuild: false
   protobufjs: false
