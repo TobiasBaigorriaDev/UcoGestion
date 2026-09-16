@@ -147,3 +147,37 @@ export const validateFixedDiscount = (
     ? discount.value
     : undefined;
 };
+
+export const shouldCreatePaymentLine = (total: unknown): boolean => {
+  const validatedTotal = parseMoneyInput(total);
+  return validatedTotal !== undefined && validatedTotal.decimal.greaterThan(0);
+};
+
+export const arePaymentsValidForSale = (
+  total: unknown,
+  payments: readonly unknown[],
+): boolean => {
+  const validatedTotal = parseMoneyInput(total);
+  if (validatedTotal === undefined || validatedTotal.decimal.lessThan(0)) {
+    return false;
+  }
+
+  if (validatedTotal.decimal.isZero()) {
+    return payments.length === 0;
+  }
+
+  const paymentAmounts: Decimal[] = [];
+  for (const payment of payments) {
+    const validatedPayment = parseMoneyInput(payment);
+    if (validatedPayment === undefined || !validatedPayment.decimal.greaterThan(0)) {
+      return false;
+    }
+
+    paymentAmounts.push(validatedPayment.decimal);
+  }
+
+  return Decimal.sum(...paymentAmounts).equals(validatedTotal.decimal);
+};
+
+export const isPositiveReversalAmount = (amount: unknown): boolean =>
+  validatePositiveMoney(amount) !== undefined;
