@@ -68,6 +68,30 @@ export class Money {
   }
 }
 
+export type QuantityUnit = 'FRACTIONAL' | 'UNIT';
+
+export class Quantity {
+  private constructor(private readonly value: Decimal) {}
+
+  static from(value: unknown, unit: QuantityUnit): Quantity {
+    const decimal = new Decimal(parseCanonicalDecimal(value));
+
+    if (
+      !decimal.greaterThan(0) ||
+      decimal.decimalPlaces() > 3 ||
+      (unit === 'UNIT' && !decimal.isInteger())
+    ) {
+      throw new RangeError('Quantity is invalid for its unit');
+    }
+
+    return new Quantity(decimal);
+  }
+
+  toString(): string {
+    return this.value.toFixed(this.value.decimalPlaces());
+  }
+}
+
 const parseMoneyInput = (value: unknown): { decimal: Decimal; value: CanonicalDecimal } | undefined => {
   try {
     const canonical = parseCanonicalDecimal(value);
