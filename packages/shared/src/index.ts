@@ -67,3 +67,59 @@ export class Money {
     return this.value.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2);
   }
 }
+
+const parseMoneyInput = (value: unknown): { decimal: Decimal; value: CanonicalDecimal } | undefined => {
+  try {
+    const canonical = parseCanonicalDecimal(value);
+    const decimal = new Decimal(canonical);
+
+    return decimal.decimalPlaces() <= 2 ? { decimal, value: canonical } : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+export const validateNonNegativeMoney = (
+  value: unknown,
+): CanonicalDecimal | undefined => {
+  const candidate = parseMoneyInput(value);
+  return candidate !== undefined && candidate.decimal.greaterThanOrEqualTo(0)
+    ? candidate.value
+    : undefined;
+};
+
+export const validatePositiveMoney = (value: unknown): CanonicalDecimal | undefined => {
+  const candidate = parseMoneyInput(value);
+  return candidate !== undefined && candidate.decimal.greaterThan(0)
+    ? candidate.value
+    : undefined;
+};
+
+export const validatePercentageDiscount = (
+  value: unknown,
+): CanonicalDecimal | undefined => {
+  try {
+    const canonical = parseCanonicalDecimal(value);
+    const decimal = new Decimal(canonical);
+    return decimal.greaterThanOrEqualTo(0) && decimal.lessThanOrEqualTo(100)
+      ? canonical
+      : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+export const validateFixedDiscount = (
+  value: unknown,
+  subtotal: unknown,
+): CanonicalDecimal | undefined => {
+  const discount = parseMoneyInput(value);
+  const validatedSubtotal = parseMoneyInput(subtotal);
+
+  return discount !== undefined &&
+    validatedSubtotal !== undefined &&
+    discount.decimal.greaterThanOrEqualTo(0) &&
+    discount.decimal.lessThanOrEqualTo(validatedSubtotal.decimal)
+    ? discount.value
+    : undefined;
+};
