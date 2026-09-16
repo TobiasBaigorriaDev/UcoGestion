@@ -18,7 +18,7 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T006: Configurar Compose de desarrollo para PostgreSQL y verificar readiness desde el API [RF-135]
 - [x] T007: Agregar MinIO, Mailpit y OTel Collector al Compose con checks de configuración reproducibles [RF-134, RF-135]
 - [x] T008: Definir contratos compartidos de UUID, timestamp UTC y decimal string con pruebas de validación [RF-43, RF-151, RF-271]
-- [ ] T009: Implementar Money canónico con decimal.js y redondeo HALF_UP mediante property tests [RF-43, RF-44]
+- [x] T009: Implementar Money canónico con decimal.js y redondeo HALF_UP mediante property tests [RF-43, RF-44]
 - [ ] T010: Implementar validadores monetarios de magnitud, escala y rangos mediante property tests [RF-246, RF-247, RF-248, RF-252, RF-253]
 - [ ] T011: Implementar Quantity para UNIT y unidades fraccionables mediante property tests [RF-41, RF-42, RF-244, RF-245]
 - [ ] T012: Implementar reglas puras de pagos, total cero y reversiones con signos positivos [RF-249, RF-250, RF-251]

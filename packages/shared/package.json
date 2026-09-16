@@ -17,6 +17,10 @@
   },
   "devDependencies": {
     "@uconext/config": "workspace:*",
+    "fast-check": "4.5.3",
     "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "decimal.js": "10.6.0"
   }
 }
