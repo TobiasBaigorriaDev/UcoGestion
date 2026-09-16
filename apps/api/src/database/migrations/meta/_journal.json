@@ -4,6 +4,7 @@
   "entries": [
     { "idx": 0, "version": "7", "when": 0, "tag": "0000_bootstrap", "breakpoints": true },
     { "idx": 1, "version": "7", "when": 1, "tag": "0001_add_probe_version", "breakpoints": true },
-    { "idx": 2, "version": "7", "when": 2, "tag": "0002_tenant_base_tables", "breakpoints": true }
+    { "idx": 2, "version": "7", "when": 2, "tag": "0002_tenant_base_tables", "breakpoints": true },
+    { "idx": 3, "version": "7", "when": 3, "tag": "0003_database_roles", "breakpoints": true }
   ]
 }
