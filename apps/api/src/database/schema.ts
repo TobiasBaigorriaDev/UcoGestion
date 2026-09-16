@@ -51,3 +51,20 @@ export const idempotencyRecords = pgTable(
   },
   (table) => [unique('idempotency_records_organization_scope_key_key').on(table.organizationId, table.scope, table.key)],
 );
+
+export const auditEvents = pgTable('audit_events', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+  actorUserId: uuid('actor_user_id').notNull(),
+  branchId: uuid('branch_id'),
+  deviceId: uuid('device_id'),
+  requestId: text('request_id').notNull(),
+  operationId: text('operation_id').notNull(),
+  entityType: text('entity_type').notNull(),
+  entityId: uuid('entity_id').notNull(),
+  action: text().notNull(),
+  beforeData: jsonb('before_data').notNull().default({}),
+  afterData: jsonb('after_data').notNull().default({}),
+  contextData: jsonb('context_data').notNull().default({}),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+});
