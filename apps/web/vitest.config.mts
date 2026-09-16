@@ -4,7 +4,7 @@ import { defineConfig, mergeConfig } from 'vitest/config';
 import { createVitestConfig } from '../../vitest.config.mts';
 
 export default mergeConfig(
-  createVitestConfig(['test/**/*.test.tsx']),
+  createVitestConfig(['test/**/*.test.{ts,tsx}']),
   defineConfig({
     plugins: [react()],
     test: {
