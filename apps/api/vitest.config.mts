@@ -9,7 +9,8 @@ export default defineConfig({
     ...sharedConfig.test,
     hookTimeout: 120_000,
     pool: 'forks',
-    singleFork: true,
+    maxForks: 2,
+    minForks: 1,
     testTimeout: 120_000,
   },
 });
