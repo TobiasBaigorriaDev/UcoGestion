@@ -3,9 +3,11 @@ import { APP_GUARD } from '@nestjs/core';
 import { Pool } from 'pg';
 
 import { AuthController } from './auth.controller.js';
+import { CsrfService } from './csrf.service.js';
 import { LoginService } from './login.service.js';
 import { SessionAuthenticationService } from './session-authentication.service.js';
 import { SessionRevocationService } from './session-revocation.service.js';
+import { RequestIntegrityGuard } from './request-integrity.guard.js';
 import { TenantAccessGuard } from './tenant-access.guard.js';
 import { TenantMembershipService } from './tenant-membership.service.js';
 
@@ -42,8 +44,14 @@ class GlobalAuthDatabase implements OnModuleDestroy {
       useFactory: (database: GlobalAuthDatabase) => new SessionRevocationService(database.pool),
       inject: [GlobalAuthDatabase],
     },
+    {
+      provide: CsrfService,
+      useFactory: (database: GlobalAuthDatabase) => new CsrfService(database.pool),
+      inject: [GlobalAuthDatabase],
+    },
     { provide: APP_GUARD, useClass: TenantAccessGuard },
+    { provide: APP_GUARD, useClass: RequestIntegrityGuard },
   ],
-  exports: [SessionAuthenticationService, SessionRevocationService, TenantMembershipService],
+  exports: [CsrfService, SessionAuthenticationService, SessionRevocationService, TenantMembershipService],
 })
 export class AuthModule {}

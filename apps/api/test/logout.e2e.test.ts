@@ -50,9 +50,17 @@ describe('logout and session revocation', () => {
     const first = await login.execute({ email: 'logout@example.com', password: 'correct-password' });
     const second = await login.execute({ email: 'logout@example.com', password: 'correct-password' });
     const firstHash = createHash('sha256').update(first.token).digest('hex');
+    const csrfResponse = await request(app.getHttpServer())
+      .get('/api/v1/auth/csrf')
+      .set('Cookie', `__Host-uco_session=${first.token}`)
+      .expect(200);
     const response = await request(app.getHttpServer())
       .post('/api/v1/auth/logout')
+      .set('Origin', 'http://localhost:3000')
+      .set('Sec-Fetch-Site', 'same-origin')
       .set('Cookie', `__Host-uco_session=${first.token}`)
+      .set('X-CSRF-Token', csrfResponse.body.csrfToken as string)
+      .send({})
       .expect(204);
 
     const setCookie = response.headers['set-cookie'] as string[] | undefined;
@@ -73,9 +81,16 @@ describe('logout and session revocation', () => {
 
     await request(app.getHttpServer())
       .post('/api/v1/auth/logout')
+      .set('Origin', 'http://localhost:3000')
       .set('Cookie', `__Host-uco_session=${first.token}`)
-      .expect(204);
-    await request(app.getHttpServer()).post('/api/v1/auth/logout').expect(204);
+      .set('X-CSRF-Token', csrfResponse.body.csrfToken as string)
+      .send({})
+      .expect(403);
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/logout')
+      .set('Origin', 'http://localhost:3000')
+      .send({})
+      .expect(403);
   });
 
   it('can revoke every session of one user without removing rows or affecting another user', async () => {

@@ -27,6 +27,20 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/auth/csrf": {
+      "get": {
+        "operationId": "AuthController_getCsrfToken",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Auth",
+        ],
+      },
+    },
     "/api/v1/auth/login": {
       "post": {
         "operationId": "AuthController_login",

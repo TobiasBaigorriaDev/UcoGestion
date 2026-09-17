@@ -65,6 +65,7 @@ export class LoginService {
       ? await hashPassword(input.password)
       : null;
     const token = randomBytes(32).toString('base64url');
+    const csrfToken = randomBytes(32).toString('base64url');
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const client = await this.database.connect();
     try {
@@ -87,9 +88,9 @@ export class LoginService {
         );
       }
       await client.query(
-        `INSERT INTO auth_sessions (id, user_id, token_hash, idle_expires_at, absolute_expires_at)
-         VALUES ($1, $2, $3, now() + interval '12 hours', now() + interval '7 days')`,
-        [randomUUID(), user.id, tokenHash],
+        `INSERT INTO auth_sessions (id, user_id, token_hash, csrf_token, idle_expires_at, absolute_expires_at)
+         VALUES ($1, $2, $3, $4, now() + interval '12 hours', now() + interval '7 days')`,
+        [randomUUID(), user.id, tokenHash, csrfToken],
       );
       await client.query('COMMIT');
     } catch (error) {

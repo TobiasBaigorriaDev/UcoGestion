@@ -25,6 +25,7 @@ export const authSessions = pgTable(
     id: uuid().primaryKey(),
     userId: uuid('user_id').notNull().references(() => users.id),
     tokenHash: text('token_hash').notNull(),
+    csrfToken: text('csrf_token'),
     idleExpiresAt: timestamp('idle_expires_at', { withTimezone: true }).notNull(),
     absoluteExpiresAt: timestamp('absolute_expires_at', { withTimezone: true }).notNull(),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),

@@ -14,6 +14,7 @@
     { "idx": 9, "version": "7", "when": 9, "tag": "0009_auth_sessions", "breakpoints": true },
     { "idx": 10, "version": "7", "when": 10, "tag": "0010_session_expiration_and_rehash", "breakpoints": true },
     { "idx": 11, "version": "7", "when": 11, "tag": "0011_active_memberships", "breakpoints": true },
-    { "idx": 12, "version": "7", "when": 12, "tag": "0012_session_revocation", "breakpoints": true }
+    { "idx": 12, "version": "7", "when": 12, "tag": "0012_session_revocation", "breakpoints": true },
+    { "idx": 13, "version": "7", "when": 13, "tag": "0013_csrf_tokens", "breakpoints": true }
   ]
 }

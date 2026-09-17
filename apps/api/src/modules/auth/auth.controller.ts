@@ -3,6 +3,7 @@ import type { ServerResponse } from 'node:http';
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   Post,
   Req,
@@ -13,6 +14,8 @@ import { z } from 'zod';
 
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
 import { InvalidCredentialsError, LoginService } from './login.service.js';
+import { CsrfExempt } from './csrf-exempt.decorator.js';
+import { CsrfService } from './csrf.service.js';
 import { PublicRoute } from './public-route.decorator.js';
 import { readSessionCookie } from './session-cookie.js';
 import { SessionRevocationService } from './session-revocation.service.js';
@@ -29,10 +32,12 @@ export class AuthController {
   constructor(
     private readonly loginService: LoginService,
     private readonly sessionRevocation: SessionRevocationService,
+    private readonly csrf: CsrfService,
   ) {}
 
   @Post('login')
   @PublicRoute()
+  @CsrfExempt()
   @HttpCode(204)
   async login(
     @Body(new ZodValidationPipe(loginRequestSchema)) input: LoginRequest,
@@ -55,6 +60,25 @@ export class AuthController {
       }
       throw error;
     }
+  }
+
+  @Get('csrf')
+  @PublicRoute()
+  async getCsrfToken(
+    @Req() request: { readonly headers: { readonly cookie?: string | string[] } },
+    @Res({ passthrough: true }) response: Pick<ServerResponse, 'setHeader'>,
+  ): Promise<{ csrfToken: string }> {
+    const sessionToken = readSessionCookie(request.headers.cookie);
+    const csrfToken = sessionToken ? await this.csrf.issue(sessionToken) : null;
+    if (!csrfToken) {
+      throw new UnauthorizedException({
+        code: 'SESSION_INVALID',
+        title: 'Sesión inválida',
+        detail: 'Iniciá sesión nuevamente.',
+      });
+    }
+    response.setHeader('Cache-Control', 'no-store');
+    return { csrfToken };
   }
 
   @Post('logout')

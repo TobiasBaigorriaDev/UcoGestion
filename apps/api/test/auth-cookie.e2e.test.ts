@@ -42,6 +42,7 @@ describe('login session cookie', () => {
   it('sets a host-only secure HttpOnly SameSite=Lax cookie with the opaque token, never the stored hash', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
+      .set('Origin', 'http://localhost:3000')
       .send({ email: 'cookie@example.com', password: 'correct-password' })
       .expect(204);
 
@@ -67,10 +68,12 @@ describe('login session cookie', () => {
   it('returns the same problem and no cookie for unknown email or wrong password', async () => {
     const missing = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
+      .set('Origin', 'http://localhost:3000')
       .send({ email: 'missing@example.com', password: 'wrong-password' })
       .expect(401);
     const wrong = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
+      .set('Origin', 'http://localhost:3000')
       .send({ email: 'cookie@example.com', password: 'wrong-password' })
       .expect(401);
 
