@@ -24,6 +24,10 @@ export class SessionAuthenticationService {
          AND revoked_at IS NULL
          AND idle_expires_at > now()
          AND absolute_expires_at > now()
+         AND EXISTS (
+           SELECT 1 FROM users
+           WHERE users.id = auth_sessions.user_id AND users.disabled_at IS NULL
+         )
        RETURNING user_id`,
       [tokenHash],
     );

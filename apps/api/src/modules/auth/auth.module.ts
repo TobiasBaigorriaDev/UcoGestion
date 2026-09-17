@@ -1,9 +1,12 @@
 import { Injectable, Module, type OnModuleDestroy } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { Pool } from 'pg';
 
 import { AuthController } from './auth.controller.js';
 import { LoginService } from './login.service.js';
 import { SessionAuthenticationService } from './session-authentication.service.js';
+import { TenantAccessGuard } from './tenant-access.guard.js';
+import { TenantMembershipService } from './tenant-membership.service.js';
 
 @Injectable()
 class GlobalAuthDatabase implements OnModuleDestroy {
@@ -28,7 +31,13 @@ class GlobalAuthDatabase implements OnModuleDestroy {
       useFactory: (database: GlobalAuthDatabase) => new SessionAuthenticationService(database.pool),
       inject: [GlobalAuthDatabase],
     },
+    {
+      provide: TenantMembershipService,
+      useFactory: (database: GlobalAuthDatabase) => new TenantMembershipService(database.pool),
+      inject: [GlobalAuthDatabase],
+    },
+    { provide: APP_GUARD, useClass: TenantAccessGuard },
   ],
-  exports: [SessionAuthenticationService],
+  exports: [SessionAuthenticationService, TenantMembershipService],
 })
 export class AuthModule {}

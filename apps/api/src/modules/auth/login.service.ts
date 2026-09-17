@@ -16,6 +16,7 @@ interface StoredUser {
   readonly id: string;
   readonly password_hash: string;
   readonly password_hash_version: number;
+  readonly disabled_at: Date | null;
 }
 
 export interface LoginResult {
@@ -42,7 +43,7 @@ export class LoginService {
   async execute(input: LoginInput): Promise<LoginResult> {
     const email = normalizeEmail(input.email);
     const result = await this.database.query<StoredUser>(
-      'SELECT id, password_hash, password_hash_version FROM users WHERE email_normalized = $1',
+      'SELECT id, password_hash, password_hash_version, disabled_at FROM users WHERE email_normalized = $1',
       [email],
     );
     const user = result.rows[0];
@@ -56,7 +57,7 @@ export class LoginService {
     } catch {
       // A malformed stored hash must not make account existence observable.
     }
-    if (!user || !passwordMatches) {
+    if (!user || !passwordMatches || user.disabled_at !== null) {
       throw new InvalidCredentialsError();
     }
 
@@ -69,12 +70,13 @@ export class LoginService {
     try {
       await client.query('BEGIN');
       const locked = await client.query<StoredUser>(
-        'SELECT id, password_hash, password_hash_version FROM users WHERE id = $1 FOR UPDATE',
+        'SELECT id, password_hash, password_hash_version, disabled_at FROM users WHERE id = $1 FOR UPDATE',
         [user.id],
       );
       if (
         locked.rows[0]?.password_hash !== user.password_hash
         || locked.rows[0]?.password_hash_version !== user.password_hash_version
+        || locked.rows[0]?.disabled_at !== null
       ) {
         throw new InvalidCredentialsError();
       }

@@ -1,4 +1,5 @@
-import { integer, jsonb, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { integer, jsonb, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 export const schemaMigrationsProbe = pgTable('schema_migrations_probe', {
   id: integer().primaryKey(),
@@ -12,6 +13,7 @@ export const users = pgTable(
     emailNormalized: text('email_normalized').notNull(),
     passwordHash: text('password_hash').notNull(),
     passwordHashVersion: integer('password_hash_version').notNull(),
+    disabledAt: timestamp('disabled_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique('users_email_normalized_key').on(table.emailNormalized)],
@@ -37,6 +39,24 @@ export const organizations = pgTable('organizations', {
   timezone: text().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const memberships = pgTable(
+  'memberships',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    role: text().notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('memberships_organization_id_id_key').on(table.organizationId, table.id),
+    uniqueIndex('memberships_active_organization_user_key')
+      .on(table.organizationId, table.userId)
+      .where(sql`${table.revokedAt} IS NULL`),
+  ],
+);
 
 export const branches = pgTable(
   'branches',

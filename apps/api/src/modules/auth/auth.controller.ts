@@ -12,6 +12,7 @@ import { z } from 'zod';
 
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
 import { InvalidCredentialsError, LoginService } from './login.service.js';
+import { PublicRoute } from './public-route.decorator.js';
 
 const loginRequestSchema = z.strictObject({
   email: z.string().trim().pipe(z.email()),
@@ -25,6 +26,7 @@ export class AuthController {
   constructor(private readonly loginService: LoginService) {}
 
   @Post('login')
+  @PublicRoute()
   @HttpCode(204)
   async login(
     @Body(new ZodValidationPipe(loginRequestSchema)) input: LoginRequest,

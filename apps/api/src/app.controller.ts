@@ -2,8 +2,10 @@ import { Controller, Get, Header, ServiceUnavailableException } from '@nestjs/co
 
 import { MetricsService } from './core/observability/metrics.service.js';
 import { DatabaseReadinessService } from './database-readiness.service.js';
+import { PublicRoute } from './modules/auth/public-route.decorator.js';
 
 @Controller()
+@PublicRoute()
 export class AppController {
   constructor(
     private readonly databaseReadiness: DatabaseReadinessService,
