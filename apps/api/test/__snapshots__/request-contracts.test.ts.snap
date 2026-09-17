@@ -41,6 +41,20 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Auth",
+        ],
+      },
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "AppController_getLiveness",

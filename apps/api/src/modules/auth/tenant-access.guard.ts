@@ -11,6 +11,7 @@ import { Reflector } from '@nestjs/core';
 
 import { PUBLIC_ROUTE_METADATA } from './public-route.decorator.js';
 import { SessionAuthenticationService } from './session-authentication.service.js';
+import { readSessionCookie } from './session-cookie.js';
 import { TenantMembershipService } from './tenant-membership.service.js';
 
 interface ProtectedRequest {
@@ -65,15 +66,6 @@ export class TenantAccessGuard implements CanActivate {
     request.identity = { organizationId, userId: identity.userId };
     return true;
   }
-}
-
-function readSessionCookie(raw: string | string[] | undefined): string | null {
-  if (typeof raw !== 'string') return null;
-  const matches = raw.split(';').map((part) => part.trim())
-    .filter((part) => part.startsWith('__Host-uco_session='));
-  if (matches.length !== 1) return null;
-  const token = matches[0]?.slice('__Host-uco_session='.length);
-  return token && /^[A-Za-z0-9_-]{43}$/.test(token) ? token : null;
 }
 
 function isUuid(value: string): boolean {

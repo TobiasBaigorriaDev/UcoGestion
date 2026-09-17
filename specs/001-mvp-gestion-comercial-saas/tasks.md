@@ -47,7 +47,7 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T031: Emitir cookie __Host-uco_session con atributos seguros y probar que nunca expone el token persistido [RF-12, RF-151]
 - [x] T032: Aplicar expiración idle/absoluta y rehash transparente en autenticación [RF-10, RF-12]
 - [x] T033: Revalidar usuario y membresía en cada request protegido e invalidar acceso revocado [RF-04, RF-19]
-- [ ] T034: Implementar logout y revocación de sesiones sin eliminar historial [RF-19]
+- [x] T034: Implementar logout y revocación de sesiones sin eliminar historial [RF-19]
 - [ ] T035: Implementar CSRF synchronizer, Origin, Sec-Fetch-Site y JSON estricto para mutaciones [RF-151]
 - [ ] T036: Implementar rate limit PostgreSQL no enumerable para login, reset e invitaciones y configurar el límite general de API en el borde [RF-11, RF-13, RF-151]
 - [ ] T037: Crear solicitud de reset con token hasheado, vencimiento y outbox email [RF-11, RF-12]

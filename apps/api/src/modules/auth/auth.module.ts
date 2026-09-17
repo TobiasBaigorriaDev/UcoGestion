@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import { AuthController } from './auth.controller.js';
 import { LoginService } from './login.service.js';
 import { SessionAuthenticationService } from './session-authentication.service.js';
+import { SessionRevocationService } from './session-revocation.service.js';
 import { TenantAccessGuard } from './tenant-access.guard.js';
 import { TenantMembershipService } from './tenant-membership.service.js';
 
@@ -36,8 +37,13 @@ class GlobalAuthDatabase implements OnModuleDestroy {
       useFactory: (database: GlobalAuthDatabase) => new TenantMembershipService(database.pool),
       inject: [GlobalAuthDatabase],
     },
+    {
+      provide: SessionRevocationService,
+      useFactory: (database: GlobalAuthDatabase) => new SessionRevocationService(database.pool),
+      inject: [GlobalAuthDatabase],
+    },
     { provide: APP_GUARD, useClass: TenantAccessGuard },
   ],
-  exports: [SessionAuthenticationService, TenantMembershipService],
+  exports: [SessionAuthenticationService, SessionRevocationService, TenantMembershipService],
 })
 export class AuthModule {}
