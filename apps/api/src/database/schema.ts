@@ -146,6 +146,7 @@ export const branches = pgTable(
     status: text().notNull().default('ACTIVE'),
     version: bigint({ mode: 'number' }).notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique('branches_organization_id_id_key').on(table.organizationId, table.id)],
 );
@@ -273,8 +274,31 @@ export const catalogCategories = pgTable(
     status: text().notNull().default('ACTIVE'),
     version: bigint({ mode: 'number' }).notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique('catalog_categories_organization_id_id_key').on(table.organizationId, table.id)],
+);
+
+export const catalogCategoryHistoryReferences = pgTable(
+  'catalog_category_history_references',
+  {
+    id: uuid().notNull(),
+    organizationId: uuid('organization_id').notNull(),
+    categoryId: uuid('category_id').notNull(),
+    referenceType: text('reference_type').notNull(),
+    sourceId: uuid('source_id').notNull(),
+    recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.id] }),
+    foreignKey({
+      columns: [table.organizationId, table.categoryId],
+      foreignColumns: [catalogCategories.organizationId, catalogCategories.id],
+      name: 'catalog_category_history_references_category_tenant_fk',
+    }),
+    unique('catalog_category_history_references_source_key')
+      .on(table.organizationId, table.categoryId, table.referenceType, table.sourceId),
+  ],
 );
 
 export const expenseCategories = pgTable(
@@ -286,8 +310,31 @@ export const expenseCategories = pgTable(
     status: text().notNull().default('ACTIVE'),
     version: bigint({ mode: 'number' }).notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique('expense_categories_organization_id_id_key').on(table.organizationId, table.id)],
+);
+
+export const expenseCategoryHistoryReferences = pgTable(
+  'expense_category_history_references',
+  {
+    id: uuid().notNull(),
+    organizationId: uuid('organization_id').notNull(),
+    categoryId: uuid('category_id').notNull(),
+    referenceType: text('reference_type').notNull(),
+    sourceId: uuid('source_id').notNull(),
+    recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.id] }),
+    foreignKey({
+      columns: [table.organizationId, table.categoryId],
+      foreignColumns: [expenseCategories.organizationId, expenseCategories.id],
+      name: 'expense_category_history_references_category_tenant_fk',
+    }),
+    unique('expense_category_history_references_source_key')
+      .on(table.organizationId, table.categoryId, table.referenceType, table.sourceId),
+  ],
 );
 
 export const idempotencyRecords = pgTable(
