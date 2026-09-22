@@ -31,4 +31,8 @@ describe('API bootstrap', () => {
       version: 'v1',
     });
   });
+
+  it('does not expose a direct membership activation endpoint', async () => {
+    await request(app.getHttpServer()).post('/api/v1/memberships').send({}).expect(404);
+  });
 });

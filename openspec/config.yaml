@@ -1,0 +1,81 @@
+version: 1
+project: uconext
+persistence: openspec
+context:
+  - "pnpm 11 workspace managed by Turborepo."
+  - "Next.js 16 web app and NestJS 12 modular API live under apps/."
+  - "Shared TypeScript packages provide config, domain utilities, and UI."
+  - "The closed MVP spec and approved technical plan are in specs/001-mvp-gestion-comercial-saas/."
+  - "PostgreSQL with Drizzle is the system of record; tenant isolation uses RLS."
+  - "Task T047 is the requested existing build task; this bootstrap does not execute it."
+strict_tdd: true
+execution:
+  mode: auto
+  delivery_strategy: ask-on-risk
+  review_budget_lines: 400
+testing:
+  workspace_test_command: "pnpm run test"
+  strict_tdd_basis: "The root test script runs Turbo tests for all workspace packages and the root workspace smoke test."
+  projects:
+    - path: "."
+      stack: "TypeScript, pnpm, Turborepo"
+      test_command: "pnpm run test"
+      framework: "Vitest via Turborepo; node:test workspace smoke test"
+      coverage_command: null
+      lint_command: "pnpm run lint"
+      typecheck_command: "pnpm run typecheck"
+      format_command: null
+      layers: [unit]
+    - path: "apps/api"
+      stack: "TypeScript, NestJS 12, Drizzle, node-postgres"
+      test_command: "pnpm --filter @uconext/api test"
+      framework: "Vitest, Supertest, Testcontainers PostgreSQL"
+      coverage_command: null
+      lint_command: "pnpm --filter @uconext/api lint"
+      typecheck_command: "pnpm --filter @uconext/api typecheck"
+      format_command: null
+      layers: [unit, integration, api]
+    - path: "apps/web"
+      stack: "TypeScript, Next.js 16, React 19"
+      test_command: "pnpm --filter @uconext/web test"
+      framework: "Vitest, Testing Library, jsdom"
+      coverage_command: null
+      lint_command: "pnpm --filter @uconext/web lint"
+      typecheck_command: "pnpm --filter @uconext/web typecheck"
+      format_command: null
+      layers: [unit, component]
+    - path: "packages/shared"
+      stack: "TypeScript shared library"
+      test_command: "pnpm --filter @uconext/shared test"
+      framework: "Vitest, fast-check"
+      coverage_command: null
+      lint_command: "pnpm --filter @uconext/shared lint"
+      typecheck_command: "pnpm --filter @uconext/shared typecheck"
+      format_command: null
+      layers: [unit, property]
+    - path: "packages/config"
+      stack: "TypeScript configuration package"
+      test_command: null
+      framework: null
+      coverage_command: null
+      lint_command: null
+      typecheck_command: null
+      format_command: null
+      layers: []
+    - path: "packages/ui"
+      stack: "UI package placeholder"
+      test_command: null
+      framework: null
+      coverage_command: null
+      lint_command: null
+      typecheck_command: null
+      format_command: null
+      layers: []
+phase_rules:
+  proposal: "Keep changes within the closed MVP scope."
+  spec: "Treat specs/001-mvp-gestion-comercial-saas/spec.md as closed."
+  design: "Treat specs/001-mvp-gestion-comercial-saas/plan.md as approved."
+  tasks: "Use the existing ordered tasks.md; execute one atomic task at a time."
+  apply: "Use strict TDD: write a failing test, implement minimally, then refactor only when green."
+  verify: "Run affected tests plus root lint, typecheck, and applicable regression checks; do not accept skipped tests."
+  archive: "Archive only after requirements, tests, and approved traceability are verified."

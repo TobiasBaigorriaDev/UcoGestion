@@ -1,5 +1,16 @@
 import { sql } from 'drizzle-orm';
-import { integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  foreignKey,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  unique,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 export const schemaMigrationsProbe = pgTable('schema_migrations_probe', {
   id: integer().primaryKey(),
@@ -131,6 +142,78 @@ export const branches = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique('branches_organization_id_id_key').on(table.organizationId, table.id)],
+);
+
+export const membershipBranches = pgTable(
+  'membership_branches',
+  {
+    organizationId: uuid('organization_id').notNull(),
+    membershipId: uuid('membership_id').notNull(),
+    branchId: uuid('branch_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.membershipId, table.branchId] }),
+    foreignKey({
+      columns: [table.organizationId, table.membershipId],
+      foreignColumns: [memberships.organizationId, memberships.id],
+      name: 'membership_branches_membership_tenant_fk',
+    }),
+    foreignKey({
+      columns: [table.organizationId, table.branchId],
+      foreignColumns: [branches.organizationId, branches.id],
+      name: 'membership_branches_branch_tenant_fk',
+    }),
+  ],
+);
+
+export const invitations = pgTable(
+  'invitations',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    emailNormalized: text('email_normalized').notNull(),
+    role: text().notNull(),
+    status: text().notNull().default('PENDING'),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    invitedByMembershipId: uuid('invited_by_membership_id').notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('invitations_organization_id_id_key').on(table.organizationId, table.id),
+    unique('invitations_token_hash_key').on(table.tokenHash),
+    foreignKey({
+      columns: [table.organizationId, table.invitedByMembershipId],
+      foreignColumns: [memberships.organizationId, memberships.id],
+      name: 'invitations_inviter_tenant_fk',
+    }),
+  ],
+);
+
+export const invitationBranches = pgTable(
+  'invitation_branches',
+  {
+    organizationId: uuid('organization_id').notNull(),
+    invitationId: uuid('invitation_id').notNull(),
+    branchId: uuid('branch_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.invitationId, table.branchId] }),
+    foreignKey({
+      columns: [table.organizationId, table.invitationId],
+      foreignColumns: [invitations.organizationId, invitations.id],
+      name: 'invitation_branches_invitation_tenant_fk',
+    }),
+    foreignKey({
+      columns: [table.organizationId, table.branchId],
+      foreignColumns: [branches.organizationId, branches.id],
+      name: 'invitation_branches_branch_tenant_fk',
+    }),
+  ],
 );
 
 export const cashRegisters = pgTable('cash_registers', {

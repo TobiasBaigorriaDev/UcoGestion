@@ -1,13 +1,16 @@
-# Tareas de construcción — MVP Gestión Comercial SaaS — ESTADO: LISTO PARA BUILD
+## Tareas de construcción — MVP Gestión Comercial SaaS — ESTADO: LISTO PARA BUILD
 
-Derivadas de `spec.md` cerrado y `plan.md` aprobado. Se ejecutan de a una, en el orden físico del listado y respetando las dependencias explícitas. Cada tarea está acotada a un incremento verificable estimado en 15–30 minutos. Cada checkbox incluye obligatoriamente: escribir primero la prueba automatizada, comprobar el estado rojo esperado, implementar el mínimo, ejecutar la prueba afectada, `lint`, `typecheck` y la regresión aplicable, y marcarse solo con todo verde. Las pruebas PostgreSQL usan una instancia real; las pruebas browser usan Playwright.
+Derivadas de spec.md cerrado y plan.md aprobado. Se ejecutan respetando el orden físico del listado y las dependencias explícitas. Pueden ejecutarse individualmente o agrupadas en bloques pequeños y coherentes cuando el usuario lo indique. Los IDs son estables y no determinan por sí solos el orden de ejecución.
 
-Una tarea que prepara schema, política o componente interno no expone un endpoint incompleto. La exposición integra permisos, RLS, auditoría, atomicidad e idempotencia. Los IDs son estables y no indican el orden: se sigue el orden físico del listado, con dependencias explícitas. Los rangos de IDs se expanden por número/sufijo, no por posición física; se incluyen sus extremos.
+Cada tarea mantiene TDD estricto: escribir primero la prueba automatizada, comprobar el estado rojo esperado, implementar el mínimo necesario y ejecutar la prueba nueva junto con las pruebas directamente afectadas. Una tarea se marca únicamente cuando su comportamiento requerido está implementado y sus pruebas relevantes están verdes.
 
-La definición de terminado de cada slice tenant incluye una prueba negativa cross-tenant y, si usa sucursal, una prueba entre sucursales. Cada comando crítico demuestra rollback de auditoría/idempotencia/ledger/proyección junto con el negocio, replay idéntico, conflicto por payload distinto y comportamiento después de perder la respuesta. Ninguna tarea puede cerrarse con tests omitidos, `skip` o mocks de repositorios para afirmar aislamiento, atomicidad o concurrencia.
+No es obligatorio ejecutar toda la regresión, lint global ni typecheck global después de cada tarea. Al finalizar un bloque se ejecuta una única verificación integrada proporcional al alcance: tests de los módulos o paquetes modificados, lint y typecheck de los paquetes afectados, y las pruebas de integración, migraciones o E2E que correspondan. La suite completa del repositorio se reserva para CI, hitos explícitos y la puerta final previa a sdd-check.
+
+Una tarea que prepara schema, política o componente interno no expone un endpoint incompleto. La exposición integra permisos, RLS, auditoría, atomicidad e idempotencia. Los rangos de IDs se expanden según la convención establecida para números y sufijos; la ejecución resultante respeta siempre el orden físico y las dependencias explícitas.
+
+La definición de terminado de cada slice tenant incluye una prueba negativa cross-tenant y, si usa sucursal, una prueba entre sucursales. Cada comando crítico demuestra, cuando corresponda, rollback de auditoría/idempotencia/ledger/proyección junto con el negocio, replay idéntico, conflicto por payload distinto y comportamiento después de perder la respuesta. Ninguna tarea puede cerrarse con tests relevantes omitidos mediante skip, todo o equivalentes, ni con mocks de repositorios utilizados para afirmar aislamiento, atomicidad o concurrencia.
 
 D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barreras/versiones y entrega opaca cifrada. La presencia de un RF expresa trazabilidad prevista, no evidencia de implementación ni cobertura de pruebas.
-
 ## 1. Fundación
 
 - [x] T001: Inicializar pnpm workspaces, Turborepo y scripts raíz con una prueba smoke del workspace [RF-151]
@@ -60,13 +63,13 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T044: Cambiar timezone por OWNER conservando timestamps históricos absolutos [RF-09, RF-271]
 - [x] T045: Preparar política interna de cambio de moneda solo para OWNER sin historial, sin exponer aún la mutación [RF-07, RF-205]
 - [x] T046: Definir y probar el predicado de historial servidor que bloquea moneda desde la primera referencia, incluso anulada o revertida [RF-06, RF-206]
-- [ ] T047: Preparar la política interna de membresía no propietaria con rol fijo y branch scope validado, sin endpoint de alta directa; T051/T052 serán las únicas vías ordinarias de activación [RF-21, RF-23, RF-184]
-- [ ] T048: Proyectar permisos OWNER sobre todas las sucursales sin asignaciones redundantes [RF-21, RF-22]
-- [ ] T049: Aplicar políticas CASHIER y EMPLOYEE con pruebas negativas de campos y capacidades [RF-24, RF-25]
-- [ ] T050: Crear invitación hasheada con rol, sucursales, vencimiento y outbox email [RF-13, RF-16]
-- [ ] T051: Aceptar invitación de cuenta existente sin duplicar usuario ni membresía [RF-14]
-- [ ] T052: Aceptar invitación de cuenta nueva exigiendo contraseña segura [RF-15]
-- [ ] T053: Revocar invitación pendiente e impedir su consumo posterior [RF-17]
+- [x] T047: Preparar la política interna de membresía no propietaria con rol fijo y branch scope validado, sin endpoint de alta directa; T051/T052 serán las únicas vías ordinarias de activación [RF-21, RF-23, RF-184]
+- [x] T048: Proyectar permisos OWNER sobre todas las sucursales sin asignaciones redundantes [RF-21, RF-22]
+- [x] T049: Aplicar políticas CASHIER y EMPLOYEE con pruebas negativas de campos y capacidades [RF-24, RF-25]
+- [x] T050: Crear invitación hasheada con rol, sucursales, vencimiento y outbox email [RF-13, RF-16]
+- [x] T051: Aceptar invitación de cuenta existente sin duplicar usuario ni membresía [RF-14]
+- [x] T052: Aceptar invitación de cuenta nueva exigiendo contraseña segura [RF-15]
+- [x] T053: Revocar invitación pendiente e impedir su consumo posterior [RF-17]
 - [ ] T054: Expirar invitación a los siete días e impedir el uso del token [RF-293]
 - [ ] T055: Reenviar invitación invalidando token previo sin duplicar membresía [RF-294]
 - [ ] T056: Impedir a no-OWNER crear, promover, degradar o revocar un OWNER [RF-18, RF-180]

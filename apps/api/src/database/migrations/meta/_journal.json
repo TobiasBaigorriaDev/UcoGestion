@@ -24,6 +24,10 @@
     { "idx": 19, "version": "7", "when": 19, "tag": "0019_global_membership_discovery", "breakpoints": true },
     { "idx": 20, "version": "7", "when": 20, "tag": "0020_organization_profile", "breakpoints": true },
     { "idx": 21, "version": "7", "when": 21, "tag": "0021_organization_timezone", "breakpoints": true },
-    { "idx": 22, "version": "7", "when": 22, "tag": "0022_organization_server_history", "breakpoints": true }
+    { "idx": 22, "version": "7", "when": 22, "tag": "0022_organization_server_history", "breakpoints": true },
+    { "idx": 23, "version": "7", "when": 23, "tag": "0023_owner_branch_scope", "breakpoints": true },
+    { "idx": 24, "version": "7", "when": 24, "tag": "0024_invitations", "breakpoints": true },
+    { "idx": 25, "version": "7", "when": 25, "tag": "0025_existing_account_invitation_acceptance", "breakpoints": true },
+    { "idx": 26, "version": "7", "when": 26, "tag": "0026_new_account_invitation_acceptance", "breakpoints": true }
   ]
 }
