@@ -83,11 +83,11 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 
 ## 3. Maestros y shell
 
-- [ ] T064: Crear y renombrar cajas con nombre normalizado único por sucursal [RF-30, RF-266]
-- [ ] T065: Desactivar caja conservando historial e impedir nuevas aperturas [RF-31]
-- [ ] T066: Activar/desactivar los cinco medios de pago por OWNER/ADMIN [RF-113]
-- [ ] T067: Crear categorías de catálogo tenant opcionales para los ítems [RF-50, RF-51]
-- [ ] T068: Crear categorías de gasto tenant separadas y exigir estado activo al seleccionarlas [RF-50, RF-52]
+- [x] T064: Crear y renombrar cajas con nombre normalizado único por sucursal [RF-30, RF-266]
+- [x] T065: Desactivar caja conservando historial e impedir nuevas aperturas [RF-31]
+- [x] T066: Activar/desactivar los cinco medios de pago por OWNER/ADMIN [RF-113]
+- [x] T067: Crear categorías de catálogo tenant opcionales para los ítems [RF-50, RF-51]
+- [x] T068: Crear categorías de gasto tenant separadas y exigir estado activo al seleccionarlas [RF-50, RF-52]
 - [ ] T069: Preparar lifecycle de categorías y predicado de referencias servidor y exposición offline; no exponer borrado físico hasta integrar la barrera D01 [RF-53, RF-54, RF-55, RF-302, RF-306]
 - [ ] T070: Crear ítem PRODUCT con identificador interno y nombre obligatorio [RF-32, RF-35]
 - [ ] T071: Crear ítem SERVICE rechazando trackInventory [RF-32, RF-34]

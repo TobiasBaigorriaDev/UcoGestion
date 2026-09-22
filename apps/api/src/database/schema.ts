@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
   foreignKey,
   integer,
   jsonb,
@@ -245,8 +246,49 @@ export const cashRegisters = pgTable('cash_registers', {
   organizationId: uuid('organization_id').notNull(),
   branchId: uuid('branch_id').notNull(),
   name: text().notNull(),
+  nameNormalized: text('name_norm').notNull(),
+  status: text().notNull().default('ACTIVE'),
+  version: bigint({ mode: 'number' }).notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const paymentMethodSettings = pgTable(
+  'payment_method_settings',
+  {
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    method: text().notNull(),
+    enabled: boolean().notNull().default(true),
+    version: bigint({ mode: 'number' }).notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.organizationId, table.method] })],
+);
+
+export const catalogCategories = pgTable(
+  'catalog_categories',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    name: text().notNull(),
+    status: text().notNull().default('ACTIVE'),
+    version: bigint({ mode: 'number' }).notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique('catalog_categories_organization_id_id_key').on(table.organizationId, table.id)],
+);
+
+export const expenseCategories = pgTable(
+  'expense_categories',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    name: text().notNull(),
+    status: text().notNull().default('ACTIVE'),
+    version: bigint({ mode: 'number' }).notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique('expense_categories_organization_id_id_key').on(table.organizationId, table.id)],
+);
 
 export const idempotencyRecords = pgTable(
   'idempotency_records',
