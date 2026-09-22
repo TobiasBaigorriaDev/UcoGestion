@@ -279,6 +279,35 @@ export const catalogCategories = pgTable(
   (table) => [unique('catalog_categories_organization_id_id_key').on(table.organizationId, table.id)],
 );
 
+export const catalogItems = pgTable(
+  'catalog_items',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    name: text().notNull(),
+    type: text().notNull(),
+    trackInventory: boolean('track_inventory').notNull().default(false),
+    baseUnit: text('base_unit').notNull().default('UNIT'),
+    sku: text(),
+    skuNormalized: text('sku_norm'),
+    barcode: text(),
+    barcodeNormalized: text('barcode_norm'),
+    status: text().notNull().default('ACTIVE'),
+    version: bigint({ mode: 'number' }).notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('catalog_items_organization_id_id_key').on(table.organizationId, table.id),
+    uniqueIndex('catalog_items_organization_sku_norm_key')
+      .on(table.organizationId, table.skuNormalized)
+      .where(sql`${table.skuNormalized} IS NOT NULL`),
+    uniqueIndex('catalog_items_organization_barcode_norm_key')
+      .on(table.organizationId, table.barcodeNormalized)
+      .where(sql`${table.barcodeNormalized} IS NOT NULL`),
+  ],
+);
+
 export const catalogCategoryHistoryReferences = pgTable(
   'catalog_category_history_references',
   {
