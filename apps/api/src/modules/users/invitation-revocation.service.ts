@@ -91,7 +91,10 @@ export class InvitationRevocationService {
     const membership = await client.query<{ role: string }>(
       `SELECT role
        FROM memberships
-       WHERE organization_id = $1 AND user_id = $2 AND revoked_at IS NULL`,
+       WHERE organization_id = $1
+         AND user_id = $2
+         AND status = 'ACTIVE'
+         AND revoked_at IS NULL`,
       [context.organizationId, context.userId],
     );
     const role = membership.rows.at(0)?.role;

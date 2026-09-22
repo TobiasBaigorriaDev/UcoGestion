@@ -135,6 +135,20 @@ describe('invitation creation', () => {
     expect(createHash('sha256').update(job.payload.token).digest('hex')).toBe(row.token_hash);
     expect(JSON.stringify(invitation.rows)).not.toContain(job.payload.token);
 
+    const expirationJob = await pool.query<{
+      available_at: Date;
+      payload: { expiresAt: string; invitationId: string };
+      status: string;
+    }>(
+      "SELECT available_at, payload, status FROM outbox_jobs WHERE job_type = 'INVITATION_EXPIRATION' AND job_key = $1",
+      [`invitation-expiration:${result.invitationId}:${result.expiresAt}`],
+    );
+    expect(expirationJob.rows).toEqual([{
+      available_at: new Date(result.expiresAt),
+      payload: { expiresAt: result.expiresAt, invitationId: result.invitationId },
+      status: 'PENDING',
+    }]);
+
     const audit = await pool.query<{ after_data: Record<string, unknown>; context_data: Record<string, unknown> }>(
       "SELECT after_data, context_data FROM audit_events WHERE entity_id = $1 AND action = 'invitation.created'",
       [result.invitationId],

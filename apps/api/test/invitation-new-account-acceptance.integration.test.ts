@@ -121,6 +121,37 @@ describe('new-account invitation acceptance', () => {
     expect(invitation.rows).toEqual([{ status: 'PENDING' }]);
   });
 
+  it('activates an invited OWNER only after acceptance and without explicit branch assignments', async () => {
+    const fixture = await seedInvitation(
+      adminPool,
+      now,
+      'invited.owner@example.com',
+      'invited-owner-token',
+      'OWNER',
+    );
+    const before = await adminPool.query(
+      'SELECT id FROM memberships WHERE organization_id = $1 AND user_id <> $2',
+      [fixture.organizationId, fixture.inviterUserId],
+    );
+    expect(before.rows).toEqual([]);
+
+    const accepted = await service.accept(
+      { password: 'invited-owner-password', token: fixture.token },
+      'accept-invited-owner',
+    );
+
+    const membership = await adminPool.query<{ role: string; status: string }>(
+      'SELECT role, status FROM memberships WHERE id = $1',
+      [accepted.membershipId],
+    );
+    expect(membership.rows).toEqual([{ role: 'OWNER', status: 'ACTIVE' }]);
+    const assignments = await adminPool.query<{ count: string }>(
+      'SELECT count(*)::text AS count FROM membership_branches WHERE membership_id = $1',
+      [accepted.membershipId],
+    );
+    expect(assignments.rows[0]?.count).toBe('0');
+  });
+
   it('rolls back the new global user when assigning its invited branch fails', async () => {
     const fixture = await seedInvitation(adminPool, now, 'rollback.invitee@example.com', 'rollback-token');
     await adminPool.query(
@@ -165,10 +196,12 @@ async function seedInvitation(
   acceptedAt: Date,
   email: string,
   token: string,
+  role: 'EMPLOYEE' | 'OWNER' = 'EMPLOYEE',
 ): Promise<{
   branchId: string;
   email: string;
   invitationId: string;
+  inviterUserId: string;
   organizationId: string;
   token: string;
 }> {
@@ -202,22 +235,25 @@ async function seedInvitation(
     `INSERT INTO invitations (
        id, organization_id, email_normalized, role, status, token_hash,
        expires_at, invited_by_membership_id, created_at
-     ) VALUES ($1, $2, $3, 'EMPLOYEE', 'PENDING', $4, $5, $6, $7)`,
+     ) VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8)`,
     [
       invitationId,
       organizationId,
       email,
+      role,
       tokenHash,
       new Date(acceptedAt.getTime() + 24 * 60 * 60 * 1_000),
       inviterMembershipId,
       new Date(acceptedAt.getTime() - 24 * 60 * 60 * 1_000),
     ],
   );
-  await pool.query(
-    `INSERT INTO invitation_branches (organization_id, invitation_id, branch_id)
-     VALUES ($1, $2, $3)`,
-    [organizationId, invitationId, branchId],
-  );
+  if (role !== 'OWNER') {
+    await pool.query(
+      `INSERT INTO invitation_branches (organization_id, invitation_id, branch_id)
+       VALUES ($1, $2, $3)`,
+      [organizationId, invitationId, branchId],
+    );
+  }
 
-  return { branchId, email, invitationId, organizationId, token };
+  return { branchId, email, invitationId, inviterUserId, organizationId, token };
 }

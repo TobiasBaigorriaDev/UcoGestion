@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   foreignKey,
   integer,
   jsonb,
@@ -120,7 +121,10 @@ export const memberships = pgTable(
     organizationId: uuid('organization_id').notNull().references(() => organizations.id),
     userId: uuid('user_id').notNull().references(() => users.id),
     role: text().notNull(),
+    status: text().notNull().default('ACTIVE'),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
+    version: bigint({ mode: 'number' }).notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -139,6 +143,7 @@ export const branches = pgTable(
     name: text().notNull(),
     nameNormalized: text('name_norm').notNull(),
     status: text().notNull().default('ACTIVE'),
+    version: bigint({ mode: 'number' }).notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique('branches_organization_id_id_key').on(table.organizationId, table.id)],
@@ -212,6 +217,25 @@ export const invitationBranches = pgTable(
       columns: [table.organizationId, table.branchId],
       foreignColumns: [branches.organizationId, branches.id],
       name: 'invitation_branches_branch_tenant_fk',
+    }),
+  ],
+);
+
+export const membershipRevocationDeviceKnowledge = pgTable(
+  'membership_revocation_device_knowledge',
+  {
+    organizationId: uuid('organization_id').notNull(),
+    membershipId: uuid('membership_id').notNull(),
+    deviceId: uuid('device_id').notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }).notNull(),
+    knownAt: timestamp('known_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.membershipId, table.deviceId] }),
+    foreignKey({
+      columns: [table.organizationId, table.membershipId],
+      foreignColumns: [memberships.organizationId, memberships.id],
+      name: 'membership_revocation_knowledge_membership_tenant_fk',
     }),
   ],
 );

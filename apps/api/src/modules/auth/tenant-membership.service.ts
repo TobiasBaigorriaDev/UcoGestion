@@ -13,7 +13,10 @@ export class TenantMembershipService {
       const result = await client.query<{ active: boolean }>(
         `SELECT EXISTS (
            SELECT 1 FROM memberships
-           WHERE organization_id = $1 AND user_id = $2 AND revoked_at IS NULL
+           WHERE organization_id = $1
+             AND user_id = $2
+             AND status = 'ACTIVE'
+             AND revoked_at IS NULL
          ) AS active`,
         [organizationId, userId],
       );

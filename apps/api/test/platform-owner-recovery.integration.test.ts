@@ -47,8 +47,8 @@ describe('exceptional OWNER recovery', () => {
       [organizationId],
     );
     await pool.query(
-      `INSERT INTO memberships (id, organization_id, user_id, role, revoked_at)
-       VALUES ($1, $2, $3, 'OWNER', now())`,
+      `INSERT INTO memberships (id, organization_id, user_id, role, status, revoked_at)
+       VALUES ($1, $2, $3, 'OWNER', 'REVOKED', now())`,
       [randomUUID(), organizationId, previousOwner.id],
     );
 
@@ -63,11 +63,11 @@ describe('exceptional OWNER recovery', () => {
 
     expect(
       await pool.query(
-        `SELECT role, revoked_at FROM memberships
+        `SELECT role, status, revoked_at FROM memberships
          WHERE id = $1 AND organization_id = $2 AND user_id = $3`,
         [first.membershipId, organizationId, recoveredOwner.id],
       ),
-    ).toMatchObject({ rows: [{ revoked_at: null, role: 'OWNER' }] });
+    ).toMatchObject({ rows: [{ revoked_at: null, role: 'OWNER', status: 'ACTIVE' }] });
     expect(
       await pool.query(
         `SELECT action, actor_user_id, entity_id, context_data->>'recoveredUserId' AS recovered_user_id

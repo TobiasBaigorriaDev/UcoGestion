@@ -9,9 +9,11 @@ interface InvitationAcceptanceOptions {
 }
 
 interface ResolvedInvitation {
+  readonly expiration_actor_user_id: string;
   readonly invitation_id: string;
+  readonly is_expired: boolean;
   readonly organization_id: string;
-  readonly user_id: string;
+  readonly user_id: string | null;
 }
 
 export interface ExistingAccountInvitationAcceptanceResult {
@@ -43,13 +45,24 @@ export class ExistingAccountInvitationAcceptanceService {
     requestId: string,
   ): Promise<ExistingAccountInvitationAcceptanceResult> {
     const client = await this.pool.connect();
+    let transactionOpen = false;
 
     try {
       await client.query('BEGIN');
+      transactionOpen = true;
       const acceptedAt = this.now();
       const tokenHash = createHash('sha256').update(token).digest('hex');
       const resolved = await this.resolveInvitation(client, tokenHash, acceptedAt);
       if (!resolved) {
+        throw new InvitationAcceptanceError();
+      }
+      if (resolved.is_expired) {
+        await this.auditExpiration(client, resolved, requestId);
+        await client.query('COMMIT');
+        transactionOpen = false;
+        throw new InvitationAcceptanceError();
+      }
+      if (!resolved.user_id) {
         throw new InvitationAcceptanceError();
       }
 
@@ -123,9 +136,12 @@ export class ExistingAccountInvitationAcceptanceService {
       });
 
       await client.query('COMMIT');
+      transactionOpen = false;
       return { membershipId, organizationId: resolved.organization_id };
     } catch (error) {
-      await client.query('ROLLBACK');
+      if (transactionOpen) {
+        await client.query('ROLLBACK');
+      }
       throw error;
     } finally {
       client.release();
@@ -138,10 +154,36 @@ export class ExistingAccountInvitationAcceptanceService {
     acceptedAt: Date,
   ): Promise<ResolvedInvitation | undefined> {
     const result = await client.query<ResolvedInvitation>(
-      `SELECT organization_id, invitation_id, user_id
+      `SELECT organization_id, invitation_id, user_id, expiration_actor_user_id, is_expired
        FROM identity_api.resolve_existing_account_invitation($1, $2)`,
       [tokenHash, acceptedAt],
     );
     return result.rows.at(0);
+  }
+
+  private async auditExpiration(
+    client: PoolClient,
+    resolved: ResolvedInvitation,
+    requestId: string,
+  ): Promise<void> {
+    await client.query("SELECT set_config('app.organization_id', $1, true)", [resolved.organization_id]);
+    await client.query("SELECT set_config('app.user_id', $1, true)", [resolved.expiration_actor_user_id]);
+    await client.query("SELECT set_config('app.request_id', $1, true)", [requestId]);
+    await new AuditEventWriter(client).append({
+      action: 'invitation.expired',
+      actorUserId: resolved.expiration_actor_user_id,
+      after: { status: 'EXPIRED' },
+      afterAllowlist: ['status'],
+      before: { status: 'PENDING' },
+      beforeAllowlist: ['status'],
+      branchId: null,
+      context: { trigger: 'token_use' },
+      contextAllowlist: ['trigger'],
+      entityId: resolved.invitation_id,
+      entityType: 'invitation',
+      operationId: resolved.invitation_id,
+      organizationId: resolved.organization_id,
+      requestId,
+    });
   }
 }

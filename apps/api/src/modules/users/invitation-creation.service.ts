@@ -122,6 +122,21 @@ export class InvitationCreationService {
             createdAt,
           ],
         );
+        await client.query(
+          `INSERT INTO outbox_jobs (
+             id, organization_id, job_key, job_type, payload, actor_user_id,
+             branch_id, authorization_class, available_at, created_at
+           ) VALUES ($1, $2, $3, 'INVITATION_EXPIRATION', $4::jsonb, $5, NULL, 'MEMBERSHIP_ADMINISTRATION', $6, $7)`,
+          [
+            randomUUID(),
+            context.organizationId,
+            `invitation-expiration:${invitationId}:${expiresAt.toISOString()}`,
+            JSON.stringify({ expiresAt: expiresAt.toISOString(), invitationId }),
+            context.userId,
+            expiresAt,
+            createdAt,
+          ],
+        );
         return { expiresAt: expiresAt.toISOString(), invitationId };
       },
     );
@@ -134,7 +149,10 @@ export class InvitationCreationService {
     const result = await client.query<ActorMembership>(
       `SELECT id, role
        FROM memberships
-       WHERE organization_id = $1 AND user_id = $2 AND revoked_at IS NULL
+       WHERE organization_id = $1
+         AND user_id = $2
+         AND status = 'ACTIVE'
+         AND revoked_at IS NULL
        FOR UPDATE`,
       [context.organizationId, context.userId],
     );

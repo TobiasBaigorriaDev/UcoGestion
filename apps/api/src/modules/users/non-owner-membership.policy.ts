@@ -11,6 +11,7 @@ export interface MembershipBranchSnapshot {
 }
 
 export interface PrepareNonOwnerMembershipRequest {
+  readonly allowEmptyScope?: boolean;
   readonly actorBranchIds: readonly string[];
   readonly actorRole: string;
   readonly availableBranches: readonly MembershipBranchSnapshot[];
@@ -58,7 +59,7 @@ export class NonOwnerMembershipPolicy {
       );
     }
 
-    if (request.targetBranchIds.length === 0) {
+    if (request.targetBranchIds.length === 0 && request.allowEmptyScope !== true) {
       throw new NonOwnerMembershipPolicyError(
         'MEMBERSHIP_BRANCH_SCOPE_REQUIRED',
         'La membresía debe tener al menos una sucursal asignada.',

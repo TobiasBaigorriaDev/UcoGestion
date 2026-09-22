@@ -44,11 +44,11 @@ describe('global membership discovery', () => {
       [activeOrganizationId, revokedOrganizationId, inactiveOrganizationId, foreignOrganizationId],
     );
     await pool.query(
-      `INSERT INTO memberships (id, organization_id, user_id, role, revoked_at) VALUES
-       ($1, $2, $3, 'ADMIN', NULL),
-       ($4, $5, $3, 'OWNER', now()),
-       ($6, $7, $3, 'OWNER', NULL),
-       ($8, $9, $10, 'OWNER', NULL)`,
+      `INSERT INTO memberships (id, organization_id, user_id, role, status, revoked_at) VALUES
+       ($1, $2, $3, 'ADMIN', 'ACTIVE', NULL),
+       ($4, $5, $3, 'OWNER', 'REVOKED', now()),
+       ($6, $7, $3, 'OWNER', 'ACTIVE', NULL),
+       ($8, $9, $10, 'OWNER', 'ACTIVE', NULL)`,
       [
         randomUUID(), activeOrganizationId, user.id,
         randomUUID(), revokedOrganizationId,

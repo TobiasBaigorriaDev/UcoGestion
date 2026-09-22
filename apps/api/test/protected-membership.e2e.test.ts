@@ -80,7 +80,9 @@ describe('protected tenant requests', () => {
       .expect(200);
 
     await pool.query(
-      'UPDATE memberships SET revoked_at = now() WHERE organization_id = $1 AND user_id = $2',
+      `UPDATE memberships
+       SET status = 'REVOKED', revoked_at = now()
+       WHERE organization_id = $1 AND user_id = $2`,
       [organizationId, userId],
     );
     const denied = await request(app.getHttpServer())
