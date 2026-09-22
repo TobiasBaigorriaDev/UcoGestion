@@ -5,6 +5,9 @@ import { Pool } from 'pg';
 import { AuthController } from './auth.controller.js';
 import { CsrfService } from './csrf.service.js';
 import { LoginService } from './login.service.js';
+import { PasswordResetRequestService } from './password-reset-request.service.js';
+import { PasswordResetConsumeService } from './password-reset-consume.service.js';
+import { PostgresRateLimitService } from './postgres-rate-limit.service.js';
 import { SessionAuthenticationService } from './session-authentication.service.js';
 import { SessionRevocationService } from './session-revocation.service.js';
 import { RequestIntegrityGuard } from './request-integrity.guard.js';
@@ -25,8 +28,29 @@ class GlobalAuthDatabase implements OnModuleDestroy {
   providers: [
     GlobalAuthDatabase,
     {
+      provide: PostgresRateLimitService,
+      useFactory: (database: GlobalAuthDatabase) => new PostgresRateLimitService(database.pool, {
+        limits: { INVITATION: 5, LOGIN: 10, PASSWORD_RESET: 5 },
+        pepper: process.env.RATE_LIMIT_PEPPER ?? 'uconext-development-rate-limit-pepper',
+        windowSeconds: 900,
+      }),
+      inject: [GlobalAuthDatabase],
+    },
+    {
       provide: LoginService,
-      useFactory: (database: GlobalAuthDatabase) => new LoginService(database.pool),
+      useFactory: (database: GlobalAuthDatabase, rateLimits: PostgresRateLimitService) =>
+        new LoginService(database.pool, rateLimits),
+      inject: [GlobalAuthDatabase, PostgresRateLimitService],
+    },
+    {
+      provide: PasswordResetRequestService,
+      useFactory: (database: GlobalAuthDatabase, rateLimits: PostgresRateLimitService) =>
+        new PasswordResetRequestService(database.pool, rateLimits),
+      inject: [GlobalAuthDatabase, PostgresRateLimitService],
+    },
+    {
+      provide: PasswordResetConsumeService,
+      useFactory: (database: GlobalAuthDatabase) => new PasswordResetConsumeService(database.pool),
       inject: [GlobalAuthDatabase],
     },
     {

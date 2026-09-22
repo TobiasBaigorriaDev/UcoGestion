@@ -41,6 +41,20 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "operationId": "AuthController_forgotPassword",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Auth",
+        ],
+      },
+    },
     "/api/v1/auth/login": {
       "post": {
         "operationId": "AuthController_login",
@@ -58,6 +72,20 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
     "/api/v1/auth/logout": {
       "post": {
         "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Auth",
+        ],
+      },
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "operationId": "AuthController_resetPassword",
         "parameters": [],
         "responses": {
           "204": {
@@ -108,6 +136,108 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         },
         "tags": [
           "App",
+        ],
+      },
+    },
+    "/api/v1/organizations": {
+      "get": {
+        "operationId": "OrganizationsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Organizations",
+        ],
+      },
+    },
+    "/api/v1/organizations/profile": {
+      "patch": {
+        "operationId": "OrganizationsController_updateProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Organizations",
+        ],
+      },
+    },
+    "/api/v1/organizations/timezone": {
+      "patch": {
+        "operationId": "OrganizationsController_updateTimezone",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Organizations",
+        ],
+      },
+    },
+    "/api/v1/organizations/{organizationId}/select": {
+      "post": {
+        "operationId": "OrganizationsController_select",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organizationId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Organizations",
+        ],
+      },
+    },
+    "/api/v1/platform/organizations": {
+      "post": {
+        "operationId": "PlatformAdminController_provision",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "PlatformAdmin",
+        ],
+      },
+    },
+    "/api/v1/platform/organizations/{organizationId}/recover-owner": {
+      "post": {
+        "operationId": "PlatformAdminController_recoverOwner",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organizationId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "PlatformAdmin",
         ],
       },
     },

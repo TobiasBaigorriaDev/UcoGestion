@@ -4,6 +4,7 @@ import type { Pool } from 'pg';
 
 import { normalizeEmail } from './global-user.repository.js';
 import { hashPassword, needsPasswordRehash, verifyPassword } from './password.js';
+import type { PostgresRateLimitService } from './postgres-rate-limit.service.js';
 
 type GlobalIdentityDatabase = Pick<Pool, 'connect' | 'query'>;
 
@@ -38,10 +39,14 @@ export class InvalidCredentialsError extends Error {
 }
 
 export class LoginService {
-  constructor(private readonly database: GlobalIdentityDatabase) {}
+  constructor(
+    private readonly database: GlobalIdentityDatabase,
+    private readonly rateLimits?: PostgresRateLimitService,
+  ) {}
 
-  async execute(input: LoginInput): Promise<LoginResult> {
+  async execute(input: LoginInput, context: { readonly ipAddress: string } = { ipAddress: 'unknown' }): Promise<LoginResult> {
     const email = normalizeEmail(input.email);
+    await this.rateLimits?.consume({ identity: email, ipAddress: context.ipAddress, scope: 'LOGIN' });
     const result = await this.database.query<StoredUser>(
       'SELECT id, password_hash, password_hash_version, disabled_at FROM users WHERE email_normalized = $1',
       [email],

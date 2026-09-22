@@ -2,9 +2,13 @@ import type { ServerResponse } from 'node:http';
 
 import {
   Body,
+  BadRequestException,
   Controller,
   Get,
+  HttpException,
   HttpCode,
+  HttpStatus,
+  Ip,
   Post,
   Req,
   Res,
@@ -14,6 +18,12 @@ import { z } from 'zod';
 
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
 import { InvalidCredentialsError, LoginService } from './login.service.js';
+import { PasswordResetRequestService } from './password-reset-request.service.js';
+import {
+  InvalidPasswordResetTokenError,
+  PasswordResetConsumeService,
+} from './password-reset-consume.service.js';
+import { RateLimitExceededError } from './postgres-rate-limit.service.js';
 import { CsrfExempt } from './csrf-exempt.decorator.js';
 import { CsrfService } from './csrf.service.js';
 import { PublicRoute } from './public-route.decorator.js';
@@ -25,15 +35,71 @@ const loginRequestSchema = z.strictObject({
   password: z.string().min(1),
 });
 
+const forgotPasswordRequestSchema = z.strictObject({
+  email: z.string().trim().pipe(z.email()),
+});
+
+const resetPasswordRequestSchema = z.strictObject({
+  password: z.string().min(12).max(256),
+  token: z.string().min(1).max(512),
+});
+
 type LoginRequest = z.infer<typeof loginRequestSchema>;
+type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>;
+type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly loginService: LoginService,
+    private readonly passwordResetRequest: PasswordResetRequestService,
+    private readonly passwordResetConsume: PasswordResetConsumeService,
     private readonly sessionRevocation: SessionRevocationService,
     private readonly csrf: CsrfService,
   ) {}
+
+  @Post('forgot-password')
+  @PublicRoute()
+  @CsrfExempt()
+  @HttpCode(202)
+  async forgotPassword(
+    @Body(new ZodValidationPipe(forgotPasswordRequestSchema)) input: ForgotPasswordRequest,
+    @Ip() ipAddress: string,
+  ): Promise<{ accepted: true }> {
+    try {
+      return await this.passwordResetRequest.execute({ email: input.email, ipAddress });
+    } catch (error) {
+      if (error instanceof RateLimitExceededError) {
+        throw new HttpException(
+          { code: error.code, title: 'Intento no disponible', detail: error.message },
+          HttpStatus.TOO_MANY_REQUESTS,
+          { cause: error },
+        );
+      }
+      throw error;
+    }
+  }
+
+  @Post('reset-password')
+  @PublicRoute()
+  @CsrfExempt()
+  @HttpCode(204)
+  async resetPassword(
+    @Body(new ZodValidationPipe(resetPasswordRequestSchema)) input: ResetPasswordRequest,
+  ): Promise<void> {
+    try {
+      await this.passwordResetConsume.execute(input);
+    } catch (error) {
+      if (error instanceof InvalidPasswordResetTokenError) {
+        throw new BadRequestException({
+          code: error.code,
+          title: 'Enlace de recuperación inválido',
+          detail: error.message,
+        });
+      }
+      throw error;
+    }
+  }
 
   @Post('login')
   @PublicRoute()
@@ -41,10 +107,11 @@ export class AuthController {
   @HttpCode(204)
   async login(
     @Body(new ZodValidationPipe(loginRequestSchema)) input: LoginRequest,
+    @Ip() ipAddress: string,
     @Res({ passthrough: true }) response: Pick<ServerResponse, 'setHeader'>,
   ): Promise<void> {
     try {
-      const result = await this.loginService.execute(input);
+      const result = await this.loginService.execute(input, { ipAddress });
       response.setHeader(
         'Set-Cookie',
         `__Host-uco_session=${result.token}; Path=/; Secure; HttpOnly; SameSite=Lax`,
@@ -57,6 +124,14 @@ export class AuthController {
           title: 'Credenciales inválidas',
           detail: error.message,
         });
+      }
+      if (error instanceof RateLimitExceededError) {
+        response.setHeader('Retry-After', String(error.retryAfterSeconds));
+        throw new HttpException(
+          { code: error.code, title: 'Intento no disponible', detail: error.message },
+          HttpStatus.TOO_MANY_REQUESTS,
+          { cause: error },
+        );
       }
       throw error;
     }

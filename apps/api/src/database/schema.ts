@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { integer, jsonb, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 export const schemaMigrationsProbe = pgTable('schema_migrations_probe', {
   id: integer().primaryKey(),
@@ -34,12 +34,73 @@ export const authSessions = pgTable(
   (table) => [unique('auth_sessions_token_hash_key').on(table.tokenHash)],
 );
 
+export const securityRateLimits = pgTable('security_rate_limits', {
+  scope: text().notNull(),
+  identityHash: text('identity_hash').notNull(),
+  ipHash: text('ip_hash').notNull(),
+  windowStartedAt: timestamp('window_started_at', { withTimezone: true }).notNull(),
+  attempts: integer().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const passwordResetTokens = pgTable(
+  'password_reset_tokens',
+  {
+    id: uuid().primaryKey(),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique('password_reset_tokens_token_hash_key').on(table.tokenHash)],
+);
+
+export const identityOutboxJobs = pgTable(
+  'identity_outbox_jobs',
+  {
+    id: uuid().primaryKey(),
+    jobKey: text('job_key').notNull(),
+    jobType: text('job_type').notNull(),
+    payload: jsonb().notNull(),
+    status: text().notNull().default('PENDING'),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    availableAt: timestamp('available_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+  },
+  (table) => [unique('identity_outbox_jobs_job_key_key').on(table.jobKey)],
+);
+
 export const organizations = pgTable('organizations', {
   id: uuid().primaryKey(),
+  name: text().notNull().default('Organización'),
+  countryCode: text('country_code').notNull().default('AR'),
   baseCurrency: text('base_currency').notNull(),
   timezone: text().notNull(),
+  status: text().notNull().default('ACTIVE'),
+  profile: jsonb().notNull().default({}),
+  version: integer().notNull().default(1),
+  operationalHistoryStartedAt: timestamp('operational_history_started_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const organizationHistoryReferences = pgTable(
+  'organization_history_references',
+  {
+    id: uuid().notNull(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    referenceDomain: text('reference_domain').notNull(),
+    referenceType: text('reference_type').notNull(),
+    sourceId: uuid('source_id').notNull(),
+    recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.id] }),
+    unique('organization_history_references_source_key')
+      .on(table.organizationId, table.referenceDomain, table.referenceType, table.sourceId),
+  ],
+);
 
 export const memberships = pgTable(
   'memberships',
@@ -65,6 +126,8 @@ export const branches = pgTable(
     id: uuid().primaryKey(),
     organizationId: uuid('organization_id').notNull().references(() => organizations.id),
     name: text().notNull(),
+    nameNormalized: text('name_norm').notNull(),
+    status: text().notNull().default('ACTIVE'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [unique('branches_organization_id_id_key').on(table.organizationId, table.id)],
