@@ -254,6 +254,42 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
       expect(check.rowCount).toBe(0);
     });
 
+    it('deletes cleared resources while preserving immutable exposure links', async () => {
+      const item = await itemCreation.create(ownerContext(), { name: 'Cleared Item', type: 'PRODUCT' });
+      const category = await categoryManagement.create(ownerContext(), { name: 'Cleared Category' });
+      const deviceId = randomUUID();
+      await pool.query(
+        `INSERT INTO devices (id, organization_id, status, public_key)
+         VALUES ($1, $2, 'ACTIVE', 'dummy-key')`,
+        [deviceId, organizationId],
+      );
+      const version = await versionService.issue(ownerContext());
+      const grant = await barrierService.issueGrant(ownerContext(), deviceId, version.version);
+      const exposure = await pool.query<{ id: string }>(
+        `SELECT id FROM offline_configuration_exposures WHERE organization_id = $1 AND grant_id = $2`,
+        [organizationId, grant.id],
+      );
+      expect(exposure.rows[0]).toBeDefined();
+
+      // Represents an exposure cleared by a verified barrier checkpoint.
+      await pool.query(
+        `UPDATE offline_configuration_exposures SET cleared_at = now()
+         WHERE organization_id = $1 AND id = $2`,
+        [organizationId, exposure.rows[0]?.id],
+      );
+
+      await expect(itemLifecycle.deletePhysically(ownerContext(), item.id, item.version, randomUUID()))
+        .resolves.toEqual({ id: item.id, deleted: true });
+      await expect(categoryManagement.deletePhysically(ownerContext(), category.id, category.version, randomUUID()))
+        .resolves.toEqual({ id: category.id, deleted: true });
+      const links = await pool.query(
+        `SELECT 1 FROM offline_exposure_resources WHERE organization_id = $1 AND exposure_id = $2
+         AND (catalog_item_id = $3 OR catalog_category_id = $4)`,
+        [organizationId, exposure.rows[0]?.id, item.id, category.id],
+      );
+      expect(links.rowCount).toBe(2);
+    });
+
     it('blocks physical deletion of an item with operational history', async () => {
       const item = await itemCreation.create(ownerContext(), {
         name: 'Item With History Cannot Delete',
@@ -409,6 +445,23 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
   });
 
   describe('T080: Change type, trackInventory and baseUnit only without history or uncertainty', () => {
+    it('rejects grants for a version issued before a structural change', async () => {
+      const item = await itemCreation.create(ownerContext(), { name: 'Versioned Item', type: 'PRODUCT' });
+      const oldVersion = await versionService.issue(ownerContext());
+      await itemLifecycle.changeStructural(ownerContext(), item.id, item.version,
+        { baseUnit: 'FRACTIONAL', type: 'PRODUCT' }, randomUUID());
+      const deviceId = randomUUID();
+      await pool.query(
+        `INSERT INTO devices (id, organization_id, status, public_key)
+         VALUES ($1, $2, 'ACTIVE', 'dummy-key')`,
+        [deviceId, organizationId],
+      );
+      await expect(barrierService.issueGrant(ownerContext(), deviceId, oldVersion.version))
+        .rejects.toThrowError(expect.objectContaining({ code: 'CONFIGURATION_GRANT_INVALID' }));
+      const newVersion = await versionService.issue(ownerContext());
+      await expect(barrierService.issueGrant(ownerContext(), deviceId, newVersion.version))
+        .resolves.toEqual(expect.objectContaining({ epoch: 2 }));
+    });
     it('allows structural change when item is clear of history and uncertainty', async () => {
       const item = await itemCreation.create(ownerContext(), {
         name: 'Modifiable Product',
@@ -485,6 +538,7 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
       );
 
       // Application check
+      const rejectedKey = randomUUID();
       await expect(
         itemLifecycle.changeStructural(
           ownerContext(),
@@ -494,11 +548,21 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
             trackInventory: true,
             type: 'PRODUCT',
           },
-          randomUUID(),
+          rejectedKey,
         ),
       ).rejects.toThrowError(
         expect.objectContaining({ code: 'CATALOG_ITEM_STRUCTURAL_CHANGE_BLOCKED_BY_HISTORY' }),
       );
+      const rolledBack = await pool.query<{ version: number; track_inventory: boolean }>(
+        `SELECT version::integer AS version, track_inventory FROM catalog_items WHERE id = $1`,
+        [item.id],
+      );
+      expect(rolledBack.rows[0]).toEqual(expect.objectContaining({ version: item.version, track_inventory: false }));
+      const rejectedRecord = await pool.query(
+        `SELECT 1 FROM idempotency_records WHERE organization_id = $1 AND key = $2`,
+        [organizationId, rejectedKey],
+      );
+      expect(rejectedRecord.rowCount).toBe(0);
 
       // Direct SQL trigger check
       await expect(
@@ -724,6 +788,18 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
       ).rejects.toThrowError(
         expect.objectContaining({ code: 'IDEMPOTENCY_KEY_REUSED' }),
       );
+
+      const structuralKey = randomUUID();
+      const structural = await itemLifecycle.changeStructural(ownerContext(), item.id, first.version,
+        { baseUnit: 'FRACTIONAL', type: 'PRODUCT' }, structuralKey);
+      const structuralReplay = await itemLifecycle.changeStructural(ownerContext(), item.id, first.version,
+        { baseUnit: 'FRACTIONAL', type: 'PRODUCT' }, structuralKey);
+      expect(structuralReplay).toEqual(structural);
+
+      const deletionKey = randomUUID();
+      const deletion = await itemLifecycle.deletePhysically(ownerContext(), item.id, structural.version, deletionKey);
+      const deletionReplay = await itemLifecycle.deletePhysically(ownerContext(), item.id, structural.version, deletionKey);
+      expect(deletionReplay).toEqual(deletion);
     });
 
     it('records audit events for status change, structural change, and deletion', async () => {
@@ -820,6 +896,29 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
         await expect(insertPromise).rejects.toThrow();
       } finally {
         clientA.release();
+      }
+    });
+
+    it('rejects a structural change when the first reference commits while it waits for the item lock', async () => {
+      const item = await itemCreation.create(ownerContext(), { name: 'First Reference Race', type: 'PRODUCT' });
+      const firstReference = await pool.connect();
+      try {
+        await firstReference.query('BEGIN');
+        await firstReference.query(
+          `INSERT INTO resource_history_references
+             (id, organization_id, catalog_item_id, reference_type, source_id)
+           VALUES ($1, $2, $3, 'SALE_SNAPSHOT', $4)`,
+          [randomUUID(), organizationId, item.id, randomUUID()],
+        );
+        const change = itemLifecycle.changeStructural(ownerContext(), item.id, item.version,
+          { baseUnit: 'FRACTIONAL', type: 'PRODUCT' }, randomUUID());
+        await firstReference.query('COMMIT');
+        await expect(change).rejects.toThrowError(
+          expect.objectContaining({ code: 'CATALOG_ITEM_STRUCTURAL_CHANGE_BLOCKED_BY_HISTORY' }),
+        );
+      } finally {
+        await firstReference.query('ROLLBACK');
+        firstReference.release();
       }
     });
 

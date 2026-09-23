@@ -97,6 +97,121 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/catalog/categories/{categoryId}": {
+      "delete": {
+        "operationId": "CatalogLifecycleController_deleteCategory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "categoryId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogLifecycle",
+        ],
+      },
+    },
+    "/api/v1/catalog/categories/{categoryId}/status": {
+      "patch": {
+        "operationId": "CatalogLifecycleController_changeCategoryStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "categoryId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogLifecycle",
+        ],
+      },
+    },
+    "/api/v1/catalog/items/{itemId}": {
+      "delete": {
+        "operationId": "CatalogLifecycleController_deleteItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogLifecycle",
+        ],
+      },
+    },
+    "/api/v1/catalog/items/{itemId}/status": {
+      "patch": {
+        "operationId": "CatalogLifecycleController_changeItemStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogLifecycle",
+        ],
+      },
+    },
+    "/api/v1/catalog/items/{itemId}/structure": {
+      "patch": {
+        "operationId": "CatalogLifecycleController_changeItemStructure",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogLifecycle",
+        ],
+      },
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "AppController_getLiveness",
@@ -142,6 +257,20 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
     "/api/v1/organizations": {
       "get": {
         "operationId": "OrganizationsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Organizations",
+        ],
+      },
+    },
+    "/api/v1/organizations/currency": {
+      "patch": {
+        "operationId": "OrganizationsController_updateCurrency",
         "parameters": [],
         "responses": {
           "200": {

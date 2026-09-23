@@ -111,6 +111,7 @@ export class CatalogItemLifecycleService {
         );
         const result = updated.rows[0];
         if (!result) throw new Error('El ítem de catálogo no pudo ser actualizado.');
+        await this.advanceOrganizationEpoch(client, context.organizationId);
 
         await idempotency.complete(acquired.record.id, {
           statusCode: 200,
@@ -232,6 +233,7 @@ export class CatalogItemLifecycleService {
         );
         const result = updated.rows[0];
         if (!result) throw new Error('El ítem de catálogo no pudo ser actualizado.');
+        await this.advanceOrganizationEpoch(client, context.organizationId);
 
         await idempotency.complete(acquired.record.id, {
           statusCode: 200,
@@ -347,6 +349,7 @@ export class CatalogItemLifecycleService {
           `DELETE FROM catalog_items WHERE organization_id = $1 AND id = $2`,
           [context.organizationId, itemId],
         );
+        await this.advanceOrganizationEpoch(client, context.organizationId);
 
         await idempotency.complete(acquired.record.id, {
           statusCode: 200,
@@ -389,6 +392,10 @@ export class CatalogItemLifecycleService {
       throw new CatalogItemServiceError('CATALOG_ITEM_LIFECYCLE_FORBIDDEN', 'Organización no disponible.');
     }
     return epoch;
+  }
+
+  private async advanceOrganizationEpoch(client: PoolClient, organizationId: string): Promise<void> {
+    await client.query('UPDATE organizations SET config_epoch = config_epoch + 1 WHERE id = $1', [organizationId]);
   }
 
   private async lockItem(

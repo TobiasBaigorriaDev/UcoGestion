@@ -150,6 +150,7 @@ export class CatalogCategoryManagementService {
         );
         const result = updated.rows[0];
         if (!result) throw new Error('La categoría de catálogo no pudo ser actualizada.');
+        await this.advanceOrganizationEpoch(client, context.organizationId);
 
         await idempotency.complete(acquired.record.id, {
           statusCode: 200,
@@ -250,6 +251,7 @@ export class CatalogCategoryManagementService {
           `DELETE FROM catalog_categories WHERE organization_id = $1 AND id = $2`,
           [context.organizationId, categoryId],
         );
+        await this.advanceOrganizationEpoch(client, context.organizationId);
 
         await idempotency.complete(acquired.record.id, {
           statusCode: 200,
@@ -294,6 +296,10 @@ export class CatalogCategoryManagementService {
       );
     }
     return epoch;
+  }
+
+  private async advanceOrganizationEpoch(client: PoolClient, organizationId: string): Promise<void> {
+    await client.query('UPDATE organizations SET config_epoch = config_epoch + 1 WHERE id = $1', [organizationId]);
   }
 
   private async lockCategory(

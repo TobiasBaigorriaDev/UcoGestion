@@ -64,8 +64,8 @@ export class ConfigurationBarrierService {
         `SELECT 1 FROM devices WHERE organization_id = $1 AND id = $2 AND status = 'ACTIVE'`,
         [context.organizationId, deviceId],
       );
-      const version = await client.query<{ currency: string }>(
-        `SELECT snapshot->>'currency' AS currency FROM configuration_versions
+      const version = await client.query<{ currency: string; config_epoch: number }>(
+        `SELECT snapshot->>'currency' AS currency, config_epoch::integer AS config_epoch FROM configuration_versions
          WHERE organization_id = $1 AND version = $2`,
         [context.organizationId, configurationVersion],
       );
@@ -73,7 +73,8 @@ export class ConfigurationBarrierService {
         'SELECT base_currency FROM organizations WHERE id = $1', [context.organizationId],
       );
       if ((device.rowCount ?? 0) === 0 ||
-        version.rows[0]?.currency !== currentCurrency.rows[0]?.base_currency) {
+        version.rows[0]?.currency !== currentCurrency.rows[0]?.base_currency ||
+        version.rows[0]?.config_epoch !== epoch) {
         throw new ConfigurationBarrierError('CONFIGURATION_GRANT_INVALID', 'Dispositivo o versión no autorizados.');
       }
       await client.query(

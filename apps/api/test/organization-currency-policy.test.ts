@@ -20,10 +20,10 @@ describe('organization base currency change policy', () => {
     }
   });
 
-  it('rejects known history and invalid currencies without exposing a mutation endpoint yet', () => {
+  it('rejects known history and invalid currencies with the existing mutation endpoint', () => {
     expect(() => policy.authorize({ actorRole: 'OWNER', hasServerHistory: true, targetCurrency: 'USD' }))
       .toThrow(OrganizationCurrencyChangeDeniedError);
     expect(() => organizationCurrencyChangeSchema.parse({ targetCurrency: 'ZZZ' })).toThrow();
-    expect('updateCurrency' in OrganizationsController.prototype).toBe(false);
+    expect('updateCurrency' in OrganizationsController.prototype).toBe(true);
   });
 });

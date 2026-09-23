@@ -71,8 +71,8 @@ export class ConfigurationVersionService {
       if (!['OWNER', 'ADMIN'].includes(membership.rows[0]?.role ?? '')) {
         throw new ConfigurationVersionError('CONFIGURATION_FORBIDDEN', 'Solo OWNER o ADMIN pueden emitir configuración.');
       }
-      const org = await client.query<{ base_currency: string }>(
-        'SELECT base_currency FROM organizations WHERE id = $1 FOR UPDATE',
+      const org = await client.query<{ base_currency: string; config_epoch: number }>(
+        'SELECT base_currency, config_epoch::integer AS config_epoch FROM organizations WHERE id = $1 FOR UPDATE',
         [context.organizationId],
       );
       const currency = org.rows[0]?.base_currency;
@@ -135,10 +135,10 @@ export class ConfigurationVersionService {
       }
       await client.query(
         `INSERT INTO configuration_versions
-           (id, organization_id, version, snapshot, canonical_payload, signature, signing_key_id, public_key_pem)
-         VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8)`,
+          (id, organization_id, version, snapshot, canonical_payload, signature, signing_key_id, public_key_pem, config_epoch)
+         VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9)`,
         [configurationId, context.organizationId, version, JSON.stringify(snapshot), canonicalPayload,
-          signature, this.signer.keyId, this.signer.publicKeyPem],
+          signature, this.signer.keyId, this.signer.publicKeyPem, org.rows[0]?.config_epoch],
       );
       return { canonicalPayload, keyId: this.signer.keyId, publicKeyPem: this.signer.publicKeyPem,
         signature, snapshot, version };
