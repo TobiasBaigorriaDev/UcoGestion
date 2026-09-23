@@ -107,6 +107,27 @@ describe('supplier creation (T085 / RF-70, RF-71, RF-265)', () => {
     expect(check.rows[0].status).toBe('ACTIVE');
   });
 
+  it('replays an identical create without duplicating the supplier or audit event', async () => {
+    const context = { organizationId: organizationA, requestId: randomUUID(), userId: ownerUserId };
+    const key = randomUUID();
+    const first = await service.create(context, { name: 'Proveedor idempotente' }, key);
+    const replay = await service.create(context, { name: 'Proveedor idempotente' }, key);
+    expect(replay).toEqual(first);
+    const suppliers = await pool.query<{ count: string }>(
+      'SELECT count(*)::text AS count FROM suppliers WHERE organization_id = $1 AND name = $2',
+      [organizationA, 'Proveedor idempotente'],
+    );
+    expect(suppliers.rows[0]?.count).toBe('1');
+    const audit = await pool.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM audit_events WHERE organization_id = $1 AND entity_id = $2 AND action = 'supplier.created'",
+      [organizationA, first.id],
+    );
+    expect(audit.rows[0]?.count).toBe('1');
+    await expect(service.create(context, { name: 'Otro proveedor' }, key)).rejects.toMatchObject({
+      code: 'IDEMPOTENCY_KEY_REUSED',
+    });
+  });
+
   it('creates supplier with name and normalized tax ID (RF-71, RF-265)', async () => {
     const context = {
       organizationId: organizationA,
@@ -134,6 +155,13 @@ describe('supplier creation (T085 / RF-70, RF-71, RF-265)', () => {
       [supplier.id],
     );
     expect(check.rows[0].tax_id_norm).toBe('30-55667788-9');
+    const audit = await pool.query<{ after_data: Record<string, unknown> }>(
+      "SELECT after_data FROM audit_events WHERE entity_id = $1 AND action = 'supplier.created'",
+      [supplier.id],
+    );
+    expect(JSON.stringify(audit.rows[0]?.after_data)).not.toContain('30-55667788-9');
+    expect(JSON.stringify(audit.rows[0]?.after_data)).not.toContain('ventas@mayorista.com');
+    expect(JSON.stringify(audit.rows[0]?.after_data)).not.toContain('Parque Industrial');
   });
 
   it('rejects supplier creation with empty or whitespace name (RF-70)', async () => {
@@ -217,6 +245,12 @@ describe('supplier creation (T085 / RF-70, RF-71, RF-265)', () => {
     expect(suppA.id).toBeDefined();
     expect(suppB.id).toBeDefined();
     expect(suppA.id).not.toBe(suppB.id);
+    await expect(service.findById(contextB, suppA.id)).rejects.toMatchObject({
+      code: 'SUPPLIER_NOT_FOUND',
+    });
+    const crossTenantRows = await new TenantTransaction(runtimePool).read(contextB, async (client) =>
+      client.query<{ id: string }>('SELECT id FROM suppliers WHERE id = $1', [suppA.id]));
+    expect(crossTenantRows.rows).toEqual([]);
   });
 
   it('denies CASHIER from creating supplier (RF-217)', async () => {

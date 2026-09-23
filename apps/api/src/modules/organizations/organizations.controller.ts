@@ -5,6 +5,7 @@ import { Body, ConflictException, Controller, ForbiddenException, Get, HttpExcep
 import { PublicRoute } from '../auth/public-route.decorator.js';
 import { readSessionCookie } from '../auth/session-cookie.js';
 import { SessionAuthenticationService } from '../auth/session-authentication.service.js';
+import { OrganizationSettingsService } from './organization-settings.service.js';
 import {
   GlobalMembershipDiscoveryService,
   OrganizationNotAvailableError,
@@ -44,7 +45,19 @@ export class OrganizationsController {
     private readonly profiles: OrganizationProfileService,
     private readonly timezones: OrganizationTimezoneService,
     private readonly currencies: OrganizationCurrencyChangeService,
+    private readonly settings: OrganizationSettingsService,
   ) {}
+
+  @Get('settings')
+  async getSettings(@Req() request: OrganizationRequest) {
+    const identity = request.identity;
+    if (!identity) throw new UnauthorizedException();
+    return this.settings.read({
+      organizationId: identity.organizationId,
+      userId: identity.userId,
+      requestId: this.requestId(request),
+    });
+  }
 
   @Patch('currency')
   async updateCurrency(

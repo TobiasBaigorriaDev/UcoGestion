@@ -1,7 +1,11 @@
+@import 'tailwindcss';
+@import '@uconext/ui/tokens.css';
+@import '@uconext/ui/primitives.css';
+@import '@uconext/ui/effects.css';
+
 :root {
-  color-scheme: light;
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--color-background);
+  color: var(--color-text);
   font-synthesis: none;
 }
 
@@ -14,10 +18,11 @@ html {
 }
 
 body {
+  font-family: var(--font-sans);
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: #f8fafc;
+  background: var(--color-background);
 }
 
 a {
@@ -25,12 +30,12 @@ a {
 }
 
 ::selection {
-  background: #22c55e;
-  color: #052e16;
+  background: var(--color-vibrant);
+  color: var(--color-on-vibrant);
 }
 
 :focus-visible {
-  outline: 3px solid #15803d;
+  outline: 3px solid var(--color-focus);
   outline-offset: 3px;
 }
 

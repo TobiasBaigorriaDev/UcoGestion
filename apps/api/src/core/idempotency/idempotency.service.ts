@@ -4,6 +4,20 @@ import type { PoolClient } from 'pg';
 
 export type JsonValue = boolean | null | number | string | JsonValue[] | { [key: string]: JsonValue };
 
+export function toJsonValue(value: unknown): JsonValue {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (Array.isArray(value)) return value.map(toJsonValue);
+  if (typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === Object.prototype) {
+    const result: Record<string, JsonValue> = {};
+    for (const [key, item] of Object.entries(value)) {
+      if (item !== undefined) result[key] = toJsonValue(item);
+    }
+    return result;
+  }
+  throw new TypeError('Only JSON values can be stored in idempotency records.');
+}
+
 export interface IdempotencyRequest {
   actorUserId: string;
   authorizationClass: string;

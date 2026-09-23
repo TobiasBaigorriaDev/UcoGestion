@@ -1,8 +1,35 @@
 import { randomUUID } from 'node:crypto';
 
 import type { DatabaseError, PoolClient } from 'pg';
+import { z } from 'zod';
 
+import {
+  IdempotencyKeyReusedError,
+  IdempotencyReplayForbiddenError,
+  IdempotencyReplayPendingError,
+  toJsonValue,
+  type IdempotencyRequest,
+} from '../../core/idempotency/idempotency.service.js';
+import { decodeMasterCursor } from '../../core/validation/master-list-query.js';
+import { encodeCursor } from '../../core/validation/pagination.js';
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
+
+const customerReplaySchema = z.strictObject({
+  id: z.string().uuid(),
+  name: z.string(),
+  taxId: z.string().nullable(),
+  contact: z.string().nullable(),
+  address: z.string().nullable(),
+  notes: z.string().nullable(),
+  status: z.enum(['ACTIVE', 'INACTIVE']),
+  version: z.number().int(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+const customerDeleteReplaySchema = z.strictObject({
+  id: z.string().uuid(),
+  deleted: z.literal(true),
+});
 
 export interface CustomerCreateInput {
   readonly name: string;
@@ -21,6 +48,7 @@ export interface CustomerUpdateInput {
 }
 
 export interface CustomerListQuery {
+  readonly cursor?: string | undefined;
   readonly status?: 'ACTIVE' | 'INACTIVE' | undefined;
   readonly search?: string | undefined;
   readonly limit?: number | undefined;
@@ -46,6 +74,8 @@ export type CustomerManagementErrorCode =
   | 'CUSTOMER_NOT_FOUND'
   | 'CUSTOMER_STATUS_CHANGE_FORBIDDEN'
   | 'CUSTOMER_TAX_ID_DUPLICATE'
+  | 'IDEMPOTENCY_KEY_REUSED'
+  | 'IDEMPOTENCY_REPLAY_PENDING'
   | 'VERSION_CONFLICT';
 
 export class CustomerManagementError extends Error {
@@ -65,6 +95,7 @@ export class CustomerManagementService {
   async create(
     context: TenantTransactionContext,
     input: CustomerCreateInput,
+    idempotencyKey: string = randomUUID(),
   ): Promise<CustomerResult> {
     const name = input.name?.trim();
     if (!name || name.length === 0) {
@@ -84,12 +115,21 @@ export class CustomerManagementService {
     const id = randomUUID();
 
     try {
-      return await this.transactions.run(
+      return await this.transactions.runIdempotent(
         context,
         {
           action: 'customer.created',
-          after: { address, contact, name, notes, status: 'ACTIVE', taxId },
-          afterAllowlist: ['address', 'contact', 'name', 'notes', 'status', 'taxId'],
+          after: {
+            status: 'ACTIVE',
+            fieldsSet: [
+              'name',
+              ...(taxId === null ? [] : ['taxId']),
+              ...(contact === null ? [] : ['contact']),
+              ...(address === null ? [] : ['address']),
+              ...(notes === null ? [] : ['notes']),
+            ],
+          },
+          afterAllowlist: ['status', 'fieldsSet'],
           before: {},
           beforeAllowlist: [],
           branchId: null,
@@ -99,6 +139,9 @@ export class CustomerManagementService {
           entityType: 'customer',
           operationId: id,
         },
+        this.idempotencyRequest(context, idempotencyKey, 'customer.create',
+          { name, taxId, contact, address, notes }, 'CUSTOMER_WRITE'),
+        async (client) => { await this.requireCanCreateOrEdit(client, context); },
         async (client) => {
           await this.requireCanCreateOrEdit(client, context);
 
@@ -129,6 +172,7 @@ export class CustomerManagementService {
           if (!row) throw new Error('El cliente no fue persistido.');
           return row;
         },
+        (body) => customerReplaySchema.parse(body),
       );
     } catch (error) {
       this.handleDatabaseError(error);
@@ -162,7 +206,7 @@ export class CustomerManagementService {
   async list(
     context: TenantTransactionContext,
     query?: CustomerListQuery,
-  ): Promise<{ items: CustomerResult[] }> {
+  ): Promise<{ items: CustomerResult[]; nextCursor: string | null }> {
     return await this.transactions.read(context, async (client) => {
       await this.requireCanRead(client, context);
 
@@ -184,15 +228,28 @@ export class CustomerManagementService {
         sql += ` AND (name ILIKE $${params.length} OR tax_id_norm ILIKE $${params.length})`;
       }
 
-      sql += ` ORDER BY created_at DESC`;
-
-      if (query?.limit && query.limit > 0) {
-        params.push(query.limit);
-        sql += ` LIMIT $${params.length}`;
+      if (query?.cursor) {
+        const cursor = decodeMasterCursor(query.cursor);
+        params.push(cursor.sortValue, cursor.id);
+        sql += ` AND (created_at, id) < ($${params.length - 1}::timestamptz, $${params.length}::uuid)`;
       }
+      sql += ` ORDER BY created_at DESC, id DESC`;
+      const limit = query?.limit ?? 25;
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+        throw new CustomerManagementError('CUSTOMER_NAME_INVALID', 'Límite de listado inválido.');
+      }
+      params.push(limit + 1);
+      sql += ` LIMIT $${params.length}`;
 
       const result = await client.query<CustomerResult>(sql, params);
-      return { items: result.rows };
+      const items = result.rows.slice(0, limit);
+      const last = items.at(-1);
+      return {
+        items,
+        nextCursor: result.rows.length > limit && last
+          ? encodeCursor({ id: last.id, sortValue: last.createdAt })
+          : null,
+      };
     });
   }
 
@@ -201,24 +258,19 @@ export class CustomerManagementService {
     id: string,
     expectedVersion: number,
     input: CustomerUpdateInput,
+    idempotencyKey: string = randomUUID(),
   ): Promise<CustomerResult> {
     if (input.name !== undefined && (!input.name.trim() || input.name.trim().length === 0)) {
       throw new CustomerManagementError('CUSTOMER_NAME_INVALID', 'El nombre del cliente es obligatorio.');
     }
 
     try {
-      return await this.transactions.run(
+      return await this.transactions.runIdempotent(
         context,
         {
           action: 'customer.updated',
-          after: {
-            address: input.address ?? null,
-            contact: input.contact ?? null,
-            name: input.name ?? null,
-            notes: input.notes ?? null,
-            taxId: input.taxId ?? null,
-          },
-          afterAllowlist: ['address', 'contact', 'name', 'notes', 'taxId'],
+          after: { fieldsSubmitted: Object.keys(input) },
+          afterAllowlist: ['fieldsSubmitted'],
           before: {},
           beforeAllowlist: [],
           branchId: null,
@@ -228,6 +280,9 @@ export class CustomerManagementService {
           entityType: 'customer',
           operationId: randomUUID(),
         },
+        this.idempotencyRequest(context, idempotencyKey, 'customer.update',
+          { id, expectedVersion, input }, 'CUSTOMER_WRITE'),
+        async (client) => { await this.requireCanCreateOrEdit(client, context); },
         async (client) => {
           await this.requireCanCreateOrEdit(client, context);
 
@@ -290,6 +345,7 @@ export class CustomerManagementService {
           if (!row) throw new Error('El cliente no pudo ser actualizado.');
           return row;
         },
+        (body) => customerReplaySchema.parse(body),
       );
     } catch (error) {
       this.handleDatabaseError(error);
@@ -301,9 +357,10 @@ export class CustomerManagementService {
     id: string,
     expectedVersion: number,
     targetStatus: 'ACTIVE' | 'INACTIVE',
+    idempotencyKey: string = randomUUID(),
   ): Promise<CustomerResult> {
     try {
-      return await this.transactions.run(
+      return await this.transactions.runIdempotent(
         context,
         {
           action: 'customer.status_changed',
@@ -318,6 +375,9 @@ export class CustomerManagementService {
           entityType: 'customer',
           operationId: randomUUID(),
         },
+        this.idempotencyRequest(context, idempotencyKey, 'customer.status',
+          { id, expectedVersion, targetStatus }, 'OWNER_OR_ADMIN'),
+        async (client) => { await this.requireOwnerOrAdmin(client, context, 'CUSTOMER_STATUS_CHANGE_FORBIDDEN'); },
         async (client) => {
           await this.requireOwnerOrAdmin(client, context, 'CUSTOMER_STATUS_CHANGE_FORBIDDEN');
 
@@ -357,6 +417,7 @@ export class CustomerManagementService {
           if (!row) throw new Error('El estado del cliente no pudo ser actualizado.');
           return row;
         },
+        (body) => customerReplaySchema.parse(body),
       );
     } catch (error) {
       this.handleDatabaseError(error);
@@ -367,9 +428,10 @@ export class CustomerManagementService {
     context: TenantTransactionContext,
     id: string,
     expectedVersion: number,
+    idempotencyKey: string = randomUUID(),
   ): Promise<{ readonly id: string; readonly deleted: true }> {
     try {
-      return await this.transactions.run(
+      return await this.transactions.runIdempotent(
         context,
         {
           action: 'customer.deleted',
@@ -384,6 +446,9 @@ export class CustomerManagementService {
           entityType: 'customer',
           operationId: randomUUID(),
         },
+        this.idempotencyRequest(context, idempotencyKey, 'customer.delete',
+          { id, expectedVersion }, 'OWNER_OR_ADMIN'),
+        async (client) => { await this.requireOwnerOrAdmin(client, context); },
         async (client) => {
           await this.requireOwnerOrAdmin(client, context, 'CUSTOMER_ACCESS_FORBIDDEN');
 
@@ -428,6 +493,7 @@ export class CustomerManagementService {
 
           return { id, deleted: true as const };
         },
+        (body) => customerDeleteReplaySchema.parse(body),
       );
     } catch (error) {
       if ((error as Partial<DatabaseError>).code === '23503') {
@@ -438,6 +504,24 @@ export class CustomerManagementService {
       }
       this.handleDatabaseError(error);
     }
+  }
+
+  private idempotencyRequest(
+    context: TenantTransactionContext,
+    key: string,
+    scope: string,
+    payload: unknown,
+    authorizationClass: string,
+  ): IdempotencyRequest {
+    return {
+      actorUserId: context.userId,
+      authorizationClass,
+      branchId: null,
+      key,
+      organizationId: context.organizationId,
+      payload: toJsonValue(payload),
+      scope,
+    };
   }
 
   private async requireCanRead(
@@ -509,6 +593,15 @@ export class CustomerManagementService {
   private handleDatabaseError(error: unknown): never {
     if (error instanceof CustomerManagementError) {
       throw error;
+    }
+    if (error instanceof IdempotencyKeyReusedError) {
+      throw new CustomerManagementError('IDEMPOTENCY_KEY_REUSED', error.message);
+    }
+    if (error instanceof IdempotencyReplayForbiddenError) {
+      throw new CustomerManagementError('CUSTOMER_ACCESS_FORBIDDEN', error.message);
+    }
+    if (error instanceof IdempotencyReplayPendingError) {
+      throw new CustomerManagementError('IDEMPOTENCY_REPLAY_PENDING', error.message);
     }
     if ((error as Partial<DatabaseError>).code === '23505') {
       const constraint = (error as Partial<DatabaseError>).constraint;

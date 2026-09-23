@@ -1,0 +1,51 @@
+:root {
+  color-scheme: light;
+  --color-primary: #166534;
+  --color-vibrant: #22c55e;
+  --color-accent: #15803d;
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-glass: rgb(255 255 255 / 78%);
+  --color-glass-strong: rgb(255 255 255 / 90%);
+  --color-glass-border: rgb(255 255 255 / 50%);
+  --color-text: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #5b677a;
+  --color-text-disabled: #94a3b8;
+  --color-on-primary: #ffffff;
+  --color-on-vibrant: #052e16;
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-danger-text: #b42318;
+  --color-focus: #166534;
+
+  --font-sans: var(--font-plus-jakarta), 'Plus Jakarta Sans', sans-serif;
+  --text-display: clamp(2rem, 5vw, 3.5rem);
+  --text-headline: 1.5rem;
+  --text-title: 1.125rem;
+  --text-body: 1rem;
+  --text-label: 0.875rem;
+  --radius-sm: 8px;
+  --radius-button: 12px;
+  --radius-card: 16px;
+  --radius-xl: 24px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --shadow-glass: 0 8px 32px rgb(15 23 42 / 5%);
+  --shadow-glass-hover: 0 12px 40px rgb(22 101 52 / 12%);
+}
+
+@theme inline {
+  --color-forest: var(--color-primary);
+  --color-apple: var(--color-vibrant);
+  --color-emerald: var(--color-accent);
+  --color-canvas: var(--color-background);
+  --color-ink: var(--color-text);
+  --color-ink-secondary: var(--color-text-secondary);
+  --font-ui: var(--font-sans);
+  --radius-uco-card: var(--radius-card);
+  --shadow-uco-glass: var(--shadow-glass);
+}

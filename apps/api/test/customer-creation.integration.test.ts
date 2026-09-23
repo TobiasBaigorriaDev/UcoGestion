@@ -107,6 +107,27 @@ describe('customer creation (T082 / RF-68, RF-69, RF-265)', () => {
     expect(check.rows[0].status).toBe('ACTIVE');
   });
 
+  it('replays an identical create without duplicating the customer or audit event', async () => {
+    const context = { organizationId: organizationA, requestId: randomUUID(), userId: ownerUserId };
+    const key = randomUUID();
+    const first = await service.create(context, { name: 'Cliente idempotente' }, key);
+    const replay = await service.create(context, { name: 'Cliente idempotente' }, key);
+    expect(replay).toEqual(first);
+    const customers = await pool.query<{ count: string }>(
+      'SELECT count(*)::text AS count FROM customers WHERE organization_id = $1 AND name = $2',
+      [organizationA, 'Cliente idempotente'],
+    );
+    expect(customers.rows[0]?.count).toBe('1');
+    const audit = await pool.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM audit_events WHERE organization_id = $1 AND entity_id = $2 AND action = 'customer.created'",
+      [organizationA, first.id],
+    );
+    expect(audit.rows[0]?.count).toBe('1');
+    await expect(service.create(context, { name: 'Otro cliente' }, key)).rejects.toMatchObject({
+      code: 'IDEMPOTENCY_KEY_REUSED',
+    });
+  });
+
   it('creates customer with name and normalized tax ID (RF-69, RF-265)', async () => {
     const context = {
       organizationId: organizationA,
@@ -134,6 +155,13 @@ describe('customer creation (T082 / RF-68, RF-69, RF-265)', () => {
       [customer.id],
     );
     expect(check.rows[0].tax_id_norm).toBe('20-30405060-7');
+    const audit = await pool.query<{ after_data: Record<string, unknown> }>(
+      "SELECT after_data FROM audit_events WHERE entity_id = $1 AND action = 'customer.created'",
+      [customer.id],
+    );
+    expect(JSON.stringify(audit.rows[0]?.after_data)).not.toContain('20-30405060-7');
+    expect(JSON.stringify(audit.rows[0]?.after_data)).not.toContain('contacto@acme.com');
+    expect(JSON.stringify(audit.rows[0]?.after_data)).not.toContain('Siempre Viva');
   });
 
   it('rejects customer creation with empty or whitespace name (RF-68)', async () => {
@@ -217,6 +245,12 @@ describe('customer creation (T082 / RF-68, RF-69, RF-265)', () => {
     expect(custA.id).toBeDefined();
     expect(custB.id).toBeDefined();
     expect(custA.id).not.toBe(custB.id);
+    await expect(service.findById(contextB, custA.id)).rejects.toMatchObject({
+      code: 'CUSTOMER_NOT_FOUND',
+    });
+    const crossTenantRows = await new TenantTransaction(runtimePool).read(contextB, async (client) =>
+      client.query<{ id: string }>('SELECT id FROM customers WHERE id = $1', [custA.id]));
+    expect(crossTenantRows.rows).toEqual([]);
   });
 
   it('allows CASHIER to create customer (RF-212)', async () => {

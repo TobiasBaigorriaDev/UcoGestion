@@ -17,6 +17,8 @@ describe('supplier role permissions (T087 / RF-216, RF-217)', () => {
   let ownerUserId: string;
   let cashierUserId: string;
   let employeeUserId: string;
+  let assignedBranchId: string;
+  let otherBranchId: string;
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16-alpine').start();
@@ -59,6 +61,21 @@ describe('supplier role permissions (T087 / RF-216, RF-217)', () => {
         randomUUID(), organizationId, employeeUserId,
       ],
     );
+
+    assignedBranchId = randomUUID();
+    otherBranchId = randomUUID();
+    await pool.query(
+      `INSERT INTO branches (id, organization_id, name) VALUES
+       ($1, $3, 'Recepción asignada'),
+       ($2, $3, 'Otra sucursal')`,
+      [assignedBranchId, otherBranchId, organizationId],
+    );
+    await pool.query(
+      `INSERT INTO membership_branches (organization_id, membership_id, branch_id)
+       SELECT organization_id, id, $3 FROM memberships
+       WHERE organization_id = $1 AND user_id = $2`,
+      [organizationId, employeeUserId, assignedBranchId],
+    );
   });
 
   afterAll(async () => {
@@ -85,12 +102,49 @@ describe('supplier role permissions (T087 / RF-216, RF-217)', () => {
       contact: 'granos@campo.com',
     });
 
-    const readByEmployee = await service.findById(employeeContext, created.id);
+    await expect(service.findById(employeeContext, created.id)).rejects.toMatchObject({
+      code: 'SUPPLIER_ACCESS_FORBIDDEN',
+    });
+    await expect(service.list(employeeContext)).rejects.toMatchObject({
+      code: 'SUPPLIER_ACCESS_FORBIDDEN',
+    });
+
+    const readByEmployee = await service.findForReception(employeeContext, assignedBranchId, created.id);
     expect(readByEmployee.id).toBe(created.id);
     expect(readByEmployee.name).toBe('Proveedor de Granos');
+    expect(readByEmployee).toEqual({
+      id: created.id,
+      name: 'Proveedor de Granos',
+      status: 'ACTIVE',
+    });
 
-    const listByEmployee = await service.list(employeeContext);
+    const listByEmployee = await service.listForReception(employeeContext, assignedBranchId);
     expect(listByEmployee.items.some((s) => s.id === created.id)).toBe(true);
+    for (let index = 0; index < 12; index += 1) {
+      await service.create(ownerContext, { name: `Recepción página ${index}` });
+    }
+    const firstPage = await service.listForReception(employeeContext, assignedBranchId, {
+      search: 'Recepción página',
+      limit: 5,
+    });
+    expect(firstPage.items).toHaveLength(5);
+    expect(firstPage.nextCursor).toBeTruthy();
+    const secondPage = await service.listForReception(employeeContext, assignedBranchId, {
+      search: 'Recepción página',
+      limit: 5,
+      cursor: firstPage.nextCursor ?? undefined,
+    });
+    expect(new Set([...firstPage.items, ...secondPage.items].map(({ id }) => id)).size).toBe(10);
+    await service.changeStatus(ownerContext, created.id, created.version, 'INACTIVE');
+    await expect(service.findForReception(employeeContext, assignedBranchId, created.id))
+      .rejects.toMatchObject({ code: 'SUPPLIER_NOT_FOUND' });
+    expect((await service.findById(ownerContext, created.id)).status).toBe('INACTIVE');
+    await pool.query("UPDATE branches SET status = 'INACTIVE' WHERE id = $1", [assignedBranchId]);
+    await expect(service.listForReception(employeeContext, assignedBranchId))
+      .rejects.toMatchObject({ code: 'SUPPLIER_ACCESS_FORBIDDEN' });
+    await expect(service.listForReception(employeeContext, otherBranchId)).rejects.toMatchObject({
+      code: 'SUPPLIER_ACCESS_FORBIDDEN',
+    });
   });
 
   it('denies EMPLOYEE from mutating suppliers (RF-216)', async () => {

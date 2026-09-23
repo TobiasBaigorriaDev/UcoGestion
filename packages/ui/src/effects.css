@@ -1,0 +1,27 @@
+.uco-glass {
+  --uco-glass-surface: var(--color-glass);
+  background: var(--color-surface);
+}
+
+.uco-glass--strong {
+  --uco-glass-surface: var(--color-glass-strong);
+}
+
+@supports (backdrop-filter: blur(14px)) {
+  .uco-glass {
+    background: var(--uco-glass-surface);
+    backdrop-filter: blur(14px);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-reduced-motion: reduce) {
+  .uco-glass {
+    background: var(--color-surface);
+    backdrop-filter: none;
+  }
+}
+
+html[data-effects='reduced'] .uco-glass {
+  background: var(--color-surface);
+  backdrop-filter: none;
+}

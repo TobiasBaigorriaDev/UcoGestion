@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { Pool } from 'pg';
+import { ForbiddenException } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { runMigrations } from '../src/database/migrate.js';
@@ -13,6 +14,7 @@ import {
   OrganizationProfileVersionError,
   organizationProfileUpdateSchema,
 } from '../src/modules/organizations/organization-profile.service.js';
+import { OrganizationSettingsService } from '../src/modules/organizations/organization-settings.service.js';
 
 describe('organization commercial profile', () => {
   let container: StartedPostgreSqlContainer;
@@ -95,5 +97,13 @@ describe('organization commercial profile', () => {
       [organizationB],
     );
     expect(other.rows[0]).toEqual({ profile: {}, version: '1' });
+  });
+
+  it('reads profile, timezone and version only for an active member of that tenant', async () => {
+    const reader = new OrganizationSettingsService(new TenantTransaction(pool));
+    await expect(reader.read({ organizationId: organizationA, requestId: 'settings-read', userId: ownerUserId }))
+      .resolves.toMatchObject({ timezone: 'America/Argentina/Mendoza', version: 3, role: 'OWNER' });
+    await expect(reader.read({ organizationId: organizationB, requestId: 'settings-cross-tenant', userId: ownerUserId }))
+      .rejects.toBeInstanceOf(ForbiddenException);
   });
 });

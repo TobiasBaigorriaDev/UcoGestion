@@ -17,9 +17,15 @@ import {
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ApiQuery } from '@nestjs/swagger';
 import { z } from 'zod';
 
 import { IfMatchVersion } from '../../core/validation/if-match.js';
+import { requireIdempotencyKey } from '../../core/validation/idempotency-key.js';
+import {
+  parseMasterListQuery,
+  parseReceptionListQuery,
+} from '../../core/validation/master-list-query.js';
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
 import type { TenantTransactionContext } from '../../database/tenant-transaction.js';
 import {
@@ -62,26 +68,53 @@ export class SuppliersController {
     @Body(new ZodValidationPipe(createSupplierSchema)) body: z.infer<typeof createSupplierSchema>,
   ) {
     try {
-      return await this.service.create(this.context(request), body);
+      return await this.service.create(this.context(request), body, requireIdempotencyKey(request.headers));
     } catch (error) {
       this.handleError(error);
     }
   }
 
   @Get()
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, enum: ['ACTIVE', 'INACTIVE'] })
   async list(
     @Req() request: SupplierRequest,
-    @Query('status') status?: 'ACTIVE' | 'INACTIVE',
-    @Query('search') search?: string,
-    @Query('limit') limit?: string,
+    @Query() query: Record<string, unknown>,
   ) {
     try {
-      const parsedLimit = limit ? Number.parseInt(limit, 10) : undefined;
-      return await this.service.list(this.context(request), {
-        status,
-        search,
-        limit: Number.isNaN(parsedLimit) ? undefined : parsedLimit,
-      });
+      return await this.service.list(this.context(request), parseMasterListQuery(query));
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  @Get('reception/:branchId')
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  async listForReception(
+    @Req() request: SupplierRequest,
+    @Param('branchId', ParseUUIDPipe) branchId: string,
+    @Query() query: Record<string, unknown>,
+  ) {
+    try {
+      return await this.service.listForReception(this.context(request), branchId,
+        parseReceptionListQuery(query));
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  @Get('reception/:branchId/:supplierId')
+  async findForReception(
+    @Req() request: SupplierRequest,
+    @Param('branchId', ParseUUIDPipe) branchId: string,
+    @Param('supplierId', ParseUUIDPipe) supplierId: string,
+  ) {
+    try {
+      return await this.service.findForReception(this.context(request), branchId, supplierId);
     } catch (error) {
       this.handleError(error);
     }
@@ -107,7 +140,8 @@ export class SuppliersController {
     @Body(new ZodValidationPipe(updateSupplierSchema)) body: z.infer<typeof updateSupplierSchema>,
   ) {
     try {
-      return await this.service.update(this.context(request), supplierId, expectedVersion, body);
+      return await this.service.update(this.context(request), supplierId, expectedVersion, body,
+        requireIdempotencyKey(request.headers));
     } catch (error) {
       this.handleError(error);
     }
@@ -121,7 +155,8 @@ export class SuppliersController {
     @Body(new ZodValidationPipe(statusSchema)) body: z.infer<typeof statusSchema>,
   ) {
     try {
-      return await this.service.changeStatus(this.context(request), supplierId, expectedVersion, body.status);
+      return await this.service.changeStatus(this.context(request), supplierId, expectedVersion, body.status,
+        requireIdempotencyKey(request.headers));
     } catch (error) {
       this.handleError(error);
     }
@@ -134,7 +169,8 @@ export class SuppliersController {
     @IfMatchVersion() expectedVersion: number,
   ) {
     try {
-      return await this.service.deletePhysically(this.context(request), supplierId, expectedVersion);
+      return await this.service.deletePhysically(this.context(request), supplierId, expectedVersion,
+        requireIdempotencyKey(request.headers));
     } catch (error) {
       this.handleError(error);
     }

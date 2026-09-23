@@ -1,6 +1,12 @@
 import type { Pool, PoolClient } from 'pg';
 
 import { AuditEventWriter, type AuditEventInput } from '../core/audit/audit-event-writer.js';
+import {
+  IdempotencyService,
+  toJsonValue,
+  type IdempotencyRequest,
+  type JsonValue,
+} from '../core/idempotency/idempotency.service.js';
 
 export interface TenantTransactionContext {
   readonly organizationId: string;
@@ -63,6 +69,30 @@ export class TenantTransaction {
     } finally {
       client.release();
     }
+  }
+
+  async runIdempotent<TResult>(
+    context: TenantTransactionContext,
+    auditEvent: TenantAuditEvent,
+    request: IdempotencyRequest,
+    authorize: (client: PoolClient) => Promise<void>,
+    operation: (client: PoolClient) => Promise<TResult>,
+    decodeReplay: (body: JsonValue) => TResult,
+  ): Promise<TResult> {
+    return await this.runWithOptionalAudit(context, async (client) => {
+      await authorize(client);
+      const idempotency = new IdempotencyService(client);
+      const acquired = await idempotency.acquire(request, async () => authorize(client));
+      if (acquired.kind === 'replay') {
+        return { result: decodeReplay(acquired.response.body) };
+      }
+      const result = await operation(client);
+      await idempotency.complete(acquired.record.id, {
+        body: toJsonValue(result),
+        statusCode: 200,
+      });
+      return { result, auditEvent };
+    });
   }
 
   async runWithOptionalAudit<TResult>(

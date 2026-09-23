@@ -7,6 +7,10 @@ import { AppModule } from '../src/app.module.js';
 import { configureApi } from '../src/configure-api.js';
 import { createOpenApiDocument } from '../src/core/validation/openapi.js';
 import {
+  parseMasterListQuery,
+  parseReceptionListQuery,
+} from '../src/core/validation/master-list-query.js';
+import {
   encodeCursor,
   parseCursorPageQuery,
 } from '../src/core/validation/pagination.js';
@@ -58,6 +62,31 @@ describe('request contracts', () => {
 
     expect(() => parseCursorPageQuery({ limit: '101' }, [])).toThrow('limit');
     expect(() => parseCursorPageQuery({ owner: 'other-tenant' }, [])).toThrow('owner');
+  });
+
+  it('rejects malformed master-list filters before querying PostgreSQL', () => {
+    expect(parseMasterListQuery({ limit: '25', status: 'ACTIVE' })).toEqual({
+      limit: 25,
+      status: 'ACTIVE',
+    });
+    for (const query of [
+      { limit: '0' },
+      { limit: '101' },
+      { limit: '2oops' },
+      { status: 'ARCHIVED' },
+      { unexpected: 'value' },
+      { cursor: encodeCursor({ id: '00000000-0000-4000-8000-000000000101', sortValue: 'bad-date' }) },
+      { cursor: encodeCursor({ id: '00000000-0000-4000-8000-000000000101', sortValue: '2026-02-31 00:00:00+00' }) },
+    ]) {
+      expect(() => parseMasterListQuery(query)).toThrow(BadRequestException);
+    }
+    expect(() => parseReceptionListQuery({ status: 'INACTIVE' })).toThrow(BadRequestException);
+    expect(parseMasterListQuery({
+      cursor: encodeCursor({
+        id: '00000000-0000-4000-8000-000000000101',
+        sortValue: '2026-09-23 05:30:00+05:30',
+      }),
+    }).cursor).toBeTruthy();
   });
 });
 

@@ -95,6 +95,23 @@ describe('customer lifecycle (T083 / RF-211, RF-214, RF-219, RF-220)', () => {
     expect(list.items.some((c) => c.id === created.id)).toBe(true);
   });
 
+  it('paginates customer listings without repeating rows', async () => {
+    const context = { organizationId, requestId: randomUUID(), userId: ownerUserId };
+    for (let index = 0; index < 12; index += 1) {
+      await service.create(context, { name: `Cliente página ${index}` });
+    }
+    const first = await service.list(context, { search: 'Cliente página', limit: 5 });
+    expect(first.items).toHaveLength(5);
+    expect(first.nextCursor).toBeTruthy();
+    const second = await service.list(context, {
+      search: 'Cliente página',
+      limit: 5,
+      cursor: first.nextCursor ?? undefined,
+    });
+    expect(second.items).toHaveLength(5);
+    expect(new Set([...first.items, ...second.items].map(({ id }) => id)).size).toBe(10);
+  });
+
   it('allows ADMIN to update customer details with optimistic concurrency (RF-211, RF-220)', async () => {
     const adminContext = {
       organizationId,
@@ -122,6 +139,19 @@ describe('customer lifecycle (T083 / RF-211, RF-214, RF-219, RF-220)', () => {
         name: 'Cliente Intento Obsoleto',
       }),
     ).rejects.toThrow(CustomerManagementError);
+  });
+
+  it('replays customer update and status change without incrementing version twice', async () => {
+    const context = { organizationId, requestId: randomUUID(), userId: ownerUserId };
+    const created = await service.create(context, { name: 'Cliente reintentado' });
+    const updateKey = randomUUID();
+    const updated = await service.update(context, created.id, created.version, { name: 'Cliente editado' }, updateKey);
+    expect(await service.update(context, created.id, created.version,
+      { name: 'Cliente editado' }, updateKey)).toEqual(updated);
+    const statusKey = randomUUID();
+    const inactive = await service.changeStatus(context, created.id, updated.version, 'INACTIVE', statusKey);
+    expect(await service.changeStatus(context, created.id, updated.version, 'INACTIVE', statusKey)).toEqual(inactive);
+    expect((await service.findById(context, created.id)).version).toBe(3);
   });
 
   it('allows OWNER to deactivate and reactivate customer (RF-211, RF-214)', async () => {

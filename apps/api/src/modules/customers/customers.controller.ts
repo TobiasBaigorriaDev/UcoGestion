@@ -17,9 +17,12 @@ import {
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ApiQuery } from '@nestjs/swagger';
 import { z } from 'zod';
 
 import { IfMatchVersion } from '../../core/validation/if-match.js';
+import { requireIdempotencyKey } from '../../core/validation/idempotency-key.js';
+import { parseMasterListQuery } from '../../core/validation/master-list-query.js';
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
 import type { TenantTransactionContext } from '../../database/tenant-transaction.js';
 import {
@@ -62,26 +65,23 @@ export class CustomersController {
     @Body(new ZodValidationPipe(createCustomerSchema)) body: z.infer<typeof createCustomerSchema>,
   ) {
     try {
-      return await this.service.create(this.context(request), body);
+      return await this.service.create(this.context(request), body, requireIdempotencyKey(request.headers));
     } catch (error) {
       this.handleError(error);
     }
   }
 
   @Get()
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, enum: ['ACTIVE', 'INACTIVE'] })
   async list(
     @Req() request: CustomerRequest,
-    @Query('status') status?: 'ACTIVE' | 'INACTIVE',
-    @Query('search') search?: string,
-    @Query('limit') limit?: string,
+    @Query() query: Record<string, unknown>,
   ) {
     try {
-      const parsedLimit = limit ? Number.parseInt(limit, 10) : undefined;
-      return await this.service.list(this.context(request), {
-        status,
-        search,
-        limit: Number.isNaN(parsedLimit) ? undefined : parsedLimit,
-      });
+      return await this.service.list(this.context(request), parseMasterListQuery(query));
     } catch (error) {
       this.handleError(error);
     }
@@ -107,7 +107,8 @@ export class CustomersController {
     @Body(new ZodValidationPipe(updateCustomerSchema)) body: z.infer<typeof updateCustomerSchema>,
   ) {
     try {
-      return await this.service.update(this.context(request), customerId, expectedVersion, body);
+      return await this.service.update(this.context(request), customerId, expectedVersion, body,
+        requireIdempotencyKey(request.headers));
     } catch (error) {
       this.handleError(error);
     }
@@ -121,7 +122,8 @@ export class CustomersController {
     @Body(new ZodValidationPipe(statusSchema)) body: z.infer<typeof statusSchema>,
   ) {
     try {
-      return await this.service.changeStatus(this.context(request), customerId, expectedVersion, body.status);
+      return await this.service.changeStatus(this.context(request), customerId, expectedVersion, body.status,
+        requireIdempotencyKey(request.headers));
     } catch (error) {
       this.handleError(error);
     }
@@ -134,7 +136,8 @@ export class CustomersController {
     @IfMatchVersion() expectedVersion: number,
   ) {
     try {
-      return await this.service.deletePhysically(this.context(request), customerId, expectedVersion);
+      return await this.service.deletePhysically(this.context(request), customerId, expectedVersion,
+        requireIdempotencyKey(request.headers));
     } catch (error) {
       this.handleError(error);
     }

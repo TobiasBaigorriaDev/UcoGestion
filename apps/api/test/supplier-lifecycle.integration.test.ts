@@ -90,6 +90,23 @@ describe('supplier lifecycle (T086 / RF-215, RF-218, RF-219, RF-220)', () => {
     expect(list.items.some((s) => s.id === created.id)).toBe(true);
   });
 
+  it('paginates supplier listings without repeating rows', async () => {
+    const context = { organizationId, requestId: randomUUID(), userId: ownerUserId };
+    for (let index = 0; index < 12; index += 1) {
+      await service.create(context, { name: `Proveedor página ${index}` });
+    }
+    const first = await service.list(context, { search: 'Proveedor página', limit: 5 });
+    expect(first.items).toHaveLength(5);
+    expect(first.nextCursor).toBeTruthy();
+    const second = await service.list(context, {
+      search: 'Proveedor página',
+      limit: 5,
+      cursor: first.nextCursor ?? undefined,
+    });
+    expect(second.items).toHaveLength(5);
+    expect(new Set([...first.items, ...second.items].map(({ id }) => id)).size).toBe(10);
+  });
+
   it('allows ADMIN to update supplier details with optimistic concurrency (RF-215, RF-220)', async () => {
     const adminContext = {
       organizationId,
@@ -167,6 +184,40 @@ describe('supplier lifecycle (T086 / RF-215, RF-218, RF-219, RF-220)', () => {
 
     await expect(service.findById(ownerContext, created.id)).rejects.toThrow(
       SupplierManagementError,
+    );
+  });
+
+  it('replays supplier deletion without attempting a second delete', async () => {
+    const context = { organizationId, requestId: randomUUID(), userId: ownerUserId };
+    const created = await service.create(context, { name: 'Proveedor borrado idempotente' });
+    const key = randomUUID();
+    const first = await service.deletePhysically(context, created.id, created.version, key);
+    expect(await service.deletePhysically(context, created.id, created.version, key)).toEqual(first);
+    const audits = await pool.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM audit_events WHERE organization_id = $1 AND entity_id = $2 AND action = 'supplier.deleted'",
+      [organizationId, created.id],
+    );
+    expect(audits.rows[0]?.count).toBe('1');
+  });
+
+  it('revalidates authorization before replaying a supplier mutation', async () => {
+    const adminContext = { organizationId, requestId: randomUUID(), userId: adminUserId };
+    const ownerContext = { organizationId, requestId: randomUUID(), userId: ownerUserId };
+    const key = randomUUID();
+    await service.create(adminContext, { name: 'Proveedor con permiso cambiante' }, key);
+    await expect(service.create(ownerContext, { name: 'Proveedor con permiso cambiante' }, key))
+      .rejects.toMatchObject({ code: 'SUPPLIER_ACCESS_FORBIDDEN' });
+    await pool.query(
+      `UPDATE memberships SET status = 'INACTIVE', deactivated_at = now()
+       WHERE organization_id = $1 AND user_id = $2`,
+      [organizationId, adminUserId],
+    );
+    await expect(service.create(adminContext, { name: 'Proveedor con permiso cambiante' }, key))
+      .rejects.toMatchObject({ code: 'SUPPLIER_ACCESS_FORBIDDEN' });
+    await pool.query(
+      `UPDATE memberships SET status = 'ACTIVE', deactivated_at = NULL
+       WHERE organization_id = $1 AND user_id = $2`,
+      [organizationId, adminUserId],
     );
   });
 

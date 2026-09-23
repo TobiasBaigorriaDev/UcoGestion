@@ -1,0 +1,13 @@
+.form { width: min(100%, 34rem); margin: clamp(2rem, 8vh, 7rem) auto; padding: clamp(1.5rem, 5vw, 2.5rem); display: grid; gap: .75rem; background: var(--color-surface); border-radius: var(--radius-card); box-shadow: var(--shadow-glass); }
+.form h1 { margin: 0; font-size: var(--text-display); line-height: 1.15; }
+.form p { margin: 0 0 .75rem; color: var(--color-text-secondary); }
+.form label { font-weight: 650; margin-top: .5rem; }
+.form input, .form select { min-height: 44px; width: 100%; border: 1px solid var(--color-text-disabled); border-radius: var(--radius-sm); padding: .65rem .8rem; background: var(--color-surface); color: var(--color-text); font: inherit; }
+.form button { min-height: 44px; border: 0; border-radius: var(--radius-button); padding: .7rem 1rem; background: var(--color-primary); color: var(--color-on-primary); font: inherit; font-weight: 700; cursor: pointer; }
+.form button:disabled { opacity: .65; cursor: wait; }
+.form a { color: var(--color-primary); text-underline-offset: .2em; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; }
+.list button { width: 100%; text-align: left; display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+.list span { font-size: var(--text-label); font-weight: 500; }
+.innerForm { display: grid; gap: .75rem; border-top: 1px solid var(--color-text-disabled); padding-top: 1.25rem; margin-top: .5rem; }
+.innerForm h2 { margin: 0; font-size: var(--text-headline); }

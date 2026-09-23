@@ -15,7 +15,7 @@ export default function HomePage() {
       </header>
 
       <main className={styles.shell}>
-        <section className={styles.introduction} aria-labelledby="shell-title">
+        <section className={`${styles.introduction} uco-glass`} aria-labelledby="shell-title">
           <h1 id="shell-title">
             Gestión comercial clara, desde cualquier pantalla.
           </h1>
