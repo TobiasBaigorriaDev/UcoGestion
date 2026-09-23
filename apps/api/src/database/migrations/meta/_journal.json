@@ -47,6 +47,7 @@
     { "idx": 42, "version": "7", "when": 42, "tag": "0042_configuration_barrier", "breakpoints": true },
     { "idx": 43, "version": "7", "when": 43, "tag": "0043_organization_currency_change", "breakpoints": true },
     { "idx": 44, "version": "7", "when": 44, "tag": "0044_catalog_lifecycle_and_structural_safety", "breakpoints": true },
-    { "idx": 45, "version": "7", "when": 45, "tag": "0045_catalog_lifecycle_revision", "breakpoints": true }
+    { "idx": 45, "version": "7", "when": 45, "tag": "0045_catalog_lifecycle_revision", "breakpoints": true },
+    { "idx": 46, "version": "7", "when": 46, "tag": "0046_customers_and_suppliers", "breakpoints": true }
   ]
 }

@@ -583,6 +583,7 @@ export const expenseCategoryHistoryReferences = pgTable(
   ],
 );
 
+
 export const idempotencyRecords = pgTable(
   'idempotency_records',
   {
@@ -642,4 +643,104 @@ export const outboxJobs = pgTable(
     completedAt: timestamp('completed_at', { withTimezone: true }),
   },
   (table) => [unique('outbox_jobs_organization_job_key_key').on(table.organizationId, table.jobKey)],
+);
+
+export const customers = pgTable(
+  'customers',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    name: text().notNull(),
+    taxId: text('tax_id'),
+    taxIdNormalized: text('tax_id_norm'),
+    contact: text(),
+    address: text(),
+    notes: text(),
+    status: text().notNull().default('ACTIVE'),
+    version: bigint({ mode: 'number' }).notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('customers_organization_id_id_key').on(table.organizationId, table.id),
+    uniqueIndex('customers_organization_tax_id_norm_key')
+      .on(table.organizationId, table.taxIdNormalized)
+      .where(sql`${table.taxIdNormalized} IS NOT NULL`),
+  ],
+);
+
+export const customerHistoryReferences = pgTable(
+  'customer_history_references',
+  {
+    id: uuid().notNull(),
+    organizationId: uuid('organization_id').notNull(),
+    customerId: uuid('customer_id').notNull(),
+    referenceType: text('reference_type').notNull(),
+    sourceId: uuid('source_id').notNull(),
+    recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.id] }),
+    foreignKey({
+      columns: [table.organizationId, table.customerId],
+      foreignColumns: [customers.organizationId, customers.id],
+      name: 'customer_history_references_customer_tenant_fk',
+    }),
+    unique('customer_history_references_source_key').on(
+      table.organizationId,
+      table.customerId,
+      table.referenceType,
+      table.sourceId,
+    ),
+  ],
+);
+
+export const suppliers = pgTable(
+  'suppliers',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    name: text().notNull(),
+    taxId: text('tax_id'),
+    taxIdNormalized: text('tax_id_norm'),
+    contact: text(),
+    address: text(),
+    notes: text(),
+    status: text().notNull().default('ACTIVE'),
+    version: bigint({ mode: 'number' }).notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('suppliers_organization_id_id_key').on(table.organizationId, table.id),
+    uniqueIndex('suppliers_organization_tax_id_norm_key')
+      .on(table.organizationId, table.taxIdNormalized)
+      .where(sql`${table.taxIdNormalized} IS NOT NULL`),
+  ],
+);
+
+export const supplierHistoryReferences = pgTable(
+  'supplier_history_references',
+  {
+    id: uuid().notNull(),
+    organizationId: uuid('organization_id').notNull(),
+    supplierId: uuid('supplier_id').notNull(),
+    referenceType: text('reference_type').notNull(),
+    sourceId: uuid('source_id').notNull(),
+    recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.id] }),
+    foreignKey({
+      columns: [table.organizationId, table.supplierId],
+      foreignColumns: [suppliers.organizationId, suppliers.id],
+      name: 'supplier_history_references_supplier_tenant_fk',
+    }),
+    unique('supplier_history_references_source_key').on(
+      table.organizationId,
+      table.supplierId,
+      table.referenceType,
+      table.sourceId,
+    ),
+  ],
 );

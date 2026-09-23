@@ -106,12 +106,12 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T080: Preparar cambio de type, trackInventory y baseUnit solo sin historia ni incertidumbre y con combinación válida; revalidar barrera/versiones bajo lock [RF-159, RF-160, RF-302, RF-303, RF-306] (Depende de T077C y T077D)
 - [x] T081: Permitir desactivación conservando referencias/versiones; para cambiar semántica bloqueada, usar otro ítem sin reasignar historia ni liberar incertidumbre del anterior [RF-159, RF-161, RF-304, RF-306]
 - [x] T081A: Exponer lifecycle de categorías/ítems con permisos, barrera D01, locks, auditoría e idempotencia; probar rollback y carrera con primera referencia [RF-53, RF-54, RF-55, RF-56, RF-131, RF-132, RF-159, RF-160, RF-161, RF-302, RF-303, RF-306] (Depende de T069 y T077A–T081)
-- [ ] T082: Crear cliente con solo nombre y tax ID normalizado opcional único [RF-68, RF-69, RF-265]
-- [ ] T083: Permitir CRUD/estado de clientes a OWNER/ADMIN y borrado solo sin historia [RF-211, RF-214, RF-219, RF-220]
-- [ ] T084: Limitar edición de clientes de CASHIER a campos permitidos y denegar EMPLOYEE [RF-212, RF-213]
-- [ ] T085: Crear proveedor con solo nombre y tax ID normalizado opcional único [RF-70, RF-71, RF-265]
-- [ ] T086: Permitir CRUD/estado de proveedores a OWNER/ADMIN y borrado solo sin historia [RF-215, RF-218, RF-219, RF-220]
-- [ ] T087: Dar lectura de proveedores a EMPLOYEE en recepción y denegar CASHIER [RF-216, RF-217]
+- [x] T082: Crear cliente con solo nombre y tax ID normalizado opcional único [RF-68, RF-69, RF-265]
+- [x] T083: Permitir CRUD/estado de clientes a OWNER/ADMIN y borrado solo sin historia [RF-211, RF-214, RF-219, RF-220]
+- [x] T084: Limitar edición de clientes de CASHIER a campos permitidos y denegar EMPLOYEE [RF-212, RF-213]
+- [x] T085: Crear proveedor con solo nombre y tax ID normalizado opcional único [RF-70, RF-71, RF-265]
+- [x] T086: Permitir CRUD/estado de proveedores a OWNER/ADMIN y borrado solo sin historia [RF-215, RF-218, RF-219, RF-220]
+- [x] T087: Dar lectura de proveedores a EMPLOYEE en recepción y denegar CASHIER [RF-216, RF-217]
 - [ ] T088: Materializar tokens, tipografía y regla cromática UcoNext en packages/ui [RF-152, RF-154]
 - [ ] T089: Crear primitivas accesibles con foco, teclado, labels y contraste sobre glass [RF-153, RF-154]
 - [ ] T090: Implementar fallback de blur y preferencias de movimiento/transparencia reducidos [RF-152, RF-154]

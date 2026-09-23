@@ -212,6 +212,145 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/customers": {
+      "get": {
+        "operationId": "CustomersController_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Customers",
+        ],
+      },
+      "post": {
+        "operationId": "CustomersController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Customers",
+        ],
+      },
+    },
+    "/api/v1/customers/{customerId}": {
+      "delete": {
+        "operationId": "CustomersController_deletePhysically",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Customers",
+        ],
+      },
+      "get": {
+        "operationId": "CustomersController_findById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Customers",
+        ],
+      },
+      "patch": {
+        "operationId": "CustomersController_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Customers",
+        ],
+      },
+    },
+    "/api/v1/customers/{customerId}/status": {
+      "patch": {
+        "operationId": "CustomersController_changeStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Customers",
+        ],
+      },
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "AppController_getLiveness",
@@ -367,6 +506,145 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         },
         "tags": [
           "PlatformAdmin",
+        ],
+      },
+    },
+    "/api/v1/suppliers": {
+      "get": {
+        "operationId": "SuppliersController_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Suppliers",
+        ],
+      },
+      "post": {
+        "operationId": "SuppliersController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Suppliers",
+        ],
+      },
+    },
+    "/api/v1/suppliers/{supplierId}": {
+      "delete": {
+        "operationId": "SuppliersController_deletePhysically",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "supplierId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Suppliers",
+        ],
+      },
+      "get": {
+        "operationId": "SuppliersController_findById",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "supplierId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Suppliers",
+        ],
+      },
+      "patch": {
+        "operationId": "SuppliersController_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "supplierId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Suppliers",
+        ],
+      },
+    },
+    "/api/v1/suppliers/{supplierId}/status": {
+      "patch": {
+        "operationId": "SuppliersController_changeStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "supplierId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Suppliers",
         ],
       },
     },
