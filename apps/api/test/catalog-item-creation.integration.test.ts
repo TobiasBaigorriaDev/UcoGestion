@@ -178,6 +178,26 @@ describe('catalog item creation', () => {
     expect(itemOtherTenant.sku).toBe('sku-abc-001');
   });
 
+  it('reserves one SKU when two creations race and reports a stable duplicate error', async () => {
+    const attempts = await Promise.allSettled([
+      service.create(context(ownerUserId, 'catalog-item-sku-race-a'), {
+        name: 'Competidor A', type: 'PRODUCT', sku: 'RACE-SKU',
+      }),
+      service.create(context(ownerUserId, 'catalog-item-sku-race-b'), {
+        name: 'Competidor B', type: 'PRODUCT', sku: ' race-sku ',
+      }),
+    ]);
+
+    expect(attempts.filter((attempt) => attempt.status === 'fulfilled')).toHaveLength(1);
+    expect(attempts.filter((attempt) => attempt.status === 'rejected')).toHaveLength(1);
+    const rejected = attempts.find((attempt) => attempt.status === 'rejected');
+    expect(rejected?.reason).toMatchObject({ code: 'CATALOG_ITEM_SKU_DUPLICATE' });
+    expect((await pool.query(
+      "SELECT id FROM catalog_items WHERE organization_id = $1 AND sku_norm = 'RACE-SKU'",
+      [organizationA],
+    )).rowCount).toBe(1);
+  });
+
   it('normalizes and reserves optional barcode uniquely among active and inactive items within the organization', async () => {
     const itemA = await service.create(context(ownerUserId, 'catalog-item-barcode-1'), {
       name: 'Item con Barcode',
@@ -251,6 +271,49 @@ describe('catalog item creation', () => {
       'Completamente Diferente',
     );
     expect(noMatches).toHaveLength(0);
+  });
+
+  it('requires an active authorized membership to discover similar names', async () => {
+    await expect(service.findSimilarNames(
+      context(ownerBUserId, 'catalog-item-similar-foreign-member'),
+      'Galletitas',
+    )).rejects.toMatchObject({ code: 'CATALOG_ITEM_CREATION_FORBIDDEN' });
+    await expect(service.findSimilarNames(
+      context(cashierUserId, 'catalog-item-similar-cashier'),
+      'Galletitas',
+    )).rejects.toMatchObject({ code: 'CATALOG_ITEM_CREATION_FORBIDDEN' });
+  });
+
+  it('treats LIKE wildcards in a proposed name as literal characters', async () => {
+    await service.create(context(ownerUserId, 'catalog-item-percent-name'), {
+      name: 'Oferta 100%',
+      type: 'PRODUCT',
+    });
+
+    expect(await service.findSimilarNames(
+      context(ownerUserId, 'catalog-item-percent-search'),
+      '%',
+    )).toEqual(['Oferta 100%']);
+  });
+
+  it('does not grant direct structural updates to the runtime role before the lifecycle command exists', async () => {
+    const item = await service.create(context(ownerUserId, 'catalog-item-no-direct-update'), {
+      name: 'Sin edición estructural',
+      type: 'PRODUCT',
+      sku: 'NO-DIRECT-UPDATE',
+    });
+    const client = await runtimePool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query("SELECT set_config('app.organization_id', $1, true)", [organizationA]);
+      await expect(client.query(
+        'UPDATE catalog_items SET sku = $1 WHERE id = $2',
+        ['BYPASS-AUDIT', item.id],
+      )).rejects.toMatchObject({ code: '42501' });
+    } finally {
+      await client.query('ROLLBACK');
+      client.release();
+    }
   });
 
   it('requires a name and keeps catalog item creation tenant-scoped', async () => {

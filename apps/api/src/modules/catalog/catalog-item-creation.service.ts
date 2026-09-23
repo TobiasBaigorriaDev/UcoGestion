@@ -171,14 +171,14 @@ export class CatalogItemCreationService {
       return [];
     }
     return this.transactions.read(context, async (client) => {
-      const pattern = `%${trimmed}%`;
+      await this.requireOwnerOrAdmin(client, context);
       const result = await client.query<{ name: string }>(
         `SELECT DISTINCT name FROM catalog_items
          WHERE organization_id = $1
-           AND (lower(btrim(name)) = lower($2) OR name ILIKE $3)
+           AND strpos(lower(btrim(name)), lower($2)) > 0
          ORDER BY name
          LIMIT 10`,
-        [context.organizationId, trimmed, pattern],
+        [context.organizationId, trimmed],
       );
       return result.rows.map((row) => row.name);
     });

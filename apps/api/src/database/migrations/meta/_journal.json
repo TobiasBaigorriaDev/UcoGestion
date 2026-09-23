@@ -39,6 +39,12 @@
     { "idx": 34, "version": "7", "when": 34, "tag": "0034_expense_categories", "breakpoints": true },
     { "idx": 35, "version": "7", "when": 35, "tag": "0035_category_lifecycle", "breakpoints": true },
     { "idx": 36, "version": "7", "when": 36, "tag": "0036_catalog_items", "breakpoints": true },
-    { "idx": 37, "version": "7", "when": 37, "tag": "0037_catalog_items_unit_sku_barcode", "breakpoints": true }
+    { "idx": 37, "version": "7", "when": 37, "tag": "0037_catalog_items_unit_sku_barcode", "breakpoints": true },
+    { "idx": 38, "version": "7", "when": 38, "tag": "0038_revoke_catalog_structural_updates", "breakpoints": true },
+    { "idx": 39, "version": "7", "when": 39, "tag": "0039_catalog_price_history", "breakpoints": true },
+    { "idx": 40, "version": "7", "when": 40, "tag": "0040_signed_configuration_exposures", "breakpoints": true },
+    { "idx": 41, "version": "7", "when": 41, "tag": "0041_resource_history_and_permanent_currency_lock", "breakpoints": true },
+    { "idx": 42, "version": "7", "when": 42, "tag": "0042_configuration_barrier", "breakpoints": true },
+    { "idx": 43, "version": "7", "when": 43, "tag": "0043_organization_currency_change", "breakpoints": true }
   ]
 }

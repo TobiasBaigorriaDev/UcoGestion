@@ -6,6 +6,7 @@ import { GlobalMembershipDiscoveryService } from './global-membership-discovery.
 import { OrganizationsController } from './organizations.controller.js';
 import { OrganizationProfileService } from './organization-profile.service.js';
 import { OrganizationTimezoneService } from './organization-timezone.service.js';
+import { OrganizationCurrencyChangeService } from './organization-currency-change.service.js';
 import { TenantTransaction } from '../../database/tenant-transaction.js';
 
 @Injectable()
@@ -37,6 +38,12 @@ class GlobalOrganizationDatabase implements OnModuleDestroy {
       provide: OrganizationTimezoneService,
       useFactory: (database: GlobalOrganizationDatabase) =>
         new OrganizationTimezoneService(new TenantTransaction(database.pool)),
+      inject: [GlobalOrganizationDatabase],
+    },
+    {
+      provide: OrganizationCurrencyChangeService,
+      useFactory: (database: GlobalOrganizationDatabase) =>
+        new OrganizationCurrencyChangeService(new TenantTransaction(database.pool)),
       inject: [GlobalOrganizationDatabase],
     },
   ],

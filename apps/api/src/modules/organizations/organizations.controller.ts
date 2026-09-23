@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Req, UnauthorizedException } from '@nestjs/common';
+import { Body, ConflictException, Controller, ForbiddenException, Get, HttpException, HttpStatus, Param, Patch, Post, Req, UnauthorizedException } from '@nestjs/common';
 
 import { PublicRoute } from '../auth/public-route.decorator.js';
 import { readSessionCookie } from '../auth/session-cookie.js';
@@ -11,6 +11,11 @@ import {
 } from './global-membership-discovery.service.js';
 import { IfMatchVersion, VersionConflictException } from '../../core/validation/if-match.js';
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
+import {
+  OrganizationCurrencyChangeError,
+  OrganizationCurrencyChangeService,
+} from './organization-currency-change.service.js';
+import { organizationCurrencyChangeSchema } from './organization-currency-change.policy.js';
 import {
   OrganizationProfilePermissionError,
   OrganizationProfileService,
@@ -38,7 +43,43 @@ export class OrganizationsController {
     private readonly discovery: GlobalMembershipDiscoveryService,
     private readonly profiles: OrganizationProfileService,
     private readonly timezones: OrganizationTimezoneService,
+    private readonly currencies: OrganizationCurrencyChangeService,
   ) {}
+
+  @Patch('currency')
+  async updateCurrency(
+    @Req() request: OrganizationRequest,
+    @IfMatchVersion() expectedVersion: number,
+    @Body(new ZodValidationPipe(organizationCurrencyChangeSchema)) update: { targetCurrency: string },
+  ) {
+    const identity = request.identity;
+    if (!identity) throw new UnauthorizedException();
+    const key = request.headers['idempotency-key'];
+    if (typeof key !== 'string' || !/^[\x21-\x7e]{1,128}$/.test(key)) {
+      throw new HttpException({
+        code: 'IDEMPOTENCY_KEY_REQUIRED', title: 'Precondición requerida',
+        detail: 'Enviá una clave Idempotency-Key válida.',
+      }, HttpStatus.PRECONDITION_REQUIRED);
+    }
+    try {
+      return await this.currencies.change({
+        organizationId: identity.organizationId,
+        requestId: this.requestId(request),
+        userId: identity.userId,
+      }, expectedVersion, update.targetCurrency, key);
+    } catch (error) {
+      if (error instanceof OrganizationCurrencyChangeError) {
+        if (error.code === 'CURRENCY_CHANGE_FORBIDDEN') {
+          throw new ForbiddenException({ code: error.code, title: 'Acceso denegado', detail: error.message });
+        }
+        throw new ConflictException({
+          code: error.code, title: 'Cambio de moneda bloqueado', detail: error.message,
+          ...(error.currentVersion === undefined ? {} : { currentVersion: error.currentVersion }),
+        });
+      }
+      throw error;
+    }
+  }
 
   @Patch('timezone')
   async updateTimezone(

@@ -64,4 +64,36 @@ export class TenantTransaction {
       client.release();
     }
   }
+
+  async runWithOptionalAudit<TResult>(
+    context: TenantTransactionContext,
+    operation: (client: PoolClient) => Promise<{
+      readonly result: TResult;
+      readonly auditEvent?: TenantAuditEvent;
+    }>,
+  ): Promise<TResult> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query("SELECT set_config('app.organization_id', $1, true)", [context.organizationId]);
+      await client.query("SELECT set_config('app.user_id', $1, true)", [context.userId]);
+      await client.query("SELECT set_config('app.request_id', $1, true)", [context.requestId]);
+      const { result, auditEvent } = await operation(client);
+      if (auditEvent) {
+        await new AuditEventWriter(client).append({
+          ...auditEvent,
+          actorUserId: context.userId,
+          organizationId: context.organizationId,
+          requestId: context.requestId,
+        });
+      }
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }

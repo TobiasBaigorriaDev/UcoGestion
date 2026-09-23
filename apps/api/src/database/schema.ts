@@ -5,6 +5,7 @@ import {
   foreignKey,
   integer,
   jsonb,
+  numeric,
   pgTable,
   primaryKey,
   text,
@@ -95,6 +96,9 @@ export const organizations = pgTable('organizations', {
   profile: jsonb().notNull().default({}),
   version: integer().notNull().default(1),
   operationalHistoryStartedAt: timestamp('operational_history_started_at', { withTimezone: true }),
+  currencyPermanentlyLockedAt: timestamp('currency_permanently_locked_at', { withTimezone: true }),
+  currencyLockDeclarationId: uuid('currency_lock_declaration_id'),
+  configEpoch: bigint('config_epoch', { mode: 'number' }).notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -251,7 +255,7 @@ export const cashRegisters = pgTable('cash_registers', {
   status: text().notNull().default('ACTIVE'),
   version: bigint({ mode: 'number' }).notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [unique('cash_registers_organization_id_id_key').on(table.organizationId, table.id)]);
 
 export const paymentMethodSettings = pgTable(
   'payment_method_settings',
@@ -292,6 +296,8 @@ export const catalogItems = pgTable(
     skuNormalized: text('sku_norm'),
     barcode: text(),
     barcodeNormalized: text('barcode_norm'),
+    price: numeric('price', { precision: 20, scale: 2 }),
+    priceVersion: bigint('price_version', { mode: 'number' }).notNull().default(0),
     status: text().notNull().default('ACTIVE'),
     version: bigint({ mode: 'number' }).notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -307,6 +313,217 @@ export const catalogItems = pgTable(
       .where(sql`${table.barcodeNormalized} IS NOT NULL`),
   ],
 );
+
+export const catalogPriceVersions = pgTable(
+  'catalog_price_versions',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull(),
+    itemId: uuid('item_id').notNull(),
+    priceVersion: bigint('price_version', { mode: 'number' }).notNull(),
+    price: numeric('price', { precision: 20, scale: 2 }).notNull(),
+    currency: text().notNull(),
+    recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.organizationId, table.itemId],
+      foreignColumns: [catalogItems.organizationId, catalogItems.id],
+      name: 'catalog_price_versions_item_fk',
+    }),
+    unique('catalog_price_versions_item_version_key')
+      .on(table.organizationId, table.itemId, table.priceVersion),
+  ],
+);
+
+export const devices = pgTable('devices', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+  status: text().notNull(),
+  publicKey: text('public_key').notNull(),
+  lastConfigVersion: bigint('last_config_version', { mode: 'number' }).notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [unique('devices_organization_id_id_key').on(table.organizationId, table.id)]);
+
+export const configurationVersions = pgTable('configuration_versions', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+  version: bigint({ mode: 'number' }).notNull(),
+  snapshot: jsonb().notNull(),
+  canonicalPayload: text('canonical_payload').notNull(),
+  signature: text().notNull(),
+  signingKeyId: text('signing_key_id').notNull(),
+  publicKeyPem: text('public_key_pem').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [unique('configuration_versions_org_version_key').on(table.organizationId, table.version)]);
+
+export const offlineGrants = pgTable('offline_grants', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  deviceId: uuid('device_id').notNull(),
+  epoch: bigint({ mode: 'number' }).notNull(),
+  configurationVersion: bigint('configuration_version', { mode: 'number' }).notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  closedAt: timestamp('closed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  foreignKey({ columns: [table.organizationId, table.deviceId],
+    foreignColumns: [devices.organizationId, devices.id], name: 'offline_grants_device_fk' }),
+  foreignKey({ columns: [table.organizationId, table.configurationVersion],
+    foreignColumns: [configurationVersions.organizationId, configurationVersions.version],
+    name: 'offline_grants_configuration_fk' }),
+  unique('offline_grants_organization_id_id_key').on(table.organizationId, table.id),
+  unique('offline_grants_exposure_identity_key')
+    .on(table.organizationId, table.id, table.deviceId, table.epoch, table.configurationVersion),
+  unique('offline_grants_device_epoch_key')
+    .on(table.organizationId, table.id, table.deviceId, table.epoch),
+]);
+
+export const configurationBarriers = pgTable('configuration_barriers', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+  epoch: bigint({ mode: 'number' }).notNull(),
+  status: text().notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+}, (table) => [unique('configuration_barriers_org_id_key').on(table.organizationId, table.id)]);
+
+export const syncOperations = pgTable('sync_operations', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  deviceId: uuid('device_id').notNull(),
+  grantId: uuid('grant_id').notNull(),
+  epoch: bigint({ mode: 'number' }).notNull(),
+  sequence: bigint({ mode: 'number' }).notNull(),
+  prevHash: text('prev_hash').notNull(),
+  operationHash: text('operation_hash').notNull(),
+  status: text().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  foreignKey({ columns: [table.organizationId, table.grantId, table.deviceId, table.epoch],
+    foreignColumns: [offlineGrants.organizationId, offlineGrants.id, offlineGrants.deviceId, offlineGrants.epoch],
+    name: 'sync_operations_grant_fk' }),
+  unique('sync_operations_device_epoch_sequence_key')
+    .on(table.organizationId, table.deviceId, table.epoch, table.sequence),
+]);
+
+export const configurationCheckpoints = pgTable('configuration_checkpoints', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  barrierId: uuid('barrier_id').notNull(),
+  grantId: uuid('grant_id').notNull(),
+  deviceId: uuid('device_id').notNull(),
+  epoch: bigint({ mode: 'number' }).notNull(),
+  sequence: bigint({ mode: 'number' }).notNull(),
+  headHash: text('head_hash').notNull(),
+  canonicalPayload: text('canonical_payload').notNull(),
+  signature: text().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  foreignKey({ columns: [table.organizationId, table.barrierId],
+    foreignColumns: [configurationBarriers.organizationId, configurationBarriers.id],
+    name: 'configuration_checkpoints_barrier_fk' }),
+  foreignKey({ columns: [table.organizationId, table.grantId, table.deviceId, table.epoch],
+    foreignColumns: [offlineGrants.organizationId, offlineGrants.id, offlineGrants.deviceId, offlineGrants.epoch],
+    name: 'configuration_checkpoints_grant_fk' }),
+]);
+
+export const offlineConfigurationExposures = pgTable('offline_configuration_exposures', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  deviceId: uuid('device_id').notNull(),
+  grantId: uuid('grant_id').notNull(),
+  epoch: bigint({ mode: 'number' }).notNull(),
+  configurationVersion: bigint('configuration_version', { mode: 'number' }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  clearedAt: timestamp('cleared_at', { withTimezone: true }),
+}, (table) => [
+  foreignKey({
+    columns: [table.organizationId, table.grantId, table.deviceId, table.epoch, table.configurationVersion],
+    foreignColumns: [offlineGrants.organizationId, offlineGrants.id, offlineGrants.deviceId,
+      offlineGrants.epoch, offlineGrants.configurationVersion],
+    name: 'offline_configuration_exposures_grant_fk',
+  }),
+  unique('offline_configuration_exposures_org_id_key').on(table.organizationId, table.id),
+  unique('offline_configuration_exposures_grant_key').on(table.organizationId, table.grantId),
+]);
+
+export const offlineExposureResources = pgTable('offline_exposure_resources', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  exposureId: uuid('exposure_id').notNull(),
+  catalogItemId: uuid('catalog_item_id'),
+  catalogCategoryId: uuid('catalog_category_id'),
+  branchId: uuid('branch_id'),
+  cashRegisterId: uuid('cash_register_id'),
+  paymentMethod: text('payment_method'),
+}, (table) => [
+  foreignKey({ columns: [table.organizationId, table.exposureId],
+    foreignColumns: [offlineConfigurationExposures.organizationId, offlineConfigurationExposures.id],
+    name: 'offline_exposure_resources_exposure_fk' }),
+  foreignKey({ columns: [table.organizationId, table.catalogItemId],
+    foreignColumns: [catalogItems.organizationId, catalogItems.id],
+    name: 'offline_exposure_resources_catalog_item_fk' }),
+  foreignKey({ columns: [table.organizationId, table.catalogCategoryId],
+    foreignColumns: [catalogCategories.organizationId, catalogCategories.id],
+    name: 'offline_exposure_resources_catalog_category_fk' }),
+  foreignKey({ columns: [table.organizationId, table.branchId],
+    foreignColumns: [branches.organizationId, branches.id],
+    name: 'offline_exposure_resources_branch_fk' }),
+  foreignKey({ columns: [table.organizationId, table.cashRegisterId],
+    foreignColumns: [cashRegisters.organizationId, cashRegisters.id],
+    name: 'offline_exposure_resources_cash_register_fk' }),
+  foreignKey({ columns: [table.organizationId, table.paymentMethod],
+    foreignColumns: [paymentMethodSettings.organizationId, paymentMethodSettings.method],
+    name: 'offline_exposure_resources_payment_method_fk' }),
+]);
+
+export const resourceHistoryReferences = pgTable('resource_history_references', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  catalogItemId: uuid('catalog_item_id'),
+  catalogCategoryId: uuid('catalog_category_id'),
+  branchId: uuid('branch_id'),
+  cashRegisterId: uuid('cash_register_id'),
+  paymentMethod: text('payment_method'),
+  referenceType: text('reference_type').notNull(),
+  sourceId: uuid('source_id').notNull(),
+  recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  foreignKey({ columns: [table.organizationId, table.catalogItemId],
+    foreignColumns: [catalogItems.organizationId, catalogItems.id],
+    name: 'resource_history_references_catalog_item_fk' }),
+  foreignKey({ columns: [table.organizationId, table.catalogCategoryId],
+    foreignColumns: [catalogCategories.organizationId, catalogCategories.id],
+    name: 'resource_history_references_catalog_category_fk' }),
+  foreignKey({ columns: [table.organizationId, table.branchId],
+    foreignColumns: [branches.organizationId, branches.id],
+    name: 'resource_history_references_branch_fk' }),
+  foreignKey({ columns: [table.organizationId, table.cashRegisterId],
+    foreignColumns: [cashRegisters.organizationId, cashRegisters.id],
+    name: 'resource_history_references_cash_register_fk' }),
+  foreignKey({ columns: [table.organizationId, table.paymentMethod],
+    foreignColumns: [paymentMethodSettings.organizationId, paymentMethodSettings.method],
+    name: 'resource_history_references_payment_method_fk' }),
+]);
+
+export const unrecoverableDeviceDeclarations = pgTable('unrecoverable_device_declarations', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  deviceId: uuid('device_id').notNull(),
+  declaredBy: uuid('declared_by').notNull().references(() => users.id),
+  requestId: text('request_id').notNull(),
+  possibleUnknownHistory: boolean('possible_unknown_history').notNull(),
+  declaredAt: timestamp('declared_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  foreignKey({ columns: [table.organizationId, table.deviceId],
+    foreignColumns: [devices.organizationId, devices.id],
+    name: 'unrecoverable_device_declarations_device_fk' }),
+  unique('unrecoverable_device_declarations_org_id_key').on(table.organizationId, table.id),
+  unique('unrecoverable_device_declarations_request_key')
+    .on(table.organizationId, table.deviceId, table.requestId),
+]);
 
 export const catalogCategoryHistoryReferences = pgTable(
   'catalog_category_history_references',
@@ -379,7 +596,7 @@ export const idempotencyRecords = pgTable(
     responseBody: jsonb('response_body'),
     resourceId: uuid('resource_id'),
     actorUserId: uuid('actor_user_id').notNull(),
-    branchId: uuid('branch_id').notNull(),
+    branchId: uuid('branch_id'),
     authorizationClass: text('authorization_class').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp('completed_at', { withTimezone: true }),

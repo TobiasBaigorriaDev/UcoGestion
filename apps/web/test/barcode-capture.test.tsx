@@ -13,6 +13,7 @@ describe('BarcodeCapture component', () => {
     const label = screen.getByLabelText('Código de barras');
     expect(label).toBeDefined();
     expect(label.tagName.toLowerCase()).toBe('input');
+    expect((label as HTMLInputElement).style.outline).not.toBe('none');
     expect(screen.getByRole('button', { name: 'Capturar código' })).toBeDefined();
   });
 

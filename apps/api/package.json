@@ -21,6 +21,7 @@
     "@opentelemetry/sdk-trace-base": "^2.11.0",
     "@opentelemetry/sdk-trace-node": "^2.11.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
+    "@uconext/shared": "workspace:*",
     "argon2": "0.45.1",
     "drizzle-orm": "0.44.7",
     "pg": "8.23.0",

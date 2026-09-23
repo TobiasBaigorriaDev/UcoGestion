@@ -7,7 +7,7 @@ export type JsonValue = boolean | null | number | string | JsonValue[] | { [key:
 export interface IdempotencyRequest {
   actorUserId: string;
   authorizationClass: string;
-  branchId: string;
+  branchId: string | null;
   key: string;
   organizationId: string;
   payload: JsonValue;
@@ -17,7 +17,7 @@ export interface IdempotencyRequest {
 export interface IdempotencyRecord {
   actorUserId: string;
   authorizationClass: string;
-  branchId: string;
+  branchId: string | null;
   id: string;
   key: string;
   organizationId: string;
@@ -40,7 +40,7 @@ export type ReplayAuthorizer = (record: IdempotencyRecord) => Promise<void>;
 interface IdempotencyRow {
   actor_user_id: string;
   authorization_class: string;
-  branch_id: string;
+  branch_id: string | null;
   id: string;
   key: string;
   organization_id: string;
