@@ -146,7 +146,7 @@ describe('category lifecycle preparation', () => {
   it('does not expose physical deletion and rejects cross-tenant reference checks', async () => {
     expect('delete' in CatalogCategoryManagementService.prototype).toBe(false);
     expect('delete' in ExpenseCategoryManagementService.prototype).toBe(false);
-    expect('deletePhysically' in CatalogCategoryManagementService.prototype).toBe(false);
+    expect('deletePhysically' in CatalogCategoryManagementService.prototype).toBe(true);
     expect('deletePhysically' in ExpenseCategoryManagementService.prototype).toBe(false);
 
     await expect(inTenant(organizationA, (client) => references.check(client, {

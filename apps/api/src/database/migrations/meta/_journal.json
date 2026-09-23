@@ -45,6 +45,7 @@
     { "idx": 40, "version": "7", "when": 40, "tag": "0040_signed_configuration_exposures", "breakpoints": true },
     { "idx": 41, "version": "7", "when": 41, "tag": "0041_resource_history_and_permanent_currency_lock", "breakpoints": true },
     { "idx": 42, "version": "7", "when": 42, "tag": "0042_configuration_barrier", "breakpoints": true },
-    { "idx": 43, "version": "7", "when": 43, "tag": "0043_organization_currency_change", "breakpoints": true }
+    { "idx": 43, "version": "7", "when": 43, "tag": "0043_organization_currency_change", "breakpoints": true },
+    { "idx": 44, "version": "7", "when": 44, "tag": "0044_catalog_lifecycle_and_structural_safety", "breakpoints": true }
   ]
 }
