@@ -57,6 +57,7 @@ export class CatalogCategoryManagementService {
   async create(
     context: TenantTransactionContext,
     input: CatalogCategoryCreateInput,
+    idempotencyKey?: string,
   ): Promise<CatalogCategoryResult> {
     const id = randomUUID();
     const name = input.name.trim();
@@ -66,7 +67,7 @@ export class CatalogCategoryManagementService {
         'El nombre de la categoría de catálogo es obligatorio.',
       );
     }
-    return this.transactions.run(
+    if (idempotencyKey === undefined) return this.transactions.run(
       context,
       {
         action: 'catalog_category.created',
@@ -94,6 +95,46 @@ export class CatalogCategoryManagementService {
         return row;
       },
     );
+    if (!/^[\x21-\x7e]{1,128}$/.test(idempotencyKey)) {
+      throw new CatalogCategoryManagementError('IDEMPOTENCY_KEY_REUSED', 'Clave idempotente inválida.');
+    }
+    try {
+      return await this.transactions.runWithOptionalAudit(context, async (client) => {
+        await this.requireOwnerOrAdmin(client, context);
+        const idempotency = new IdempotencyService(client);
+        const acquired = await idempotency.acquire({
+          actorUserId: context.userId,
+          authorizationClass: 'OWNER_OR_ADMIN',
+          branchId: null,
+          key: idempotencyKey,
+          organizationId: context.organizationId,
+          payload: { name },
+          scope: 'catalog_category.create',
+        }, async () => { await this.requireOwnerOrAdmin(client, context); });
+        if (acquired.kind === 'replay') return { result: this.readStoredCategoryResult(acquired.response.body) };
+        await this.lockOrganizationEpoch(client, context.organizationId);
+        const inserted = await client.query<CatalogCategoryResult>(
+          `INSERT INTO catalog_categories (id, organization_id, name, status)
+           VALUES ($1, $2, $3, 'ACTIVE')
+           RETURNING id, name, status, version::integer AS version`,
+          [id, context.organizationId, name],
+        );
+        const result = inserted.rows[0];
+        if (!result) throw new Error('La categoría de catálogo no fue persistida.');
+        await this.advanceOrganizationEpoch(client, context.organizationId);
+        await idempotency.complete(acquired.record.id, { statusCode: 201, body: {
+          id: result.id, name: result.name, status: result.status, version: result.version,
+        } });
+        return { result, auditEvent: {
+          action: 'catalog_category.created', after: { name, status: 'ACTIVE' },
+          afterAllowlist: ['name', 'status'], before: {}, beforeAllowlist: [], branchId: null,
+          context: {}, contextAllowlist: [], entityId: id, entityType: 'catalog_category',
+          operationId: id,
+        } };
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   async changeStatus(

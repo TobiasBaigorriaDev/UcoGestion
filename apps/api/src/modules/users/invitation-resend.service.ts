@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
 import type { PoolClient } from 'pg';
+import { z } from 'zod';
 
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
 
@@ -43,6 +44,7 @@ export class InvitationResendService {
   async resend(
     context: TenantTransactionContext,
     invitationId: string,
+    idempotencyKey?: string,
   ): Promise<{ readonly expiresAt: string; readonly invitationId: string }> {
     const resentAt = this.now();
     const expiresAt = new Date(resentAt.getTime() + invitationLifetimeMs);
@@ -50,9 +52,7 @@ export class InvitationResendService {
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const operationId = randomUUID();
 
-    return this.transactions.run(
-      context,
-      {
+    const auditEvent = {
         action: 'invitation.resent',
         after: { status: 'PENDING' },
         afterAllowlist: ['status'],
@@ -64,8 +64,8 @@ export class InvitationResendService {
         entityId: invitationId,
         entityType: 'invitation',
         operationId,
-      },
-      async (client) => {
+      };
+    const operation = async (client: PoolClient) => {
         await this.requireManager(client, context);
         const invitation = await client.query<ResendableInvitation>(
           `SELECT email_normalized AS email, role, status
@@ -137,8 +137,14 @@ export class InvitationResendService {
         );
 
         return { expiresAt: expiresAt.toISOString(), invitationId };
-      },
-    );
+      };
+    if (idempotencyKey) return this.transactions.runIdempotent(context, auditEvent, {
+      actorUserId: context.userId, authorizationClass: 'MEMBERSHIP_ADMINISTRATION', branchId: null,
+      key: idempotencyKey, organizationId: context.organizationId,
+      payload: { invitationId }, scope: 'invitation.resend',
+    }, async (client) => { await this.requireManager(client, context); }, operation,
+    (body) => z.object({ invitationId: z.string(), expiresAt: z.string() }).parse(body));
+    return this.transactions.run(context, auditEvent, operation);
   }
 
   private async requireManager(

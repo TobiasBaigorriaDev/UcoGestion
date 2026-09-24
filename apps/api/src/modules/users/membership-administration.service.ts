@@ -1,6 +1,8 @@
 import type { PoolClient } from 'pg';
+import { z } from 'zod';
 
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
+import type { IdempotencyRequest, JsonValue } from '../../core/idempotency/idempotency.service.js';
 import {
   type MembershipBranchSnapshot,
   type MembershipRole,
@@ -14,6 +16,7 @@ interface MembershipAdministrationOptions {
 
 interface MembershipRow {
   readonly id: string;
+  readonly userId: string;
   readonly role: MembershipRole;
   readonly status: string;
   readonly version: number;
@@ -62,14 +65,14 @@ export class MembershipAdministrationService {
     context: TenantTransactionContext,
     membershipId: string,
     change: MembershipRoleChange,
+    idempotencyKey?: string,
   ): Promise<{ readonly role: MembershipRole; readonly version: number }> {
-    return this.transactions.run(
-      context,
-      this.auditEvent('membership.role_changed', membershipId, { role: change.role }),
-      async (client) => {
+    const auditEvent = this.auditEvent('membership.role_changed', membershipId, { role: change.role });
+    const operation = async (client: PoolClient) => {
         const organizationIsActive = await this.lockOrganization(client, context.organizationId);
         const { actor, target } = await this.loadActorAndTarget(client, context, membershipId);
         this.authorizeOwnerMutation(actor, target, change.role);
+        await this.requireActorTargetScope(client, context.organizationId, actor, target);
         await this.requireRemainingOwner(
           client,
           context.organizationId,
@@ -115,23 +118,28 @@ export class MembershipAdministrationService {
           );
         }
         return row;
-      },
-    );
+      };
+    if (idempotencyKey) {
+      return this.transactions.runIdempotent(context, auditEvent, this.idempotencyRequest(context, membershipId, idempotencyKey, 'role', { role: change.role, branchIds: [...change.branchIds], expectedVersion: change.expectedVersion }),
+        (client) => this.authorizeReplay(client, context, membershipId), operation,
+        (body) => z.object({ role: z.enum(['OWNER', 'ADMIN', 'CASHIER', 'EMPLOYEE']), version: z.number().int() }).parse(body));
+    }
+    return this.transactions.run(context, auditEvent, operation);
   }
 
   async revoke(
     context: TenantTransactionContext,
     membershipId: string,
     expectedVersion: number,
+    idempotencyKey?: string,
   ): Promise<{ readonly revokedAt: string; readonly version: number }> {
     const revokedAt = this.now();
-    return this.transactions.run(
-      context,
-      this.auditEvent('membership.revoked', membershipId, { status: 'REVOKED' }),
-      async (client) => {
+    const auditEvent = this.auditEvent('membership.revoked', membershipId, { status: 'REVOKED' });
+    const operation = async (client: PoolClient) => {
         const organizationIsActive = await this.lockOrganization(client, context.organizationId);
         const { actor, target } = await this.loadActorAndTarget(client, context, membershipId);
         this.authorizeOwnerMutation(actor, target, target.role);
+        await this.requireActorTargetScope(client, context.organizationId, actor, target);
         await this.requireRemainingOwner(
           client,
           context.organizationId,
@@ -154,21 +162,25 @@ export class MembershipAdministrationService {
           );
         }
         return { revokedAt: revokedAt.toISOString(), version: row.version };
-      },
-    );
+      };
+    if (idempotencyKey) {
+      return this.transactions.runIdempotent(context, auditEvent, this.idempotencyRequest(context, membershipId, idempotencyKey, 'revoke', { expectedVersion }),
+        (client) => this.authorizeReplay(client, context, membershipId), operation,
+        (body) => z.object({ revokedAt: z.string(), version: z.number().int() }).parse(body));
+    }
+    return this.transactions.run(context, auditEvent, operation);
   }
 
   async setStatus(
     context: TenantTransactionContext,
     membershipId: string,
     change: MembershipStatusChange,
+    idempotencyKey?: string,
   ): Promise<{ readonly status: 'ACTIVE' | 'INACTIVE'; readonly version: number }> {
     const changedAt = this.now();
     const expectedStatus = change.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    return this.transactions.run(
-      context,
-      this.auditEvent('membership.status_changed', membershipId, { status: change.status }),
-      async (client) => {
+    const auditEvent = this.auditEvent('membership.status_changed', membershipId, { status: change.status });
+    const operation = async (client: PoolClient) => {
         const organizationIsActive = await this.lockOrganization(client, context.organizationId);
         const { actor, target } = await this.loadActorAndTarget(
           client,
@@ -177,6 +189,7 @@ export class MembershipAdministrationService {
           [expectedStatus],
         );
         this.authorizeOwnerMutation(actor, target, target.role);
+        await this.requireActorTargetScope(client, context.organizationId, actor, target);
         await this.requireRemainingOwner(
           client,
           context.organizationId,
@@ -212,8 +225,13 @@ export class MembershipAdministrationService {
           );
         }
         return row;
-      },
-    );
+      };
+    if (idempotencyKey) {
+      return this.transactions.runIdempotent(context, auditEvent, this.idempotencyRequest(context, membershipId, idempotencyKey, 'status', { status: change.status, expectedVersion: change.expectedVersion }),
+        (client) => this.authorizeReplay(client, context, membershipId), operation,
+        (body) => z.object({ status: z.enum(['ACTIVE', 'INACTIVE']), version: z.number().int() }).parse(body));
+    }
+    return this.transactions.run(context, auditEvent, operation);
   }
 
   async recordDeviceRevocationKnowledge(
@@ -319,15 +337,14 @@ export class MembershipAdministrationService {
     allowedTargetStatuses: readonly string[] = ['ACTIVE'],
   ): Promise<{ actor: MembershipRow; target: MembershipRow }> {
     const result = await client.query<MembershipRow>(
-      `SELECT id, role, status, version::integer AS version
+      `SELECT id, user_id AS "userId", role, status, version::integer AS version
        FROM memberships
        WHERE organization_id = $1
          AND (user_id = $2 OR id = $3)
        FOR UPDATE`,
       [context.organizationId, context.userId, targetMembershipId],
     );
-    const actor = result.rows.find((row) => row.id !== targetMembershipId)
-      ?? result.rows.find((row) => row.id === targetMembershipId);
+    const actor = result.rows.find((row) => row.userId === context.userId);
     const target = result.rows.find((row) => row.id === targetMembershipId);
     if (
       !actor
@@ -370,6 +387,36 @@ export class MembershipAdministrationService {
       );
     }
     return [];
+  }
+
+  private async requireActorTargetScope(client: PoolClient, organizationId: string, actor: MembershipRow, target: MembershipRow): Promise<void> {
+    if (actor.role !== 'ADMIN' || actor.id === target.id) return;
+    const result = await client.query<{ allowed: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1 FROM membership_branches target_scope
+         JOIN effective_membership_branch_scope actor_scope
+           ON actor_scope.organization_id = target_scope.organization_id
+          AND actor_scope.branch_id = target_scope.branch_id
+         WHERE target_scope.organization_id = $1
+           AND target_scope.membership_id = $2
+           AND actor_scope.membership_id = $3
+       ) AS allowed`,
+      [organizationId, target.id, actor.id],
+    );
+    if (result.rows.at(0)?.allowed !== true) {
+      throw new NonOwnerMembershipPolicyError('MEMBERSHIP_BRANCH_SCOPE_FORBIDDEN', 'La membresía está fuera de tus sucursales asignadas.');
+    }
+  }
+
+  private idempotencyRequest(context: TenantTransactionContext, membershipId: string, key: string, action: string, payload: JsonValue): IdempotencyRequest {
+    return { actorUserId: context.userId, authorizationClass: 'MEMBERSHIP_ADMINISTRATION', branchId: null,
+      key, organizationId: context.organizationId, payload: { membershipId, value: payload }, scope: `membership.${action}` };
+  }
+
+  private async authorizeReplay(client: PoolClient, context: TenantTransactionContext, membershipId: string): Promise<void> {
+    const { actor, target } = await this.loadActorAndTarget(client, context, membershipId, ['ACTIVE', 'INACTIVE', 'REVOKED']);
+    this.authorizeOwnerMutation(actor, target, target.role);
+    await this.requireActorTargetScope(client, context.organizationId, actor, target);
   }
 
   private async prepareNonOwnerScope(

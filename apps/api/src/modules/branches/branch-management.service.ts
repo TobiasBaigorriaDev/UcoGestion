@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { DatabaseError, PoolClient } from 'pg';
+import { z } from 'zod';
 
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
 
@@ -36,6 +37,7 @@ export class BranchManagementService {
   async create(
     context: TenantTransactionContext,
     input: BranchCreateInput,
+    idempotencyKey?: string,
   ): Promise<BranchResult> {
     const branchId = randomUUID();
     const name = input.name.trim();
@@ -44,9 +46,7 @@ export class BranchManagementService {
     }
 
     try {
-      return await this.transactions.run(
-        context,
-        {
+      const auditEvent = {
           action: 'branch.created',
           after: { name, status: 'ACTIVE' },
           afterAllowlist: ['name', 'status'],
@@ -58,8 +58,8 @@ export class BranchManagementService {
           entityId: branchId,
           entityType: 'branch',
           operationId: branchId,
-        },
-        async (client) => {
+        };
+      const operation = async (client: PoolClient) => {
           await this.requireOwner(client, context);
           const inserted = await client.query<BranchResult>(
             `INSERT INTO branches (id, organization_id, name, status)
@@ -70,8 +70,15 @@ export class BranchManagementService {
           const row = inserted.rows.at(0);
           if (!row) throw new Error('La sucursal no fue persistida.');
           return row;
-        },
-      );
+        };
+      if (idempotencyKey) {
+        return await this.transactions.runIdempotent(context, auditEvent, {
+          actorUserId: context.userId, authorizationClass: 'BRANCH_MANAGEMENT', branchId: null,
+          key: idempotencyKey, organizationId: context.organizationId, payload: { name }, scope: 'branch.create',
+        }, (client) => this.requireOwner(client, context), operation,
+        (body) => z.object({ id: z.string(), name: z.string(), status: z.enum(['ACTIVE', 'INACTIVE']), version: z.number().int() }).parse(body));
+      }
+      return await this.transactions.run(context, auditEvent, operation);
     } catch (error) {
       if ((error as Partial<DatabaseError>).code === '23505') {
         throw new BranchManagementError(

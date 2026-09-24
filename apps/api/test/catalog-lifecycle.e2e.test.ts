@@ -79,6 +79,39 @@ describe('catalog lifecycle HTTP commands (T081A)', () => {
       .set('X-CSRF-Token', csrf.body.csrfToken as string)
       .set('Content-Type', 'application/json').send({});
 
+    const categories = await request(app.getHttpServer()).get('/api/v1/catalog/categories')
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(categories.body.categories).toEqual([expect.objectContaining({
+      id: categoryId, name: 'Lifecycle Category', status: 'ACTIVE', version: 1,
+    })]);
+    const createCategory = () => request(app.getHttpServer()).post('/api/v1/catalog/categories')
+      .set('Origin', origin).set('Cookie', cookie)
+      .set('X-Organization-Id', organizationId)
+      .set('X-CSRF-Token', csrf.body.csrfToken as string)
+      .set('Idempotency-Key', 'category-create-key').send({ name: 'Almacén' });
+    const created = await createCategory().expect(201);
+    expect(created.body).toEqual(expect.objectContaining({ name: 'Almacén', status: 'ACTIVE', version: 1 }));
+    expect((await createCategory().expect(201)).body).toEqual(created.body);
+
+    const createItem = () => request(app.getHttpServer()).post('/api/v1/catalog/items')
+      .set('Origin', origin).set('Cookie', cookie).set('X-Organization-Id', organizationId)
+      .set('X-CSRF-Token', csrf.body.csrfToken as string).set('Idempotency-Key', 'item-create-http-key')
+      .send({ name: 'Yerba nueva', type: 'PRODUCT', trackInventory: true, baseUnit: 'UNIT', sku: 'Y-1', barcode: '12345' });
+    const createdItem = await createItem().expect(201);
+    expect(createdItem.body).toMatchObject({ name: 'Yerba nueva', trackInventory: true, version: 1 });
+    expect((await createItem().expect(201)).body).toEqual(createdItem.body);
+    const managed = await request(app.getHttpServer()).get('/api/v1/catalog/items/manage')
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(managed.body.items).toContainEqual(expect.objectContaining({ id: createdItem.body.id, sku: 'Y-1', version: 1 }));
+    const edited = await patch(`/api/v1/catalog/items/${createdItem.body.id as string}`)
+      .set('If-Match', '1').set('Idempotency-Key', 'item-edit-key')
+      .send({ name: 'Yerba premium', sku: 'Y-2', barcode: '12346' }).expect(200);
+    expect(edited.body).toMatchObject({ name: 'Yerba premium', sku: 'Y-2', version: 2 });
+    const priced = await patch(`/api/v1/catalog/items/${createdItem.body.id as string}/price`)
+      .set('If-Match', '2').set('Idempotency-Key', 'item-price-key')
+      .send({ price: '150.00' }).expect(200);
+    expect(priced.body).toMatchObject({ price: '150.00', priceVersion: 1, version: 3 });
+
     const itemStatus = `/api/v1/catalog/items/${itemId}/status`;
     const invalidStatus = await patch(itemStatus).set('If-Match', '1')
       .set('Idempotency-Key', 'invalid-status-key').send({ status: 'ARCHIVED' }).expect(400);
@@ -117,5 +150,9 @@ describe('catalog lifecycle HTTP commands (T081A)', () => {
       .set('If-Match', '1').set('Idempotency-Key', 'cashier-status-key')
       .send({ status: 'INACTIVE' }).expect(403);
     expect(forbidden.body.code).toBe('CATALOG_ITEM_LIFECYCLE_FORBIDDEN');
+    await request(app.getHttpServer()).get('/api/v1/catalog/categories')
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(403);
+    await request(app.getHttpServer()).get('/api/v1/catalog/items/manage')
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(403);
   });
 });

@@ -15,6 +15,7 @@ import {
   MembershipAdministrationError,
   MembershipAdministrationService,
 } from '../src/modules/users/membership-administration.service.js';
+import { UserManagementReadService } from '../src/modules/users/user-management-read.service.js';
 
 describe('membership administration', () => {
   let adminUserId: string;
@@ -25,6 +26,7 @@ describe('membership administration', () => {
   let employeeUserId: string;
   let invitations: InvitationCreationService;
   let memberships: MembershipAdministrationService;
+  let reader: UserManagementReadService;
   let organizationId: string;
   let ownerMembershipId: string;
   let ownerUserId: string;
@@ -37,6 +39,7 @@ describe('membership administration', () => {
     const transactions = new TenantTransaction(pool);
     invitations = new InvitationCreationService(transactions);
     memberships = new MembershipAdministrationService(transactions);
+    reader = new UserManagementReadService(transactions);
 
     organizationId = randomUUID();
     branchA = randomUUID();
@@ -89,6 +92,55 @@ describe('membership administration', () => {
   afterAll(async () => {
     await pool?.end();
     await container?.stop();
+  });
+
+  it('returns only administrable members and assigned branches to ADMIN', async () => {
+    const result = await reader.read(context(adminUserId, 'admin-read'));
+    expect(result.actorRole).toBe('ADMIN');
+    expect(result.branches.map((branch) => branch.id)).toEqual([branchA]);
+    expect(result.memberships.map((member) => member.email)).not.toContain('membership.owner@example.com');
+    expect(result.memberships.find((member) => member.id === employeeMembershipId)).toMatchObject({
+      branchIds: [branchA], role: 'EMPLOYEE', version: 1,
+    });
+  });
+
+  it('prevents ADMIN from changing a member assigned only outside their branch scope', async () => {
+    const otherBranch = randomUUID();
+    const otherUser = randomUUID();
+    const otherMembership = randomUUID();
+    await pool.query('INSERT INTO branches (id, organization_id, name) VALUES ($1, $2, $3)', [otherBranch, organizationId, `Outside ${otherBranch}`]);
+    await pool.query('INSERT INTO users (id, email_normalized, password_hash, password_hash_version) VALUES ($1, $2, $3, 1)', [otherUser, `${otherUser}@example.com`, '$argon2id$v=19$other']);
+    await pool.query("INSERT INTO memberships (id, organization_id, user_id, role) VALUES ($1, $2, $3, 'EMPLOYEE')", [otherMembership, organizationId, otherUser]);
+    await pool.query('INSERT INTO membership_branches (organization_id, membership_id, branch_id) VALUES ($1, $2, $3)', [organizationId, otherMembership, otherBranch]);
+
+    const view = await reader.read(context(adminUserId, 'outside-read'));
+    expect(view.memberships.some((member) => member.id === otherMembership)).toBe(false);
+    await expect(memberships.changeRole(context(adminUserId, 'outside-role'), otherMembership,
+      { role: 'CASHIER', branchIds: [branchA], expectedVersion: 1 })).rejects.toMatchObject({ code: 'MEMBERSHIP_BRANCH_SCOPE_FORBIDDEN' });
+    await expect(memberships.setStatus(context(adminUserId, 'outside-status'), otherMembership,
+      { status: 'INACTIVE', expectedVersion: 1 })).rejects.toMatchObject({ code: 'MEMBERSHIP_BRANCH_SCOPE_FORBIDDEN' });
+    await expect(memberships.revoke(context(adminUserId, 'outside-revoke'), otherMembership, 1)).rejects.toMatchObject({ code: 'MEMBERSHIP_BRANCH_SCOPE_FORBIDDEN' });
+  });
+
+  it('replays a role change with the same version and key without a second write', async () => {
+    const userId = randomUUID();
+    const membershipId = randomUUID();
+    await pool.query('INSERT INTO users (id, email_normalized, password_hash, password_hash_version) VALUES ($1, $2, $3, 1)', [userId, `${userId}@example.com`, '$argon2id$v=19$idempotent']);
+    await pool.query("INSERT INTO memberships (id, organization_id, user_id, role) VALUES ($1, $2, $3, 'EMPLOYEE')", [membershipId, organizationId, userId]);
+    await pool.query('INSERT INTO membership_branches (organization_id, membership_id, branch_id) VALUES ($1, $2, $3)', [organizationId, membershipId, branchA]);
+    const change = { role: 'CASHIER' as const, branchIds: [branchA], expectedVersion: 1 };
+    const first = await memberships.changeRole(context(ownerUserId, 'role-idempotent'), membershipId, change, 'role-change-key');
+    expect(first).toEqual({ role: 'CASHIER', version: 2 });
+    expect(await memberships.changeRole(context(ownerUserId, 'role-retry'), membershipId, change, 'role-change-key')).toEqual(first);
+    const audits = await pool.query<{ count: string }>("SELECT count(*) FROM audit_events WHERE entity_id = $1 AND action = 'membership.role_changed'", [membershipId]);
+    expect(audits.rows[0]?.count).toBe('1');
+  });
+
+  it('does not mistake a targeted membership for an actor without membership', async () => {
+    const outsiderUserId = randomUUID();
+    await pool.query('INSERT INTO users (id, email_normalized, password_hash, password_hash_version) VALUES ($1, $2, $3, 1)', [outsiderUserId, `${outsiderUserId}@example.com`, '$argon2id$v=19$outsider']);
+    await expect(memberships.changeRole(context(outsiderUserId, 'outsider-role'), ownerMembershipId,
+      { role: 'OWNER', branchIds: [], expectedVersion: 1 })).rejects.toMatchObject({ code: 'MEMBERSHIP_NOT_MUTABLE' });
   });
 
   it('prevents non-OWNER actors from creating, promoting, degrading or revoking OWNER', async () => {

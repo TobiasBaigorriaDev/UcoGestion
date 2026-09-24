@@ -147,7 +147,7 @@ describe('category lifecycle preparation', () => {
     expect('delete' in CatalogCategoryManagementService.prototype).toBe(false);
     expect('delete' in ExpenseCategoryManagementService.prototype).toBe(false);
     expect('deletePhysically' in CatalogCategoryManagementService.prototype).toBe(true);
-    expect('deletePhysically' in ExpenseCategoryManagementService.prototype).toBe(false);
+    expect('deletePhysically' in ExpenseCategoryManagementService.prototype).toBe(true);
 
     await expect(inTenant(organizationA, (client) => references.check(client, {
       categoryId: catalogCategoryB,

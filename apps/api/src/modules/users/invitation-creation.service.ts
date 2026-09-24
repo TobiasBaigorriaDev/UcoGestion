@@ -9,6 +9,7 @@ import {
   type MembershipRole,
 } from './non-owner-membership.policy.js';
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
+import { z } from 'zod';
 
 const invitationLifetimeMs = 7 * 24 * 60 * 60 * 1_000;
 
@@ -59,6 +60,7 @@ export class InvitationCreationService {
   async create(
     context: TenantTransactionContext,
     input: CreateInvitationInput,
+    idempotencyKey?: string,
   ): Promise<CreateInvitationResult> {
     const invitationId = randomUUID();
     const email = normalizeEmail(input.email);
@@ -67,9 +69,7 @@ export class InvitationCreationService {
     const token = randomBytes(32).toString('base64url');
     const tokenHash = createHash('sha256').update(token).digest('hex');
 
-    return this.transactions.run(
-      context,
-      {
+    const auditEvent = {
         action: 'invitation.created',
         after: { branchCount: input.branchIds.length, email, role: input.role, status: 'PENDING' },
         afterAllowlist: ['branchCount', 'email', 'role', 'status'],
@@ -81,8 +81,8 @@ export class InvitationCreationService {
         entityId: invitationId,
         entityType: 'invitation',
         operationId: invitationId,
-      },
-      async (client) => {
+      };
+    const operation = async (client: PoolClient) => {
         const actor = await this.loadActor(client, context);
         const branchIds = await this.authorizeScope(client, context.organizationId, actor, input);
         await client.query(
@@ -138,8 +138,18 @@ export class InvitationCreationService {
           ],
         );
         return { expiresAt: expiresAt.toISOString(), invitationId };
-      },
-    );
+      };
+    if (idempotencyKey) {
+      return this.transactions.runIdempotent(context, auditEvent, {
+        actorUserId: context.userId, authorizationClass: 'MEMBERSHIP_ADMINISTRATION', branchId: null,
+        key: idempotencyKey, organizationId: context.organizationId,
+        payload: { branchIds: [...input.branchIds], email, role: input.role }, scope: 'invitation.create',
+      }, async (client) => {
+        const actor = await this.loadActor(client, context);
+        await this.authorizeScope(client, context.organizationId, actor, input);
+      }, operation, (body) => z.object({ expiresAt: z.string(), invitationId: z.string() }).parse(body));
+    }
+    return this.transactions.run(context, auditEvent, operation);
   }
 
   private async loadActor(

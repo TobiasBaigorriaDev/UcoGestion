@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import {
   BadRequestException, Body, ConflictException, Controller, Delete, ForbiddenException,
-  HttpException, HttpStatus, NotFoundException, Param, ParseUUIDPipe, Patch, Req,
+  HttpException, HttpStatus, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Req,
   UnauthorizedException,
 } from '@nestjs/common';
 import { z } from 'zod';
@@ -16,6 +16,7 @@ import {
 import { CatalogItemLifecycleService, CatalogItemServiceError } from './catalog-item-lifecycle.service.js';
 
 const statusSchema = z.strictObject({ status: z.enum(['ACTIVE', 'INACTIVE']) });
+const createCategorySchema = z.strictObject({ name: z.string().trim().min(1).max(255) });
 const structuralSchema = z.strictObject({
   type: z.enum(['PRODUCT', 'SERVICE']),
   trackInventory: z.boolean().optional(),
@@ -33,6 +34,18 @@ export class CatalogLifecycleController {
     private readonly items: CatalogItemLifecycleService,
     private readonly categories: CatalogCategoryManagementService,
   ) {}
+
+  @Post('categories')
+  async createCategory(
+    @Req() request: CatalogRequest,
+    @Body(new ZodValidationPipe(createCategorySchema)) body: z.infer<typeof createCategorySchema>,
+  ) {
+    try {
+      return await this.categories.create(this.context(request), body, this.idempotencyKey(request));
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
 
   @Patch('items/:itemId/status')
   async changeItemStatus(

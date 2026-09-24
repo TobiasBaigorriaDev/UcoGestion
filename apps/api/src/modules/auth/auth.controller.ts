@@ -29,6 +29,9 @@ import { CsrfService } from './csrf.service.js';
 import { PublicRoute } from './public-route.decorator.js';
 import { readSessionCookie } from './session-cookie.js';
 import { SessionRevocationService } from './session-revocation.service.js';
+import { ExistingAccountInvitationAcceptanceService, InvitationAcceptanceError } from '../users/existing-account-invitation-acceptance.service.js';
+import { NewAccountInvitationAcceptanceService } from '../users/new-account-invitation-acceptance.service.js';
+import { randomUUID } from 'node:crypto';
 
 const loginRequestSchema = z.strictObject({
   email: z.string().trim().pipe(z.email()),
@@ -43,6 +46,7 @@ const resetPasswordRequestSchema = z.strictObject({
   password: z.string().min(12).max(256),
   token: z.string().min(1).max(512),
 });
+const acceptInvitationSchema = z.strictObject({ token: z.string().min(1).max(512), password: z.string().min(12).max(256).optional() });
 
 type LoginRequest = z.infer<typeof loginRequestSchema>;
 type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>;
@@ -56,7 +60,26 @@ export class AuthController {
     private readonly passwordResetConsume: PasswordResetConsumeService,
     private readonly sessionRevocation: SessionRevocationService,
     private readonly csrf: CsrfService,
+    private readonly existingInvitation: ExistingAccountInvitationAcceptanceService,
+    private readonly newInvitation: NewAccountInvitationAcceptanceService,
   ) {}
+
+  @Post('accept-invitation')
+  @PublicRoute()
+  @CsrfExempt()
+  async acceptInvitation(@Body(new ZodValidationPipe(acceptInvitationSchema)) input: z.infer<typeof acceptInvitationSchema>, @Req() request: { readonly headers: Record<string, string | string[] | undefined> }): Promise<{ membershipId: string; organizationId: string }> {
+    const requestId = typeof request.headers['x-request-id'] === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(request.headers['x-request-id']) ? request.headers['x-request-id'] : randomUUID();
+    try {
+      return input.password === undefined
+        ? await this.existingInvitation.accept(input.token, requestId)
+        : await this.newInvitation.accept({ token: input.token, password: input.password }, requestId);
+    } catch (error) {
+      if (error instanceof InvitationAcceptanceError) {
+        throw new BadRequestException({ code: error.code, title: 'Invitación no disponible', detail: 'La invitación venció, fue revocada o ya se usó. Solicitá otra.' });
+      }
+      throw error;
+    }
+  }
 
   @Post('forgot-password')
   @PublicRoute()

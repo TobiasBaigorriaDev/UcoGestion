@@ -73,6 +73,7 @@ export function LoginForm({ login: performLogin = login, onSuccess = () => { win
     <input id="login-password" type="password" autoComplete="current-password" aria-invalid={!!errors.password} aria-describedby={errors.password ? 'login-password-error' : undefined} {...register('password')} />
     {errors.password ? <p id="login-password-error" role="alert">Ingresá tu contraseña.</p> : null}
     <button type="submit" disabled={busy}>{busy ? 'Ingresando…' : 'Iniciar sesión'}</button>
+    <a href="/forgot-password">Olvidé mi contraseña</a>
   </form>;
 }
 

@@ -1,0 +1,24 @@
+.page { display: grid; gap: 1.5rem; max-width: 72rem; margin-inline: auto; }
+.heading h1 { margin: 0; font-size: var(--text-display); line-height: 1.15; }
+.heading p { color: var(--color-text-secondary); margin: .5rem 0 0; }
+.panel { display: grid; gap: 1rem; padding: clamp(1rem, 3vw, 1.75rem); border-radius: var(--radius-card); background: var(--color-surface); box-shadow: var(--shadow-glass); }
+.panel h2 { margin: 0; font-size: var(--text-headline); }
+.fields { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+.fields > div { display: grid; gap: .4rem; }
+.page label, .page legend { font-weight: 650; }
+.page input:not([type='checkbox']), .page select { width: 100%; min-height: 44px; padding: .6rem .75rem; border: 1px solid var(--color-text-disabled); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: inherit; }
+.page fieldset { border: 1px solid var(--color-text-disabled); border-radius: var(--radius-sm); padding: .75rem 1rem; }
+.checks { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; margin-top: .5rem; }
+.checks label { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; }
+.checks input { width: 1.15rem; height: 1.15rem; accent-color: var(--color-primary); }
+.page button { min-height: 44px; width: fit-content; max-width: 100%; border: 1px solid var(--color-primary); border-radius: var(--radius-button); padding: .65rem 1rem; background: var(--color-primary); color: var(--color-on-primary); font: inherit; font-weight: 700; cursor: pointer; }
+.page button:disabled { opacity: .6; cursor: not-allowed; }
+.page button:focus-visible, .page input:focus-visible, .page select:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+.rows { display: grid; gap: 1rem; padding: 0; margin: 0; list-style: none; }
+.row { display: grid; gap: 1rem; padding: 1rem 0; border-top: 1px solid var(--color-text-disabled); }
+.row p { margin: .35rem 0 0; color: var(--color-text-secondary); }
+.memberTitle { display: flex; gap: 1rem; align-items: baseline; flex-wrap: wrap; }
+.memberTitle span { color: var(--color-text-secondary); }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.actions button:not(:first-child), .row > button { color: var(--color-primary); background: transparent; }
+@media (prefers-reduced-motion: no-preference) { .page button { transition: background-color .16s ease-out; } .page button:not(:disabled):hover { background: #15803D; color: white; } }

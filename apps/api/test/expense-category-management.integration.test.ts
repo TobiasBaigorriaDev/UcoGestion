@@ -114,6 +114,28 @@ describe('expense category management', () => {
       } satisfies Partial<ExpenseCategorySelectionError>);
   });
 
+  it('lists both states and manages lifecycle without deleting historical references', async () => {
+    const category = await service.create(context(ownerUserId, 'expense-lifecycle-create'), { name: 'Gestión' });
+    expect(await service.list(context(adminUserId, 'expense-lifecycle-list'))).toContainEqual(category);
+    const inactive = await service.changeStatus(context(ownerUserId, 'expense-lifecycle-status'), category.id, 1, 'INACTIVE', 'expense-status-key');
+    expect(inactive).toMatchObject({ status: 'INACTIVE', version: 2 });
+    expect(await service.changeStatus(context(ownerUserId, 'expense-lifecycle-replay'), category.id, 1, 'INACTIVE', 'expense-status-key')).toEqual(inactive);
+    await expect(service.changeStatus(context(cashierUserId, 'expense-lifecycle-denied'), category.id, 2, 'ACTIVE', 'expense-denied-key'))
+      .rejects.toMatchObject({ code: 'EXPENSE_CATEGORY_MANAGEMENT_FORBIDDEN' });
+    await pool.query(`INSERT INTO expense_category_history_references (id, organization_id, category_id, reference_type, source_id)
+      VALUES ($1, $2, $3, 'EXPENSE', $4)`, [randomUUID(), organizationA, category.id, randomUUID()]);
+    await expect(service.deletePhysically(context(ownerUserId, 'expense-lifecycle-delete'), category.id, 2, 'expense-delete-key'))
+      .rejects.toMatchObject({ code: 'CATEGORY_DELETE_BLOCKED_BY_HISTORY' });
+    const fresh = await service.create(context(ownerUserId, 'expense-lifecycle-fresh'), { name: 'Sin historial' });
+    await expect(service.deletePhysically(context(ownerUserId, 'expense-lifecycle-fresh-delete'), fresh.id, 1, 'expense-fresh-delete-key'))
+      .resolves.toEqual({ id: fresh.id, deleted: true });
+    const foreignId = randomUUID();
+    await pool.query(`INSERT INTO expense_categories (id, organization_id, name) VALUES ($1, $2, 'Other tenant')`,
+      [foreignId, organizationB]);
+    await expect(service.changeStatus(context(ownerUserId, 'expense-lifecycle-foreign'), foreignId, 1, 'INACTIVE', 'expense-foreign-key'))
+      .rejects.toMatchObject({ code: 'EXPENSE_CATEGORY_NOT_FOUND' });
+  });
+
   function context(userId: string, requestId: string) {
     return { organizationId: organizationA, requestId, userId };
   }

@@ -179,6 +179,18 @@ describe('invitation creation', () => {
     expect(rejected.rows[0]?.count).toBe('0');
   });
 
+  it('replays an identical invitation without duplicate outbox or audit effects', async () => {
+    const context = { organizationId: organizationA, requestId: 'invite-idempotent', userId: ownerUserId };
+    const input = { branchIds: [branchA1], email: 'replay@example.com', role: 'CASHIER' };
+    const first = await service.create(context, input, 'invite-replay-key');
+    expect(await service.create({ ...context, requestId: 'invite-idempotent-retry' }, input, 'invite-replay-key')).toEqual(first);
+    await expect(service.create(context, { ...input, role: 'EMPLOYEE' }, 'invite-replay-key')).rejects.toThrow('different payload');
+    const invitations = await pool.query<{ count: string }>('SELECT count(*) FROM invitations WHERE id = $1', [first.invitationId]);
+    const outbox = await pool.query<{ count: string }>('SELECT count(*) FROM outbox_jobs WHERE job_key LIKE $1', [`%${first.invitationId}%`]);
+    const audit = await pool.query<{ count: string }>('SELECT count(*) FROM audit_events WHERE entity_id = $1', [first.invitationId]);
+    expect([invitations.rows[0]?.count, outbox.rows[0]?.count, audit.rows[0]?.count]).toEqual(['1', '2', '1']);
+  });
+
   it('rolls back invitation, branches and audit when the email outbox insert fails', async () => {
     await pool.query(`
       CREATE FUNCTION reject_invitation_outbox_insert() RETURNS trigger LANGUAGE plpgsql AS $$

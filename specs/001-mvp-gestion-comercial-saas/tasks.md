@@ -118,16 +118,16 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T091: Crear shell mobile-first y navegación contextual organización/sucursal [RF-03, RF-152, RF-153]
 - [x] T092: Implementar cliente REST común con Problem Details y resumen accesible de errores [RF-133, RF-154]
 - [x] T092A: Implementar UI de login y selector/cambio de organización con estados accesibles [RF-03, RF-10, RF-133, RF-152, RF-153, RF-154] (Depende de T038, T042 y T088–T092)
-- [ ] T092F: Implementar UI de recuperación y aceptación/reenvío de invitación con estados accesibles y respuestas no enumerables [RF-11, RF-13, RF-14, RF-15, RF-16, RF-17, RF-133, RF-152, RF-153, RF-154, RF-293, RF-294] (Depende de T041, T043–T053 y T088–T092)
+- [x] T092F: Implementar UI de recuperación y aceptación/reenvío de invitación con estados accesibles y respuestas no enumerables [RF-11, RF-13, RF-14, RF-15, RF-16, RF-17, RF-133, RF-152, RF-153, RF-154, RF-293, RF-294] (Depende de T041, T043–T053 y T088–T092)
 - [x] T092B: Implementar UI de perfil comercial y timezone con permisos y concurrencia optimista [RF-08, RF-09, RF-133, RF-152, RF-153, RF-154] (Depende de T060 y T088–T092)
-- [ ] T092D: Implementar UI de usuarios, invitaciones y roles con restricciones OWNER/ADMIN y concurrencia optimista [RF-13, RF-17, RF-18, RF-21, RF-22, RF-23, RF-24, RF-25, RF-133, RF-152, RF-153, RF-154, RF-178, RF-184] (Depende de T043–T060 y T088–T092)
-- [ ] T092E: Implementar UI de sucursales con alta, alcance y navegación contextual; posponer desactivación completa hasta T221A [RF-27, RF-133, RF-152, RF-153, RF-154, RF-184] (Depende de T061–T063 y T088–T092)
+- [x] T092D: Implementar UI de usuarios, invitaciones y roles con restricciones OWNER/ADMIN y concurrencia optimista [RF-13, RF-17, RF-18, RF-21, RF-22, RF-23, RF-24, RF-25, RF-133, RF-152, RF-153, RF-154, RF-178, RF-184] (Depende de T043–T060 y T088–T092)
+- [x] T092E: Implementar UI de sucursales con alta, alcance y navegación contextual; posponer desactivación completa hasta T221A [RF-27, RF-133, RF-152, RF-153, RF-154, RF-184] (Depende de T061–T063 y T088–T092)
 - [x] T092C: Implementar onboarding asistido de plataforma para organización, primera sucursal y OWNER, con confirmación de resultado o rollback sin exponer acceso tenant ordinario [RF-01, RF-05, RF-133, RF-152, RF-153, RF-154, RF-284] (Depende de T040 y T088–T092)
-- [ ] T093: Implementar catálogo de solo lectura para CASHIER/EMPLOYEE sin costos ni márgenes [RF-222, RF-224, RF-226]
-- [ ] T094: Permitir a EMPLOYEE ver ítems inactivos solo en contexto histórico autorizado [RF-223]
-- [ ] T095: Implementar UI de categorías de catálogo para OWNER/ADMIN con alta, estados, activación y borrado; explicar bloqueos D01 [RF-50, RF-51, RF-53, RF-54, RF-55, RF-152, RF-153, RF-154, RF-221, RF-306, RF-308] (Depende de T069, T081A y T088–T092)
-- [ ] T095E: Implementar UI separada de categorías de gasto con selección activa y estados accesibles [RF-50, RF-52, RF-53, RF-54, RF-55, RF-152, RF-153, RF-154] (Depende de T069 y T088–T092)
-- [ ] T095A: Implementar UI de listado, alta y edición no estructural de ítems, incluidos tipo inicial, inventario, unidad, códigos, duplicados y precio [RF-32, RF-33, RF-34, RF-35, RF-36, RF-37, RF-41, RF-42, RF-46, RF-152, RF-153, RF-154, RF-221] (Depende de T067–T078 y T088–T092)
+- [x] T093: Implementar catálogo de solo lectura para CASHIER/EMPLOYEE sin costos ni márgenes [RF-222, RF-224, RF-226]
+- [x] T094: Permitir a EMPLOYEE ver ítems inactivos solo en contexto histórico autorizado [RF-223]
+- [x] T095: Implementar UI de categorías de catálogo para OWNER/ADMIN con alta, estados, activación y borrado; explicar bloqueos D01 [RF-50, RF-51, RF-53, RF-54, RF-55, RF-152, RF-153, RF-154, RF-221, RF-306, RF-308] (Depende de T069, T081A y T088–T092)
+- [x] T095E: Implementar UI separada de categorías de gasto con selección activa y estados accesibles [RF-50, RF-52, RF-53, RF-54, RF-55, RF-152, RF-153, RF-154] (Depende de T069 y T088–T092)
+- [x] T095A: Implementar UI de listado, alta y edición no estructural de ítems, incluidos tipo inicial, inventario, unidad, códigos, duplicados y precio [RF-32, RF-33, RF-34, RF-35, RF-36, RF-37, RF-41, RF-42, RF-46, RF-152, RF-153, RF-154, RF-221] (Depende de T067–T078 y T088–T092)
 - [ ] T095F: Implementar UI de activación, desactivación, borrado y cambio estructural de ítems con motivos D01 diferenciados [RF-54, RF-55, RF-56, RF-133, RF-152, RF-153, RF-154, RF-159, RF-160, RF-161, RF-221, RF-306, RF-308] (Depende de T079–T081A y T095A)
 - [ ] T095B: Implementar UI de clientes por rol con campos permitidos, alta, consulta, edición y estados [RF-68, RF-69, RF-211, RF-212, RF-213, RF-214, RF-220] (Depende de T082, T084–T092)
 - [ ] T095G: Implementar UI de proveedores por rol con campos permitidos, alta, consulta, edición, estados y borrado sin historia [RF-70, RF-71, RF-215, RF-216, RF-217, RF-218, RF-219, RF-220] (Depende de T083–T092)

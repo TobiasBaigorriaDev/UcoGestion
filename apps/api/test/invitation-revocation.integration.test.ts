@@ -74,6 +74,7 @@ describe('invitation revocation', () => {
        ($1, $2, 'Branch A'), ($3, $4, 'Branch B')`,
       [branchA, organizationA, branchB, organizationB],
     );
+    const adminMembershipId = randomUUID();
     await adminPool.query(
       `INSERT INTO memberships (id, organization_id, user_id, role) VALUES
        ($1, $2, $3, 'OWNER'),
@@ -84,7 +85,7 @@ describe('invitation revocation', () => {
         ownerAMembershipId,
         organizationA,
         ownerAUserId,
-        randomUUID(),
+        adminMembershipId,
         adminUserId,
         randomUUID(),
         employeeUserId,
@@ -93,6 +94,7 @@ describe('invitation revocation', () => {
         ownerBUserId,
       ],
     );
+    await adminPool.query('INSERT INTO membership_branches (organization_id, membership_id, branch_id) VALUES ($1, $2, $3)', [organizationA, adminMembershipId, branchA]);
   });
 
   afterAll(async () => {
@@ -153,6 +155,9 @@ describe('invitation revocation', () => {
   });
 
   it('allows ADMIN but denies operational roles and cross-tenant invitation ids', async () => {
+    const outsideBranch = randomUUID();
+    await adminPool.query('INSERT INTO branches (id, organization_id, name) VALUES ($1, $2, $3)', [outsideBranch, organizationA, `Outside ${outsideBranch}`]);
+    const outsideInvitation = await seedInvitation(adminPool, organizationA, outsideBranch, ownerAMembershipId, 'outside-admin@example.com', 'outside-token', now);
     const adminInvitation = await seedInvitation(
       adminPool,
       organizationA,
@@ -185,6 +190,10 @@ describe('invitation revocation', () => {
       { organizationId: organizationA, requestId: 'revoke-admin', userId: adminUserId },
       adminInvitation.id,
     )).resolves.toMatchObject({ status: 'REVOKED' });
+    await expect(revocation.revoke(
+      { organizationId: organizationA, requestId: 'revoke-outside', userId: adminUserId },
+      outsideInvitation.id,
+    )).rejects.toMatchObject({ code: 'INVITATION_REVOCATION_FORBIDDEN' });
     await expect(revocation.revoke(
       { organizationId: organizationA, requestId: 'revoke-employee', userId: employeeUserId },
       employeeInvitation.id,

@@ -13,6 +13,8 @@ import { SessionRevocationService } from './session-revocation.service.js';
 import { RequestIntegrityGuard } from './request-integrity.guard.js';
 import { TenantAccessGuard } from './tenant-access.guard.js';
 import { TenantMembershipService } from './tenant-membership.service.js';
+import { ExistingAccountInvitationAcceptanceService } from '../users/existing-account-invitation-acceptance.service.js';
+import { NewAccountInvitationAcceptanceService } from '../users/new-account-invitation-acceptance.service.js';
 
 @Injectable()
 class GlobalAuthDatabase implements OnModuleDestroy {
@@ -53,6 +55,8 @@ class GlobalAuthDatabase implements OnModuleDestroy {
       useFactory: (database: GlobalAuthDatabase) => new PasswordResetConsumeService(database.pool),
       inject: [GlobalAuthDatabase],
     },
+    { provide: ExistingAccountInvitationAcceptanceService, useFactory: (database: GlobalAuthDatabase) => new ExistingAccountInvitationAcceptanceService(database.pool), inject: [GlobalAuthDatabase] },
+    { provide: NewAccountInvitationAcceptanceService, useFactory: (database: GlobalAuthDatabase) => new NewAccountInvitationAcceptanceService(database.pool), inject: [GlobalAuthDatabase] },
     {
       provide: SessionAuthenticationService,
       useFactory: (database: GlobalAuthDatabase) => new SessionAuthenticationService(database.pool),

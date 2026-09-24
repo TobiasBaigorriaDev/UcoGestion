@@ -10,6 +10,7 @@ import {
   BranchManagementError,
   BranchManagementService,
 } from '../src/modules/branches/branch-management.service.js';
+import { BranchReadService } from '../src/modules/branches/branch-read.service.js';
 import {
   BranchOperationError,
   BranchOperationPolicy,
@@ -24,6 +25,7 @@ describe('branch management', () => {
   let pool: Pool;
   let runtimePool: Pool;
   let service: BranchManagementService;
+  let reader: BranchReadService;
   const operationPolicy = new BranchOperationPolicy();
 
   beforeAll(async () => {
@@ -36,6 +38,7 @@ describe('branch management', () => {
     runtimeUrl.password = 'runtime-password';
     runtimePool = new Pool({ connectionString: runtimeUrl.toString() });
     service = new BranchManagementService(new TenantTransaction(runtimePool));
+    reader = new BranchReadService(new TenantTransaction(runtimePool));
     organizationA = randomUUID();
     organizationB = randomUUID();
     ownerAUserId = randomUUID();
@@ -65,6 +68,32 @@ describe('branch management', () => {
     await container?.stop();
   });
 
+  it('reads only active assigned branches for an operational member and stays inside the tenant', async () => {
+    const assigned = randomUUID();
+    const unassigned = randomUUID();
+    const foreign = randomUUID();
+    const userId = randomUUID();
+    const membershipId = randomUUID();
+    await pool.query(`INSERT INTO branches (id, organization_id, name) VALUES
+      ($1, $2, 'Assigned'), ($3, $2, 'Unassigned'), ($4, $5, 'Foreign')`, [assigned, organizationA, unassigned, foreign, organizationB]);
+    await pool.query('INSERT INTO users (id, email_normalized, password_hash, password_hash_version) VALUES ($1, $2, $3, 1)', [userId, `${userId}@example.com`, '$argon2id$v=19$branch']);
+    await pool.query("INSERT INTO memberships (id, organization_id, user_id, role) VALUES ($1, $2, $3, 'EMPLOYEE')", [membershipId, organizationA, userId]);
+    await pool.query('INSERT INTO membership_branches (organization_id, membership_id, branch_id) VALUES ($1, $2, $3)', [organizationA, membershipId, assigned]);
+    const result = await reader.read({ organizationId: organizationA, requestId: 'branch-read-scope', userId });
+    expect(result.actorRole).toBe('EMPLOYEE');
+    expect(result.branches.map((branch) => branch.id)).toEqual([assigned]);
+  });
+
+  it('replays branch creation once without duplicate audit effects', async () => {
+    const context = { organizationId: organizationA, requestId: 'branch-idempotent', userId: ownerAUserId };
+    const name = `Replay ${randomUUID()}`;
+    const first = await service.create(context, { name }, 'branch-replay-key');
+    expect(await service.create({ ...context, requestId: 'branch-idempotent-retry' }, { name }, 'branch-replay-key')).toEqual(first);
+    await expect(service.create(context, { name: `${name} changed` }, 'branch-replay-key')).rejects.toThrow('different payload');
+    const audit = await pool.query<{ count: string }>('SELECT count(*) FROM audit_events WHERE entity_id = $1', [first.id]);
+    expect(audit.rows[0]?.count).toBe('1');
+  });
+
   it('normalizes branch names and enforces uniqueness only inside the tenant', async () => {
     const created = await service.create(
       { organizationId: organizationA, requestId: 'branch-create-a', userId: ownerAUserId },
@@ -84,7 +113,7 @@ describe('branch management', () => {
 
     const stored = await pool.query<{ name: string; name_norm: string; organization_id: string }>(
       `SELECT organization_id, name, name_norm FROM branches
-       WHERE organization_id = ANY($1::uuid[]) ORDER BY organization_id`,
+       WHERE organization_id = ANY($1::uuid[]) AND name_norm = 'centro' ORDER BY organization_id`,
       [[organizationA, organizationB]],
     );
     expect(stored.rows).toEqual([

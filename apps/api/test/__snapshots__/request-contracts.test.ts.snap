@@ -27,6 +27,20 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/auth/accept-invitation": {
+      "post": {
+        "operationId": "AuthController_acceptInvitation",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Auth",
+        ],
+      },
+    },
     "/api/v1/auth/csrf": {
       "get": {
         "operationId": "AuthController_getCsrfToken",
@@ -97,6 +111,32 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/branches": {
+      "get": {
+        "operationId": "BranchesController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Branches",
+        ],
+      },
+      "post": {
+        "operationId": "BranchesController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Branches",
+        ],
+      },
+    },
     "/api/v1/catalog/categories/{categoryId}": {
       "delete": {
         "operationId": "CatalogLifecycleController_deleteCategory",
@@ -140,6 +180,37 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         },
         "tags": [
           "CatalogLifecycle",
+        ],
+      },
+    },
+    "/api/v1/catalog/items": {
+      "get": {
+        "operationId": "CatalogReadController_read",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogRead",
         ],
       },
     },
@@ -761,6 +832,149 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         },
         "tags": [
           "Suppliers",
+        ],
+      },
+    },
+    "/api/v1/users/invitations": {
+      "post": {
+        "operationId": "UsersController_invite",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Users",
+        ],
+      },
+    },
+    "/api/v1/users/invitations/{id}": {
+      "delete": {
+        "operationId": "UsersController_revokeInvitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Users",
+        ],
+      },
+    },
+    "/api/v1/users/invitations/{id}/resend": {
+      "post": {
+        "operationId": "UsersController_resendInvitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Users",
+        ],
+      },
+    },
+    "/api/v1/users/management": {
+      "get": {
+        "operationId": "UsersController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Users",
+        ],
+      },
+    },
+    "/api/v1/users/memberships/{id}": {
+      "delete": {
+        "operationId": "UsersController_revokeMembership",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Users",
+        ],
+      },
+    },
+    "/api/v1/users/memberships/{id}/role": {
+      "patch": {
+        "operationId": "UsersController_changeRole",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Users",
+        ],
+      },
+    },
+    "/api/v1/users/memberships/{id}/status": {
+      "patch": {
+        "operationId": "UsersController_changeStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Users",
         ],
       },
     },
