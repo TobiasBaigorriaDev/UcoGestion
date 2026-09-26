@@ -498,11 +498,88 @@ export const catalogPriceVersions = pgTable(
 export const devices = pgTable('devices', {
   id: uuid().primaryKey(),
   organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+  branchId: uuid('branch_id'),
+  authorizedByUserId: uuid('authorized_by_user_id').references(() => users.id),
+  authorizedAt: timestamp('authorized_at', { withTimezone: true }),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+  lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
   status: text().notNull(),
-  publicKey: text('public_key').notNull(),
+  publicKey: text('public_key'),
   lastConfigVersion: bigint('last_config_version', { mode: 'number' }).notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [unique('devices_organization_id_id_key').on(table.organizationId, table.id)]);
+}, (table) => [
+  unique('devices_organization_id_id_key').on(table.organizationId, table.id),
+  unique('devices_organization_branch_id_id_key').on(table.organizationId, table.branchId, table.id),
+  foreignKey({ columns: [table.organizationId, table.branchId],
+    foreignColumns: [branches.organizationId, branches.id], name: 'devices_branch_tenant_fk' }),
+]);
+
+export const cashSessions = pgTable('cash_sessions', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+  branchId: uuid('branch_id').notNull(),
+  cashRegisterId: uuid('cash_register_id').notNull(),
+  ownerUserId: uuid('owner_user_id').notNull().references(() => users.id),
+  deviceId: uuid('device_id').notNull(),
+  origin: text().notNull(),
+  status: text().notNull(),
+  openingCash: numeric('opening_cash', { precision: 20, scale: 2 }).notNull(),
+  expectedCash: numeric('expected_cash', { precision: 20, scale: 2 }).notNull(),
+  currencyCode: text('currency_code').notNull(),
+  serverSyncSeq: bigint('server_sync_seq', { mode: 'number' }).notNull().default(0),
+  completeness: text().notNull().default('COMPLETE'),
+  openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('cash_sessions_organization_id_id_key').on(table.organizationId, table.id),
+  unique('cash_sessions_organization_branch_id_key').on(table.organizationId, table.branchId, table.id),
+  unique('cash_sessions_device_identity_key').on(table.organizationId, table.branchId, table.id, table.deviceId),
+  uniqueIndex('cash_sessions_one_normal_active_per_register')
+    .on(table.organizationId, table.cashRegisterId)
+    .where(sql`${table.status} IN ('OPEN', 'CLOSING')`),
+  foreignKey({ columns: [table.organizationId, table.branchId],
+    foreignColumns: [branches.organizationId, branches.id], name: 'cash_sessions_branch_tenant_fk' }),
+  foreignKey({ columns: [table.organizationId, table.cashRegisterId],
+    foreignColumns: [cashRegisters.organizationId, cashRegisters.id], name: 'cash_sessions_register_tenant_fk' }),
+  foreignKey({ columns: [table.organizationId, table.branchId, table.deviceId],
+    foreignColumns: [devices.organizationId, devices.branchId, devices.id], name: 'cash_sessions_device_branch_fk' }),
+]);
+
+export const cashSessionStateTransitions = pgTable('cash_session_state_transitions', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  cashSessionId: uuid('cash_session_id').notNull(),
+  actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+  fromStatus: text('from_status').notNull(),
+  toStatus: text('to_status').notNull(),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [foreignKey({ columns: [table.organizationId, table.cashSessionId],
+  foreignColumns: [cashSessions.organizationId, cashSessions.id], name: 'cash_session_transitions_session_fk' })]);
+
+export const cashMovements = pgTable('cash_movements', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  branchId: uuid('branch_id').notNull(),
+  cashSessionId: uuid('cash_session_id').notNull(),
+  actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+  deviceId: uuid('device_id').notNull(),
+  delta: numeric({ precision: 20, scale: 2 }).notNull(),
+  currencyCode: text('currency_code').notNull(),
+  sourceType: text('source_type').notNull(),
+  sourceId: uuid('source_id').notNull(),
+  effectKind: text('effect_kind').notNull(),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('cash_movements_source_effect_key')
+    .on(table.organizationId, table.sourceType, table.sourceId, table.effectKind),
+  foreignKey({ columns: [table.organizationId, table.branchId, table.cashSessionId],
+    foreignColumns: [cashSessions.organizationId, cashSessions.branchId, cashSessions.id],
+    name: 'cash_movements_session_branch_fk' }),
+  foreignKey({ columns: [table.organizationId, table.branchId, table.deviceId],
+    foreignColumns: [devices.organizationId, devices.branchId, devices.id], name: 'cash_movements_device_branch_fk' }),
+  foreignKey({ columns: [table.organizationId, table.branchId, table.cashSessionId, table.deviceId],
+    foreignColumns: [cashSessions.organizationId, cashSessions.branchId, cashSessions.id, cashSessions.deviceId],
+    name: 'cash_movements_session_device_fk' }),
+]);
 
 export const configurationVersions = pgTable('configuration_versions', {
   id: uuid().primaryKey(),

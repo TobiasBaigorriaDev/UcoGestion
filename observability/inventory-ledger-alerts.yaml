@@ -1,0 +1,18 @@
+groups:
+  - name: inventory-ledger
+    rules:
+      - alert: InventoryLedgerProjectionDivergence
+        expr: uconext_inventory_ledger_divergences > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Inventory ledger and stock projection differ
+          description: Inspect structured inventory-ledger-verifier logs; correct through an approved compensating operation.
+      - alert: InventoryLedgerVerificationFailed
+        expr: increase(uconext_inventory_ledger_verification_failures_total[30m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Inventory reconciliation could not complete
+          description: Inspect the verifier context and PostgreSQL availability. No stock data is changed by this check.

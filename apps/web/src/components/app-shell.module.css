@@ -79,6 +79,8 @@
   padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--color-text-secondary);
   background: var(--color-surface);
+  scrollbar-color: var(--color-text-secondary) var(--color-surface);
+  scrollbar-width: thin;
 }
 
 .navigation a {

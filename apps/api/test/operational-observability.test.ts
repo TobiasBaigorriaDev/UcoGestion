@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { AppModule } from '../src/app.module.js';
 import { configureApi } from '../src/configure-api.js';
+import { MetricsService } from '../src/core/observability/metrics.service.js';
 import { resolveOtlpTracesUrl } from '../src/core/observability/tracing.js';
 
 describe('operational observability', () => {
@@ -46,5 +47,15 @@ describe('operational observability', () => {
     expect(resolveOtlpTracesUrl('http://collector:4318/v1/traces')).toBe(
       'http://collector:4318/v1/traces',
     );
+  });
+
+  it('exposes inventory reconciliation divergence and failure metrics without tenant labels', async () => {
+    const service = app.get(MetricsService);
+    service.recordInventoryVerification(2);
+    service.recordInventoryVerificationFailure();
+    const body = (await request(app.getHttpServer()).get('/api/v1/metrics').expect(200)).text;
+    expect(body).toContain('uconext_inventory_ledger_divergences 2');
+    expect(body).toContain('uconext_inventory_ledger_verification_failures_total 1');
+    expect(body).not.toContain('organization_id=');
   });
 });

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Counter, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
+import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
 
 type HttpMetricLabels = 'method' | 'route' | 'status_code';
 
@@ -26,6 +26,14 @@ export class MetricsService {
     name: 'uconext_http_requests_total',
     registers: [this.registry],
   });
+  private readonly inventoryDivergences = new Gauge({
+    help: 'Inventory ledger and projection divergences in the latest completed verification.',
+    name: 'uconext_inventory_ledger_divergences', registers: [this.registry],
+  });
+  private readonly inventoryVerificationFailures = new Counter({
+    help: 'Failed inventory ledger verification passes.',
+    name: 'uconext_inventory_ledger_verification_failures_total', registers: [this.registry],
+  });
 
   constructor() {
     collectDefaultMetrics({ prefix: 'uconext_', register: this.registry });
@@ -48,4 +56,7 @@ export class MetricsService {
     this.requests.inc(labels);
     this.requestDuration.observe(labels, metric.durationMs / 1_000);
   }
+
+  recordInventoryVerification(divergent: number): void { this.inventoryDivergences.set(divergent); }
+  recordInventoryVerificationFailure(): void { this.inventoryVerificationFailures.inc(); }
 }

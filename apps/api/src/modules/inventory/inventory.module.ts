@@ -5,6 +5,7 @@ import { TenantTransaction } from '../../database/tenant-transaction.js';
 import { InventoryAdjustmentService } from './inventory-adjustment.service.js';
 import { InventoryController } from './inventory.controller.js';
 import { InventoryTransferService } from './inventory-transfer.service.js';
+import { InventoryReadService } from './inventory-read.service.js';
 import { StockThresholdService } from './stock-threshold.service.js';
 
 @Injectable()
@@ -25,6 +26,9 @@ class InventoryDatabase implements OnModuleDestroy {
       inject: [InventoryDatabase] },
     { provide: InventoryTransferService,
       useFactory: (database: InventoryDatabase) => new InventoryTransferService(new TenantTransaction(database.pool)),
+      inject: [InventoryDatabase] },
+    { provide: InventoryReadService,
+      useFactory: (database: InventoryDatabase) => new InventoryReadService(new TenantTransaction(database.pool)),
       inject: [InventoryDatabase] },
   ],
 })

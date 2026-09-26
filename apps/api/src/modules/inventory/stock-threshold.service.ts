@@ -14,6 +14,11 @@ export interface StockSnapshot {
   readonly lowStock: boolean;
 }
 
+export interface StockListItem extends StockSnapshot {
+  readonly itemName: string;
+  readonly baseUnit: 'UNIT' | 'FRACTIONAL';
+}
+
 const replaySchema = z.object({ branchId: z.string().uuid(), itemId: z.string().uuid(),
   quantity: z.string(), threshold: z.string().nullable(), lowStock: z.boolean() });
 
@@ -44,6 +49,27 @@ export class StockThresholdService {
     return this.transactions.read(context, async (client) => {
       await this.authorize(client, context, branchId, ['OWNER', 'ADMIN', 'EMPLOYEE', 'CASHIER']);
       return this.readRow(client, context.organizationId, branchId, itemId);
+    });
+  }
+
+  async list(context: TenantTransactionContext, branchId: string,
+    after: string | undefined): Promise<{ stocks: StockListItem[]; nextCursor: string | null }> {
+    return this.transactions.read(context, async (client) => {
+      await this.authorize(client, context, branchId, ['OWNER', 'ADMIN', 'EMPLOYEE', 'CASHIER']);
+      const result = await client.query<{ item_id: string; item_name: string; base_unit: 'UNIT' | 'FRACTIONAL';
+        quantity: string; threshold: string | null; low_stock: boolean }>(
+        `SELECT s.item_id, i.name AS item_name, i.base_unit, s.quantity::text AS quantity,
+          t.minimum::text AS threshold, (t.minimum IS NOT NULL AND s.quantity <= t.minimum) AS low_stock
+        FROM branch_stocks s JOIN catalog_items i ON i.organization_id = s.organization_id
+          AND i.id = s.item_id AND i.status = 'ACTIVE' AND i.track_inventory
+        LEFT JOIN stock_thresholds t ON t.organization_id = s.organization_id
+          AND t.branch_id = s.branch_id AND t.item_id = s.item_id
+        WHERE s.organization_id = $1 AND s.branch_id = $2 AND ($3::uuid IS NULL OR s.item_id > $3::uuid)
+        ORDER BY s.item_id LIMIT 101`, [context.organizationId, branchId, after ?? null]);
+      const page = result.rows.slice(0, 100);
+      return { stocks: page.map((row) => ({ branchId, itemId: row.item_id, itemName: row.item_name,
+        baseUnit: row.base_unit, quantity: row.quantity, threshold: row.threshold, lowStock: row.low_stock })),
+      nextCursor: result.rows.length > 100 ? page.at(-1)?.item_id ?? null : null };
     });
   }
 

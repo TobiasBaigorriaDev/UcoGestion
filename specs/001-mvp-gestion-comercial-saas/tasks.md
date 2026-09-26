@@ -156,19 +156,19 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T111: Corregir transferencia únicamente con una transferencia compensatoria [RF-67]
 - [x] T112: Reintentar deadlocks de inventario de forma acotada conservando idempotency key [RF-131, RF-164]
 - [x] T113: Probar dos operaciones concurrentes sobre el mismo stock y transferencias A→B/B→A sin saldo negativo, parciales ni deadlock por orden inverso [RF-164, RF-165, RF-166]
-- [ ] T114: Implementar verificador ledger/proyección que solo alerta divergencias [RF-62, RF-134]
-- [ ] T114A: Implementar UI de consulta de stock, mínimos y alertas por sucursal y rol [RF-57, RF-58, RF-59, RF-152, RF-153, RF-154, RF-227, RF-228, RF-229] (Depende de T106–T107 y T088–T092)
-- [ ] T114B: Implementar UI de ajustes y compensaciones con motivos/permisos, validación decimal y errores de stock [RF-40, RF-60, RF-61, RF-63, RF-133, RF-152, RF-153, RF-154, RF-190, RF-191, RF-192, RF-193] (Depende de T100–T107 y T088–T092)
-- [ ] T114C: Implementar UI de transferencias con origen/destino, líneas, scope y compensación posterior [RF-64, RF-65, RF-67, RF-133, RF-152, RF-153, RF-154] (Depende de T108–T111 y T088–T092)
+- [x] T114: Implementar verificador ledger/proyección que solo alerta divergencias [RF-62, RF-134]
+- [x] T114A: Implementar UI de consulta de stock, mínimos y alertas por sucursal y rol [RF-57, RF-58, RF-59, RF-152, RF-153, RF-154, RF-227, RF-228, RF-229] (Depende de T106–T107 y T088–T092)
+- [x] T114B: Implementar UI de ajustes y compensaciones con motivos/permisos, validación decimal y errores de stock [RF-40, RF-60, RF-61, RF-63, RF-133, RF-152, RF-153, RF-154, RF-190, RF-191, RF-192, RF-193] (Depende de T100–T107 y T088–T092)
+- [x] T114C: Implementar UI de transferencias con origen/destino, líneas, scope y compensación posterior [RF-64, RF-65, RF-67, RF-133, RF-152, RF-153, RF-154] (Depende de T108–T111 y T088–T092)
 
 ## 5. Caja y ventas online
 
-- [ ] T115: Crear devices y autorización mínima para dispositivo operativo online [RF-127, RF-230]
-- [ ] T116: Crear cash_sessions con origin, transiciones append-only e índice parcial para una sesión normal OPEN/CLOSING; toda apertura bloquea cash_register y también rechaza CONFLICTED, sin impedir conservar aperturas offline separadas conflictivas [RF-92, RF-124, RF-290, RF-291, RF-292]
-- [ ] T117: Crear cash_movements append-only y expected_cash transaccional [RF-97, RF-99]
-- [ ] T118: Preparar apertura online con monto no negativo, actor, caja, branch y dispositivo, sin exponer aún el comando [RF-91, RF-230, RF-253]
-- [ ] T119: Aplicar scope y permisos de apertura de OWNER/ADMIN/CASHIER y rechazo EMPLOYEE [RF-93, RF-94, RF-95]
-- [ ] T120: Rechazar operaciones desde un dispositivo distinto al asociado a la sesión [RF-231, RF-232]
+- [x] T115: Crear devices y autorización mínima para dispositivo operativo online [RF-127, RF-230]
+- [x] T116: Crear cash_sessions con origin, transiciones append-only e índice parcial para una sesión normal OPEN/CLOSING; toda apertura bloquea cash_register y también rechaza CONFLICTED, sin impedir conservar aperturas offline separadas conflictivas [RF-92, RF-124, RF-290, RF-291, RF-292]
+- [x] T117: Crear cash_movements append-only y expected_cash transaccional [RF-97, RF-99]
+- [x] T118: Preparar apertura online con monto no negativo, actor, caja, branch y dispositivo, sin exponer aún el comando [RF-91, RF-230, RF-253]
+- [x] T119: Aplicar scope y permisos de apertura de OWNER/ADMIN/CASHIER y rechazo EMPLOYEE [RF-93, RF-94, RF-95]
+- [x] T120: Rechazar operaciones desde un dispositivo distinto al asociado a la sesión [RF-231, RF-232]
 - [ ] T121: Conservar dispositivo y registrar actor real cuando cambia el usuario autorizado [RF-233]
 - [ ] T121A: Exponer apertura online integrando lock de caja, unicidad, scope, rol, dispositivo, auditoría e idempotencia; probar aperturas concurrentes [RF-91, RF-92, RF-93, RF-94, RF-95, RF-131, RF-132, RF-140, RF-230, RF-232, RF-253] (Depende de T116 y T118–T121)
 - [ ] T122: Exponer ingreso manual positivo con motivo, sesión/dispositivo bajo lock, permisos, auditoría e idempotencia atómicas [RF-93, RF-94, RF-95, RF-96, RF-131, RF-132, RF-140, RF-231, RF-252]

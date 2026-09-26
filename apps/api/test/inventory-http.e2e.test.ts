@@ -75,6 +75,12 @@ describe('inventory HTTP', () => {
       .send({ branchId, itemId, direction: 'DECREASE', quantity: '1', reason: 'ROTURA' }).expect(201);
     const compensation = await post(`/api/v1/inventory/adjustments/${decreased.body.id as string}/compensations`, 'inventory-http-comp')
       .send({ observation: 'Se recuperó la unidad' }).expect(201);
+    const history = await request(app.getHttpServer()).get(`/api/v1/inventory/adjustments?branchId=${branchId}`)
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(history.body.adjustments).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: decreased.body.id, itemName: 'Yerba', compensatedBy: compensation.body.id }),
+      expect.objectContaining({ id: compensation.body.id, compensates: decreased.body.id }),
+    ]));
     expect(compensation.body).toMatchObject({ branchId, itemId, quantity: '1' });
     expect((await pool.query('SELECT quantity FROM branch_stocks WHERE branch_id = $1 AND item_id = $2',
       [branchId, itemId])).rows[0]?.quantity).toBe('3.000');
@@ -123,6 +129,44 @@ describe('inventory HTTP', () => {
     await update().send({ minimum: '4' }).expect(409);
   });
 
+  it('T114A lists stock only in branches assigned to the actor', async () => {
+    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin', 'http://localhost:3000')
+      .send({ email: cashierEmail, password: 'correct-password' }).expect(204);
+    const cookie = (login.headers['set-cookie'] as string[] | undefined)?.[0]?.split(';')[0] ?? '';
+    const read = (branch: string) => request(app.getHttpServer()).get(`/api/v1/inventory/stocks?branchId=${branch}`)
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId);
+    expect((await read(branchId).expect(200)).body.stocks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ branchId, itemId, itemName: 'Yerba', lowStock: expect.any(Boolean) }),
+    ]));
+    await read(destinationBranchId).expect(403);
+    const otherOrganization = randomUUID(); const otherBranch = randomUUID();
+    await pool.query("INSERT INTO organizations (id, name, base_currency, timezone) VALUES ($1, 'Other inventory', 'ARS', 'UTC')",
+      [otherOrganization]);
+    await pool.query("INSERT INTO branches (id, organization_id, name) VALUES ($1, $2, 'Foreign branch')",
+      [otherBranch, otherOrganization]);
+    await read(otherBranch).expect(403);
+  });
+
+  it('T114B lists adjustments for compensation only within assigned branch scope', async () => {
+    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin', 'http://localhost:3000')
+      .send({ email: employeeEmail, password: 'correct-password' }).expect(204);
+    const cookie = (login.headers['set-cookie'] as string[] | undefined)?.[0]?.split(';')[0] ?? '';
+    const read = (branch: string) => request(app.getHttpServer()).get(`/api/v1/inventory/adjustments?branchId=${branch}`)
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId);
+    expect((await read(branchId).expect(200)).body).toEqual({ adjustments: expect.any(Array), nextCursor: null });
+    await read(destinationBranchId).expect(403);
+  });
+
+  it('T114C lists transfers only when the actor can access both branches', async () => {
+    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin', 'http://localhost:3000')
+      .send({ email: employeeEmail, password: 'correct-password' }).expect(204);
+    const cookie = (login.headers['set-cookie'] as string[] | undefined)?.[0]?.split(';')[0] ?? '';
+    const read = (branch: string) => request(app.getHttpServer()).get(`/api/v1/inventory/transfers?branchId=${branch}`)
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId);
+    expect((await read(branchId).expect(200)).body).toEqual({ transfers: [], nextCursor: null });
+    await read(destinationBranchId).expect(403);
+  });
+
   it('T110 transfers atomically with two ledger effects, audit and idempotent replay', async () => {
     const login = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin', 'http://localhost:3000')
       .send({ email: ownerEmail, password: 'correct-password' }).expect(204);
@@ -141,6 +185,12 @@ describe('inventory HTTP', () => {
     const body = { originBranchId: branchId, destinationBranchId,
       lines: [{ itemId, quantity: '2' }] };
     const created = await post('transfer-http-once').send(body).expect(201);
+    const history = await request(app.getHttpServer()).get(`/api/v1/inventory/transfers?branchId=${branchId}`)
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(history.body.transfers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: created.body.id, originBranchId: branchId,
+        destinationBranchId, lines: [expect.objectContaining({ itemId, itemName: 'Yerba', quantity: '2.000' })] }),
+    ]));
     expect((await post('transfer-http-once').send(body).expect(201)).body).toEqual(created.body);
     await post('transfer-http-once').send({ ...body, lines: [{ itemId, quantity: '1' }] }).expect(409);
     expect((await pool.query('SELECT effect_kind, delta FROM inventory_movements WHERE source_id = $1 ORDER BY effect_kind',

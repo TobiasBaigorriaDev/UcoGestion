@@ -64,6 +64,10 @@
     { "idx": 59, "version": "7", "when": 59, "tag": "0059_stock_threshold_scope", "breakpoints": true },
     { "idx": 60, "version": "7", "when": 60, "tag": "0060_transfer_stock_lock", "breakpoints": true },
     { "idx": 61, "version": "7", "when": 61, "tag": "0061_stock_transfers", "breakpoints": true },
-    { "idx": 62, "version": "7", "when": 62, "tag": "0062_stock_transfer_compensations", "breakpoints": true }
+    { "idx": 62, "version": "7", "when": 62, "tag": "0062_stock_transfer_compensations", "breakpoints": true },
+    { "idx": 63, "version": "7", "when": 63, "tag": "0063_devices", "breakpoints": true },
+    { "idx": 64, "version": "7", "when": 64, "tag": "0064_cash_sessions", "breakpoints": true },
+    { "idx": 65, "version": "7", "when": 65, "tag": "0065_cash_movements", "breakpoints": true },
+    { "idx": 66, "version": "7", "when": 66, "tag": "0066_cash_session_device", "breakpoints": true }
   ]
 }

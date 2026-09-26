@@ -12,6 +12,7 @@ import { InventoryIncreaseService } from '../src/modules/inventory/inventory-inc
 import { InventoryAdjustmentService } from '../src/modules/inventory/inventory-adjustment.service.js';
 import { StockThresholdService } from '../src/modules/inventory/stock-threshold.service.js';
 import { InventoryTransferService } from '../src/modules/inventory/inventory-transfer.service.js';
+import { InventoryLedgerVerifier } from '../src/modules/inventory/inventory-ledger-verifier.js';
 
 describe('inventory foundation', () => {
   let container: StartedPostgreSqlContainer;
@@ -64,6 +65,40 @@ describe('inventory foundation', () => {
       .rejects.toMatchObject({ code: '42501' });
     await expect(admin.query('INSERT INTO branch_stocks (organization_id, branch_id, item_id, quantity) VALUES ($1, $2, $3, 0)',
       [organizationB, branch.id, item.id])).rejects.toMatchObject({ code: '23503' });
+  });
+
+  it('T114 reports ledger/projection divergence without changing either side or exposing another tenant', async () => {
+    const verifierOrganization = randomUUID();
+    const foreignOrganization = randomUUID();
+    await admin.query(`INSERT INTO organizations (id, name, base_currency, timezone)
+      VALUES ($1, 'Verifier A', 'ARS', 'UTC'), ($2, 'Verifier B', 'ARS', 'UTC')`,
+    [verifierOrganization, foreignOrganization]);
+    await admin.query(`INSERT INTO memberships (id, organization_id, user_id, role)
+      VALUES ($1, $2, $3, 'OWNER'), ($4, $5, $6, 'OWNER')`,
+    [randomUUID(), verifierOrganization, ownerA, randomUUID(), foreignOrganization, ownerB]);
+    const branch = await branches.create({ organizationId: verifierOrganization, userId: ownerA, requestId: randomUUID() }, { name: 'Verifier branch' });
+    const item = await catalog.create({ organizationId: verifierOrganization, userId: ownerA, requestId: randomUUID() },
+      { name: 'Verifier item', type: 'PRODUCT', trackInventory: true });
+    const foreignBranch = await branches.create({ organizationId: foreignOrganization, userId: ownerB, requestId: randomUUID() }, { name: 'Foreign verifier branch' });
+    const foreignItem = await catalog.create({ organizationId: foreignOrganization, userId: ownerB, requestId: randomUUID() },
+      { name: 'Foreign verifier item', type: 'PRODUCT', trackInventory: true });
+    await admin.query('UPDATE branch_stocks SET quantity = 2 WHERE organization_id = $1 AND branch_id = $2 AND item_id = $3',
+      [verifierOrganization, branch.id, item.id]);
+    await admin.query('UPDATE branch_stocks SET quantity = 3 WHERE organization_id = $1 AND branch_id = $2 AND item_id = $3',
+      [foreignOrganization, foreignBranch.id, foreignItem.id]);
+    const alerts: unknown[] = [];
+    const verifier = new InventoryLedgerVerifier(new TenantTransaction(runtime), (divergence) => alerts.push(divergence));
+    const context = { organizationId: verifierOrganization, userId: ownerA, requestId: randomUUID() };
+    expect(await verifier.verify(context)).toEqual({ checked: expect.any(Number), divergent: 1 });
+    expect(alerts).toEqual([{ organizationId: verifierOrganization, branchId: branch.id, itemId: item.id,
+      projected: '2.000', ledger: '0.000' }]);
+    expect((await admin.query<{ quantity: string }>('SELECT quantity FROM branch_stocks WHERE branch_id = $1 AND item_id = $2', [branch.id, item.id])).rows[0]?.quantity)
+      .toBe('2.000');
+    expect((await admin.query('SELECT id FROM inventory_movements WHERE item_id = $1', [item.id])).rowCount).toBe(0);
+    alerts.length = 0;
+    expect((await verifier.verify({ organizationId: foreignOrganization, userId: ownerB, requestId: randomUUID() })).divergent).toBe(1);
+    expect(alerts).toEqual([{ organizationId: foreignOrganization, branchId: foreignBranch.id, itemId: foreignItem.id,
+      projected: '3.000', ledger: '0.000' }]);
   });
 
   it('T097 keeps movements append-only and permits two distinct transfer effects per line', async () => {

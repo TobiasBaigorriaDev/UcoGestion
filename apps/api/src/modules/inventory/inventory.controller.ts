@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get,
-  HttpException, HttpStatus, NotFoundException, Param, ParseUUIDPipe, Post, Put, Req,
+  HttpException, HttpStatus, NotFoundException, Param, ParseUUIDPipe, Post, Put, Query, Req,
   UnauthorizedException } from '@nestjs/common';
 import { z } from 'zod';
 
@@ -13,6 +13,7 @@ import type { TenantTransactionContext } from '../../database/tenant-transaction
 import { InventoryAdjustmentService } from './inventory-adjustment.service.js';
 import { ConcurrentInventoryModificationError } from './inventory-transaction-retry.js';
 import { InventoryTransferService } from './inventory-transfer.service.js';
+import { InventoryReadService } from './inventory-read.service.js';
 import { StockThresholdService } from './stock-threshold.service.js';
 
 const adjustmentSchema = z.strictObject({
@@ -33,7 +34,33 @@ interface InventoryRequest {
 export class InventoryController {
   constructor(private readonly adjustments: InventoryAdjustmentService,
     private readonly thresholds: StockThresholdService,
-    private readonly transfers: InventoryTransferService) {}
+    private readonly transfers: InventoryTransferService,
+    private readonly reads: InventoryReadService) {}
+
+  @Get('adjustments')
+  async listAdjustments(@Req() request: InventoryRequest,
+    @Query('branchId', ParseUUIDPipe) branchId: string, @Query('after') after?: string) {
+    this.validateCursor(after);
+    try { return await this.reads.adjustments(this.context(request), branchId, after); }
+    catch (error) { this.handleError(error); }
+  }
+
+  @Get('transfers')
+  async listTransfers(@Req() request: InventoryRequest,
+    @Query('branchId', ParseUUIDPipe) branchId: string, @Query('after') after?: string) {
+    this.validateCursor(after);
+    try { return await this.reads.transfers(this.context(request), branchId, after); }
+    catch (error) { this.handleError(error); }
+  }
+
+  @Get('stocks')
+  async stocks(@Req() request: InventoryRequest,
+    @Query('branchId', ParseUUIDPipe) branchId: string,
+    @Query('after') after?: string) {
+    this.validateCursor(after);
+    try { return await this.thresholds.list(this.context(request), branchId, after); }
+    catch (error) { this.handleError(error); }
+  }
 
   @Post('transfers')
   async transfer(@Req() request: InventoryRequest,
@@ -90,6 +117,11 @@ export class InventoryController {
     const requestId = request.headers['x-request-id'];
     return { organizationId: request.identity.organizationId, userId: request.identity.userId,
       requestId: typeof requestId === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(requestId) ? requestId : randomUUID() };
+  }
+
+  private validateCursor(after?: string): void {
+    if (after && !z.uuid().safeParse(after).success) throw new BadRequestException({
+      code: 'INVALID_CURSOR', title: 'Cursor inválido', detail: 'Actualizá el listado.' });
   }
 
   private handleError(error: unknown): never {

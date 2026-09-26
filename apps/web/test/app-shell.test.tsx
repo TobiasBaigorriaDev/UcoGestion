@@ -13,6 +13,16 @@ const organizations = [
 afterEach(cleanup);
 
 describe('AppShell', () => {
+  it('keeps the current navigation item visible in the horizontal menu', () => {
+    const scroll = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scroll });
+    render(<AppShell organizations={organizations} activeOrganizationId="org-a" activeBranchId="branch-a"
+      onOrganizationChange={vi.fn()} onBranchChange={vi.fn()}
+      navigation={[{ href: '/catalog', label: 'Catálogo' }, { href: '/transfers', label: 'Transferencias' }]}
+      currentPath="/transfers"><p>Contenido</p></AppShell>);
+    expect(scroll).toHaveBeenCalledWith({ block: 'nearest', inline: 'center' });
+    expect(screen.getByRole('navigation', { name: 'Navegación principal' }).getAttribute('aria-description')).toMatch(/deslizá/i);
+  });
   it('shows active organization and only its branches with accessible navigation', async () => {
     const onOrganizationChange = vi.fn();
     const onBranchChange = vi.fn();

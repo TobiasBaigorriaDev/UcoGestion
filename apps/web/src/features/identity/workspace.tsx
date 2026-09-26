@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { AppShell } from '../../components/app-shell';
 import { ApiProblemError } from '../../lib/api/client';
@@ -20,6 +20,11 @@ import { CustomerManagement, loadCustomers } from '../customers/customer-managem
 import { SupplierManagement, loadSuppliers } from '../suppliers/supplier-management';
 import { CashRegisterManagement, loadCashRegisters } from '../cash/cash-register-management';
 import { PaymentMethodsManagement, loadPaymentMethods } from '../organizations/payment-methods-management';
+import { InventoryStock } from '../inventory/inventory-stock';
+import { loadStocks } from '../inventory/inventory-api';
+import { loadAdjustments, loadTransfers } from '../inventory/inventory-api';
+import { InventoryAdjustments } from '../inventory/inventory-adjustments';
+import { InventoryTransfers } from '../inventory/inventory-transfers';
 
 type WorkspacePage =
   | 'home'
@@ -33,7 +38,10 @@ type WorkspacePage =
   | 'customers'
   | 'suppliers'
   | 'cash-registers'
-  | 'payment-methods';
+  | 'payment-methods'
+  | 'inventory'
+  | 'inventory-adjustments'
+  | 'inventory-transfers';
 
 export function Workspace({ page = 'home' }: { page?: WorkspacePage }) {
   return <RemoteProvider><WorkspaceContent page={page} /></RemoteProvider>;
@@ -65,6 +73,24 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
     enabled: page === 'cash-registers' && !!activeId && !!activeBranchId,
   });
   const paymentMethods = useQuery({ queryKey: ['payment-methods', activeId], queryFn: () => loadPaymentMethods(activeId ?? ''), enabled: page === 'payment-methods' && !!activeId });
+  const stocks = useInfiniteQuery({
+    queryKey: ['inventory-stocks', activeId, activeBranchId],
+    queryFn: ({ pageParam }) => loadStocks(activeId ?? '', activeBranchId ?? '', pageParam || undefined),
+    initialPageParam: '', getNextPageParam: (last) => last.nextCursor ?? undefined,
+    enabled: (page === 'inventory' || page === 'inventory-adjustments' || page === 'inventory-transfers') && !!activeId && !!activeBranchId,
+  });
+  const adjustments = useInfiniteQuery({
+    queryKey: ['inventory-adjustments', activeId, activeBranchId],
+    queryFn: ({ pageParam }) => loadAdjustments(activeId ?? '', activeBranchId ?? '', pageParam || undefined),
+    initialPageParam: '', getNextPageParam: (last) => last.nextCursor ?? undefined,
+    enabled: page === 'inventory-adjustments' && !!activeId && !!activeBranchId,
+  });
+  const transfers = useInfiniteQuery({
+    queryKey: ['inventory-transfers', activeId, activeBranchId],
+    queryFn: ({ pageParam }) => loadTransfers(activeId ?? '', activeBranchId ?? '', pageParam || undefined),
+    initialPageParam: '', getNextPageParam: (last) => last.nextCursor ?? undefined,
+    enabled: page === 'inventory-transfers' && !!activeId && !!activeBranchId,
+  });
 
   useEffect(() => {
     const available = memberships.data;
@@ -101,6 +127,9 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
     navigation={[
       { href: '/workspace', label: 'Inicio' },
       { href: '/workspace/catalog', label: 'Catálogo' },
+      { href: '/workspace/inventory', label: 'Inventario' },
+      ...(current?.role === 'CASHIER' ? [] : [{ href: '/workspace/inventory/adjustments', label: 'Ajustes' }]),
+      ...(current?.role === 'CASHIER' ? [] : [{ href: '/workspace/inventory/transfers', label: 'Transferencias' }]),
       { href: '/workspace/branches', label: 'Sucursales' },
       { href: '/workspace/customers', label: 'Clientes' },
       { href: '/workspace/suppliers', label: 'Proveedores' },
@@ -114,7 +143,7 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
         : []),
       { href: '/workspace/settings', label: 'Configuración' },
     ]}
-    currentPath={page === 'home' ? '/workspace' : page === 'catalog-categories' || page === 'catalog-items' ? '/workspace/catalog' : `/workspace/${page}`}>
+    currentPath={page === 'home' ? '/workspace' : page === 'catalog-categories' || page === 'catalog-items' ? '/workspace/catalog' : page === 'inventory-adjustments' ? '/workspace/inventory/adjustments' : page === 'inventory-transfers' ? '/workspace/inventory/transfers' : `/workspace/${page}`}>
       {switchError ? <ErrorSummary error={switchError} /> : null}
       {branches.error ? <><ErrorSummary error={branches.error instanceof ApiProblemError ? branches.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar las sucursales.' })} /><button type="button" onClick={() => void branches.refetch()}>Reintentar sucursales</button></> : null}
       {page === 'catalog-items' ? current?.role !== 'OWNER' && current?.role !== 'ADMIN'
@@ -122,6 +151,36 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
         : managedItems.error
           ? <><ErrorSummary error={managedItems.error instanceof ApiProblemError ? managedItems.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar los ítems.' })} /><button type="button" onClick={() => void managedItems.refetch()}>Reintentar</button></>
           : managedItems.data ? <CatalogItemManagement organizationId={activeId} items={managedItems.data} onReload={() => void managedItems.refetch()} /> : <p role="status">Cargando ítems…</p>
+      : page === 'inventory-transfers' ? !activeBranchId || !current || !branches.data
+        ? <p>Seleccioná una sucursal para transferir stock.</p>
+        : stocks.error || transfers.error ? <><ErrorSummary error={(stocks.error ?? transfers.error) instanceof ApiProblemError ? (stocks.error ?? transfers.error) as ApiProblemError : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar las transferencias.' })} /><button type="button" onClick={() => { void stocks.refetch(); void transfers.refetch(); }}>Reintentar</button></>
+          : stocks.data && transfers.data ? <InventoryTransfers key={`${activeId}:${activeBranchId}`} organizationId={activeId}
+              role={current.role} branches={branches.data.branches.filter((branch) => branch.status === 'ACTIVE')}
+              originBranchId={activeBranchId} stocks={stocks.data.pages.flatMap((page) => page.stocks)}
+              transfers={transfers.data.pages.flatMap((page) => page.transfers)}
+              nextCursor={transfers.data.pages.at(-1)?.nextCursor ?? null} onOriginChange={setActiveBranchId}
+              onReload={() => { void stocks.refetch(); void transfers.refetch(); }}
+              {...(stocks.hasNextPage ? { onLoadMoreStocks: () => void stocks.fetchNextPage() } : {})}
+              onLoadMore={() => void transfers.fetchNextPage()} /> : <p role="status">Cargando transferencias…</p>
+      : page === 'inventory-adjustments' ? !activeBranchId || !current
+        ? <p>Seleccioná una sucursal para registrar ajustes.</p>
+        : stocks.error || adjustments.error ? <><ErrorSummary error={(stocks.error ?? adjustments.error) instanceof ApiProblemError ? (stocks.error ?? adjustments.error) as ApiProblemError : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar los ajustes.' })} /><button type="button" onClick={() => { void stocks.refetch(); void adjustments.refetch(); }}>Reintentar</button></>
+          : stocks.data && adjustments.data ? <InventoryAdjustments key={`${activeId}:${activeBranchId}`} organizationId={activeId}
+              branchId={activeBranchId} role={current.role} stocks={stocks.data.pages.flatMap((page) => page.stocks)}
+              adjustments={adjustments.data.pages.flatMap((page) => page.adjustments)}
+              nextCursor={adjustments.data.pages.at(-1)?.nextCursor ?? null}
+              onReload={() => { void adjustments.refetch(); void stocks.refetch(); }}
+              {...(stocks.hasNextPage ? { onLoadMoreStocks: () => void stocks.fetchNextPage() } : {})}
+              onLoadMore={() => void adjustments.fetchNextPage()} /> : <p role="status">Cargando ajustes…</p>
+      : page === 'inventory' ? !activeBranchId || !branches.data || !current
+        ? <p>Seleccioná una sucursal para consultar el stock.</p>
+        : stocks.error ? <><ErrorSummary error={stocks.error instanceof ApiProblemError ? stocks.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar el stock.' })} /><button type="button" onClick={() => void stocks.refetch()}>Reintentar</button></>
+          : stocks.data ? <InventoryStock key={`${activeId}:${activeBranchId}`} organizationId={activeId}
+              role={current.role} branches={branches.data.branches.filter((branch) => branch.status === 'ACTIVE')}
+              branchId={activeBranchId} stocks={stocks.data.pages.flatMap((page) => page.stocks)}
+              nextCursor={stocks.data.pages.at(-1)?.nextCursor ?? null} onBranchChange={setActiveBranchId}
+              onReload={() => void stocks.refetch()} onLoadMore={() => void stocks.fetchNextPage()} />
+            : <p role="status">Cargando stock…</p>
       : page === 'expense-categories' ? current?.role !== 'OWNER' && current?.role !== 'ADMIN'
         ? <p role="alert">No tenés permiso para administrar categorías de gasto.</p>
         : expenseCategories.error

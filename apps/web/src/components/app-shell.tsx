@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 
 import styles from './app-shell.module.css';
 
@@ -35,6 +35,10 @@ export function AppShell({
 }: AppShellProps) {
   const organizationLabelId = useId();
   const branchLabelId = useId();
+  const activeNavigationRef = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    activeNavigationRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'center' });
+  }, [currentPath]);
   const activeOrganization = organizations.find((organization) => organization.id === activeOrganizationId);
   const branches = activeOrganization?.branches ?? [];
   const selectedBranchId = branches.some((branch) => branch.id === activeBranchId) ? activeBranchId : '';
@@ -75,9 +79,11 @@ export function AppShell({
           </div>
         </div>
       </header>
-      <nav className={styles.navigation} aria-label="Navegación principal">
+      <nav className={styles.navigation} aria-label="Navegación principal"
+        aria-description="Deslizá horizontalmente para ver más secciones">
         {navigation.map((item) => (
-          <a key={item.href} href={item.href} aria-current={currentPath === item.href ? 'page' : undefined}>
+          <a key={item.href} href={item.href} ref={currentPath === item.href ? activeNavigationRef : undefined}
+            aria-current={currentPath === item.href ? 'page' : undefined}>
             {item.label}
           </a>
         ))}
