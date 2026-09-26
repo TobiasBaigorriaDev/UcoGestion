@@ -55,6 +55,10 @@
     { "idx": 50, "version": "7", "when": 50, "tag": "0050_inventory_movements", "breakpoints": true },
     { "idx": 51, "version": "7", "when": 51, "tag": "0051_initialize_item_stocks", "breakpoints": true },
     { "idx": 52, "version": "7", "when": 52, "tag": "0052_initialize_branch_stocks", "breakpoints": true },
-    { "idx": 53, "version": "7", "when": 53, "tag": "0053_inventory_increase", "breakpoints": true }
+    { "idx": 53, "version": "7", "when": 53, "tag": "0053_inventory_increase", "breakpoints": true },
+    { "idx": 54, "version": "7", "when": 54, "tag": "0054_inventory_decrease", "breakpoints": true },
+    { "idx": 55, "version": "7", "when": 55, "tag": "0055_inventory_adjustment_reasons", "breakpoints": true },
+    { "idx": 56, "version": "7", "when": 56, "tag": "0056_inventory_employee_adjustment", "breakpoints": true },
+    { "idx": 57, "version": "7", "when": 57, "tag": "0057_inventory_adjustment_compensation", "breakpoints": true }
   ]
 }

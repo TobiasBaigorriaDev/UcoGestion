@@ -347,10 +347,32 @@ export const inventoryAdjustments = pgTable(
     occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    unique('inventory_adjustments_tenant_identity').on(table.organizationId, table.id),
     foreignKey({ columns: [table.organizationId, table.branchId],
       foreignColumns: [branches.organizationId, branches.id], name: 'inventory_adjustments_branch_tenant_fk' }),
     foreignKey({ columns: [table.organizationId, table.itemId],
       foreignColumns: [catalogItems.organizationId, catalogItems.id], name: 'inventory_adjustments_item_tenant_fk' }),
+  ],
+);
+
+export const inventoryAdjustmentCompensations = pgTable(
+  'inventory_adjustment_compensations',
+  {
+    organizationId: uuid('organization_id').notNull(),
+    originalAdjustmentId: uuid('original_adjustment_id').notNull(),
+    compensationAdjustmentId: uuid('compensation_adjustment_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.originalAdjustmentId] }),
+    unique('inventory_adjustment_compensations_organization_id_compensation_adjustment_id_key')
+      .on(table.organizationId, table.compensationAdjustmentId),
+    foreignKey({ columns: [table.organizationId, table.originalAdjustmentId],
+      foreignColumns: [inventoryAdjustments.organizationId, inventoryAdjustments.id],
+      name: 'inventory_compensation_original_fk' }),
+    foreignKey({ columns: [table.organizationId, table.compensationAdjustmentId],
+      foreignColumns: [inventoryAdjustments.organizationId, inventoryAdjustments.id],
+      name: 'inventory_compensation_new_fk' }),
   ],
 );
 
