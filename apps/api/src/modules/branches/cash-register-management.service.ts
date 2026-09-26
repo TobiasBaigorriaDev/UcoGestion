@@ -178,6 +178,23 @@ export class CashRegisterManagementService {
     );
   }
 
+  async listByBranch(
+    context: TenantTransactionContext,
+    branchId: string,
+  ): Promise<readonly CashRegisterResult[]> {
+    return this.transactions.read(context, async (client) => {
+      await this.requireAuthorizedBranch(client, context, branchId, false);
+      const result = await client.query<CashRegisterResult>(
+        `SELECT id, branch_id AS "branchId", name, status, version::integer AS version
+         FROM cash_registers
+         WHERE organization_id = $1 AND branch_id = $2
+         ORDER BY name, id`,
+        [context.organizationId, branchId],
+      );
+      return result.rows;
+    });
+  }
+
   private auditEvent(
     action: string,
     entityId: string,
@@ -203,12 +220,13 @@ export class CashRegisterManagementService {
     client: PoolClient,
     context: TenantTransactionContext,
     branchId: string,
+    forUpdate = true,
   ): Promise<void> {
+    const lockClause = forUpdate ? ' FOR UPDATE' : '';
     const membership = await client.query<ActorMembership>(
       `SELECT id, role FROM memberships
        WHERE organization_id = $1 AND user_id = $2
-         AND status = 'ACTIVE' AND revoked_at IS NULL
-       FOR UPDATE`,
+         AND status = 'ACTIVE' AND revoked_at IS NULL${lockClause}`,
       [context.organizationId, context.userId],
     );
     const actor = membership.rows.at(0);

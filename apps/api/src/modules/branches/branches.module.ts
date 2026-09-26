@@ -5,6 +5,7 @@ import { TenantTransaction } from '../../database/tenant-transaction.js';
 import { BranchManagementService } from './branch-management.service.js';
 import { BranchReadService } from './branch-read.service.js';
 import { BranchesController } from './branches.controller.js';
+import { CashRegisterManagementService } from './cash-register-management.service.js';
 
 @Injectable()
 class BranchesDatabase implements OnModuleDestroy {
@@ -14,9 +15,11 @@ class BranchesDatabase implements OnModuleDestroy {
 
 @Module({
   controllers: [BranchesController],
-  providers: [BranchesDatabase,
+  providers: [
+    BranchesDatabase,
     { provide: BranchReadService, useFactory: (database: BranchesDatabase) => new BranchReadService(new TenantTransaction(database.pool)), inject: [BranchesDatabase] },
     { provide: BranchManagementService, useFactory: (database: BranchesDatabase) => new BranchManagementService(new TenantTransaction(database.pool)), inject: [BranchesDatabase] },
+    { provide: CashRegisterManagementService, useFactory: (database: BranchesDatabase) => new CashRegisterManagementService(new TenantTransaction(database.pool)), inject: [BranchesDatabase] },
   ],
 })
 export class BranchesModule {}

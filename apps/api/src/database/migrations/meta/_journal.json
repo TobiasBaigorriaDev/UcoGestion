@@ -50,6 +50,11 @@
     { "idx": 45, "version": "7", "when": 45, "tag": "0045_catalog_lifecycle_revision", "breakpoints": true },
     { "idx": 46, "version": "7", "when": 46, "tag": "0046_customers_and_suppliers", "breakpoints": true },
     { "idx": 47, "version": "7", "when": 47, "tag": "0047_expense_category_lifecycle", "breakpoints": true },
-    { "idx": 48, "version": "7", "when": 48, "tag": "0048_catalog_item_nonstructural_edit", "breakpoints": true }
+    { "idx": 48, "version": "7", "when": 48, "tag": "0048_catalog_item_nonstructural_edit", "breakpoints": true },
+    { "idx": 49, "version": "7", "when": 49, "tag": "0049_branch_stocks", "breakpoints": true },
+    { "idx": 50, "version": "7", "when": 50, "tag": "0050_inventory_movements", "breakpoints": true },
+    { "idx": 51, "version": "7", "when": 51, "tag": "0051_initialize_item_stocks", "breakpoints": true },
+    { "idx": 52, "version": "7", "when": 52, "tag": "0052_initialize_branch_stocks", "breakpoints": true },
+    { "idx": 53, "version": "7", "when": 53, "tag": "0053_inventory_increase", "breakpoints": true }
   ]
 }

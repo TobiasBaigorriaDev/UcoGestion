@@ -61,6 +61,7 @@ export class BranchManagementService {
         };
       const operation = async (client: PoolClient) => {
           await this.requireOwner(client, context);
+          await client.query('SELECT 1 FROM organizations WHERE id = $1 FOR UPDATE', [context.organizationId]);
           const inserted = await client.query<BranchResult>(
             `INSERT INTO branches (id, organization_id, name, status)
              VALUES ($1, $2, $3, 'ACTIVE')

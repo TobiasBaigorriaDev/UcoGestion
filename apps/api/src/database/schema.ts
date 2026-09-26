@@ -314,6 +314,70 @@ export const catalogItems = pgTable(
   ],
 );
 
+export const branchStocks = pgTable(
+  'branch_stocks',
+  {
+    organizationId: uuid('organization_id').notNull(),
+    branchId: uuid('branch_id').notNull(),
+    itemId: uuid('item_id').notNull(),
+    quantity: numeric('quantity', { precision: 20, scale: 3 }).notNull().default('0'),
+    version: bigint({ mode: 'number' }).notNull().default(1),
+  },
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.branchId, table.itemId] }),
+    foreignKey({ columns: [table.organizationId, table.branchId],
+      foreignColumns: [branches.organizationId, branches.id], name: 'branch_stocks_branch_tenant_fk' }),
+    foreignKey({ columns: [table.organizationId, table.itemId],
+      foreignColumns: [catalogItems.organizationId, catalogItems.id], name: 'branch_stocks_item_tenant_fk' }),
+  ],
+);
+
+export const inventoryAdjustments = pgTable(
+  'inventory_adjustments',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull(),
+    branchId: uuid('branch_id').notNull(),
+    itemId: uuid('item_id').notNull(),
+    actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+    direction: text().notNull(),
+    quantity: numeric('quantity', { precision: 20, scale: 3 }).notNull(),
+    reason: text().notNull(),
+    observation: text(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    foreignKey({ columns: [table.organizationId, table.branchId],
+      foreignColumns: [branches.organizationId, branches.id], name: 'inventory_adjustments_branch_tenant_fk' }),
+    foreignKey({ columns: [table.organizationId, table.itemId],
+      foreignColumns: [catalogItems.organizationId, catalogItems.id], name: 'inventory_adjustments_item_tenant_fk' }),
+  ],
+);
+
+export const inventoryMovements = pgTable(
+  'inventory_movements',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull(),
+    branchId: uuid('branch_id').notNull(),
+    itemId: uuid('item_id').notNull(),
+    actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+    delta: numeric('delta', { precision: 20, scale: 3 }).notNull(),
+    sourceType: text('source_type').notNull(),
+    sourceId: uuid('source_id').notNull(),
+    sourceLineId: uuid('source_line_id').notNull(),
+    effectKind: text('effect_kind').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('inventory_movements_source_effect_key').on(table.organizationId, table.sourceType,
+      table.sourceId, table.sourceLineId, table.effectKind),
+    foreignKey({ columns: [table.organizationId, table.branchId, table.itemId],
+      foreignColumns: [branchStocks.organizationId, branchStocks.branchId, branchStocks.itemId],
+      name: 'inventory_movements_stock_tenant_fk' }),
+  ],
+);
+
 export const catalogPriceVersions = pgTable(
   'catalog_price_versions',
   {

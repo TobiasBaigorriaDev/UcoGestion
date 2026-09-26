@@ -5,6 +5,7 @@ import { TenantTransaction, type TenantTransactionContext } from '../../database
 export interface OrganizationSettingsView {
   readonly profile: Record<string, string | null>;
   readonly timezone: string;
+  readonly baseCurrency?: string;
   readonly version: number;
   readonly role: 'OWNER' | 'ADMIN' | 'CASHIER' | 'EMPLOYEE';
 }
@@ -15,7 +16,7 @@ export class OrganizationSettingsService {
   async read(context: TenantTransactionContext): Promise<OrganizationSettingsView> {
     return this.transactions.read(context, async (client) => {
       const result = await client.query<OrganizationSettingsView>(
-        `SELECT o.profile, o.timezone, o.version::integer AS version, m.role
+        `SELECT o.profile, o.timezone, o.base_currency AS "baseCurrency", o.version::integer AS version, m.role
          FROM organizations o
          JOIN memberships m ON m.organization_id = o.id
            AND m.user_id = $2 AND m.status = 'ACTIVE' AND m.revoked_at IS NULL

@@ -8,27 +8,27 @@ web
 
 ## Users
 
-Inferido del spec cerrado: personas que operan pequeñas y medianas empresas, con roles OWNER, ADMIN, CASHIER y EMPLOYEE, principalmente durante su operación comercial diaria en computadora o teléfono.
+Personas que operan pequeñas y medianas empresas, con roles OWNER, ADMIN, CASHIER y EMPLOYEE, principalmente durante su operación comercial diaria en computadora o teléfono.
 
 ## Product Purpose
 
-Inferido del spec cerrado: UcoNext permite gestionar operación comercial, catálogo, inventario, caja, ventas, compras, gastos y reportes en un SaaS web/PWA multi-tenant, con continuidad limitada para POS offline.
+UcoNext permite gestionar operación comercial, catálogo, inventario, caja, ventas, compras, gastos y reportes en un SaaS web/PWA multi-tenant, con continuidad limitada para POS offline.
 
 ## Positioning
 
-Inferido del spec cerrado: combina gestión comercial cotidiana con aislamiento multi-tenant, trazabilidad transaccional y un POS capaz de conservar operaciones offline legítimas para su sincronización segura.
+Combina gestión comercial cotidiana con aislamiento multi-tenant, trazabilidad transaccional y un POS capaz de conservar operaciones offline legítimas para su sincronización segura.
 
 ## Operating Context
 
-Inferido del spec cerrado: el producto se usa en mostrador, sucursales y administración de una PyME, en equipos de escritorio, notebooks, tablets y teléfonos; el sistema debe permitir operación por teclado y presentar estados claros y accionables.
+El producto se usa en mostrador, sucursales y administración de una PyME, en equipos de escritorio, notebooks, tablets y teléfonos; el sistema debe permitir operación por teclado y presentar estados claros y accionables.
 
 ## Capabilities and Constraints
 
-Confirmado por el spec y la constitución: Next.js App Router con React para web; NestJS y PostgreSQL como autoridad; las mutaciones comerciales usan la API REST bajo `/api/v1`; la interfaz es mobile-first, accesible y no transmite estados importantes solo con color.
+Next.js App Router con React para web; NestJS y PostgreSQL como autoridad; las mutaciones comerciales usan la API REST bajo `/api/v1`; la interfaz es mobile-first, accesible y no transmite estados importantes solo con color.
 
 ## Brand Commitments
 
-Confirmado por DESIGN.md: UcoNext usa el sistema “El Mostrador Digital de la Cordillera”, Plus Jakarta Sans, verde Bosque para acciones principales y superficies glass moderadas que degradan de forma segura en dispositivos modestos.
+UcoNext usa el sistema “El Mostrador Digital de la Cordillera”, Plus Jakarta Sans, verde Bosque para acciones principales y superficies glass moderadas que degradan de forma segura en dispositivos modestos (definido en DESIGN.md).
 
 ## Evidence on Hand
 
@@ -43,4 +43,4 @@ El repositorio contiene el spec funcional cerrado, el plan técnico aprobado, la
 
 ## Accessibility & Inclusion
 
-Confirmado por el spec y la constitución: contraste mínimo 4.5:1, foco visible, etiquetas y semántica accesibles, soporte de teclado y respeto por `prefers-reduced-motion`.
+Contraste mínimo 4.5:1, foco visible, etiquetas y semántica accesibles, soporte de teclado y respeto por `prefers-reduced-motion` según la constitución técnica y WCAG AA.

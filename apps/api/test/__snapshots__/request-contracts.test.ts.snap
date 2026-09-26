@@ -137,6 +137,138 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/branches/{branchId}/cash-registers": {
+      "get": {
+        "operationId": "BranchesController_listCashRegisters",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Branches",
+        ],
+      },
+      "post": {
+        "operationId": "BranchesController_createCashRegister",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Branches",
+        ],
+      },
+    },
+    "/api/v1/branches/{branchId}/cash-registers/{cashRegisterId}": {
+      "patch": {
+        "operationId": "BranchesController_renameCashRegister",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "cashRegisterId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Branches",
+        ],
+      },
+    },
+    "/api/v1/branches/{branchId}/cash-registers/{cashRegisterId}/deactivate": {
+      "patch": {
+        "operationId": "BranchesController_deactivateCashRegister",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "cashRegisterId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Branches",
+        ],
+      },
+    },
+    "/api/v1/catalog/categories": {
+      "get": {
+        "operationId": "CatalogReadController_readCategories",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogRead",
+        ],
+      },
+      "post": {
+        "operationId": "CatalogLifecycleController_createCategory",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogLifecycle",
+        ],
+      },
+    },
     "/api/v1/catalog/categories/{categoryId}": {
       "delete": {
         "operationId": "CatalogLifecycleController_deleteCategory",
@@ -211,6 +343,101 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         },
         "tags": [
           "CatalogRead",
+        ],
+      },
+      "post": {
+        "operationId": "CatalogItemManagementController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogItemManagement",
+        ],
+      },
+    },
+    "/api/v1/catalog/items/manage": {
+      "get": {
+        "operationId": "CatalogReadController_readManagedItems",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogRead",
+        ],
+      },
+    },
+    "/api/v1/catalog/items/similar": {
+      "get": {
+        "operationId": "CatalogItemManagementController_similar",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogItemManagement",
+        ],
+      },
+    },
+    "/api/v1/catalog/items/{id}": {
+      "patch": {
+        "operationId": "CatalogItemManagementController_edit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogItemManagement",
+        ],
+      },
+    },
+    "/api/v1/catalog/items/{id}/price": {
+      "patch": {
+        "operationId": "CatalogItemManagementController_price",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogItemManagement",
         ],
       },
     },
@@ -434,6 +661,92 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/expense-categories": {
+      "get": {
+        "operationId": "ExpenseCategoriesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "ExpenseCategories",
+        ],
+      },
+      "post": {
+        "operationId": "ExpenseCategoriesController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "ExpenseCategories",
+        ],
+      },
+    },
+    "/api/v1/expense-categories/active": {
+      "get": {
+        "operationId": "ExpenseCategoriesController_listActive",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "ExpenseCategories",
+        ],
+      },
+    },
+    "/api/v1/expense-categories/{id}": {
+      "delete": {
+        "operationId": "ExpenseCategoriesController_remove",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "ExpenseCategories",
+        ],
+      },
+    },
+    "/api/v1/expense-categories/{id}/status": {
+      "patch": {
+        "operationId": "ExpenseCategoriesController_changeStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "ExpenseCategories",
+        ],
+      },
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "AppController_getLiveness",
@@ -494,6 +807,43 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
       "patch": {
         "operationId": "OrganizationsController_updateCurrency",
         "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Organizations",
+        ],
+      },
+    },
+    "/api/v1/organizations/payment-methods": {
+      "get": {
+        "operationId": "OrganizationsController_listPaymentMethods",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Organizations",
+        ],
+      },
+    },
+    "/api/v1/organizations/payment-methods/{method}": {
+      "patch": {
+        "operationId": "OrganizationsController_updatePaymentMethod",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "method",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
         "responses": {
           "200": {
             "description": "",

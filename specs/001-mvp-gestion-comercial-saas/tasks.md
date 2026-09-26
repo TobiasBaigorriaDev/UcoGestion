@@ -128,20 +128,20 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T095: Implementar UI de categorías de catálogo para OWNER/ADMIN con alta, estados, activación y borrado; explicar bloqueos D01 [RF-50, RF-51, RF-53, RF-54, RF-55, RF-152, RF-153, RF-154, RF-221, RF-306, RF-308] (Depende de T069, T081A y T088–T092)
 - [x] T095E: Implementar UI separada de categorías de gasto con selección activa y estados accesibles [RF-50, RF-52, RF-53, RF-54, RF-55, RF-152, RF-153, RF-154] (Depende de T069 y T088–T092)
 - [x] T095A: Implementar UI de listado, alta y edición no estructural de ítems, incluidos tipo inicial, inventario, unidad, códigos, duplicados y precio [RF-32, RF-33, RF-34, RF-35, RF-36, RF-37, RF-41, RF-42, RF-46, RF-152, RF-153, RF-154, RF-221] (Depende de T067–T078 y T088–T092)
-- [ ] T095F: Implementar UI de activación, desactivación, borrado y cambio estructural de ítems con motivos D01 diferenciados [RF-54, RF-55, RF-56, RF-133, RF-152, RF-153, RF-154, RF-159, RF-160, RF-161, RF-221, RF-306, RF-308] (Depende de T079–T081A y T095A)
-- [ ] T095B: Implementar UI de clientes por rol con campos permitidos, alta, consulta, edición y estados [RF-68, RF-69, RF-211, RF-212, RF-213, RF-214, RF-220] (Depende de T082, T084–T092)
-- [ ] T095G: Implementar UI de proveedores por rol con campos permitidos, alta, consulta, edición, estados y borrado sin historia [RF-70, RF-71, RF-215, RF-216, RF-217, RF-218, RF-219, RF-220] (Depende de T083–T092)
-- [ ] T095C: Implementar UI de cajas con alcance, alta, renombre, desactivación y confirmaciones accesibles [RF-30, RF-31, RF-93, RF-152, RF-153, RF-154] (Depende de T064–T065 y T088–T092)
-- [ ] T095H: Implementar UI de medios de pago con alcance, activación/desactivación y confirmaciones accesibles [RF-93, RF-113, RF-152, RF-153, RF-154] (Depende de T066 y T088–T092)
-- [ ] T095D: Implementar UI de moneda OWNER con concurrencia optimista y motivos distintos de historial, incertidumbre y bloqueo permanente por dispositivo irrecuperable [RF-06, RF-07, RF-133, RF-152, RF-153, RF-154, RF-205, RF-206, RF-305, RF-308] (Depende de T077B y T088–T092)
+- [x] T095F: Implementar UI de activación, desactivación, borrado y cambio estructural de ítems con motivos D01 diferenciados [RF-54, RF-55, RF-56, RF-133, RF-152, RF-153, RF-154, RF-159, RF-160, RF-161, RF-221, RF-306, RF-308] (Depende de T079–T081A y T095A)
+- [x] T095B: Implementar UI de clientes por rol con campos permitidos, alta, consulta, edición y estados [RF-68, RF-69, RF-211, RF-212, RF-213, RF-214, RF-220] (Depende de T082, T084–T092)
+- [x] T095G: Implementar UI de proveedores por rol con campos permitidos, alta, consulta, edición, estados y borrado sin historia [RF-70, RF-71, RF-215, RF-216, RF-217, RF-218, RF-219, RF-220] (Depende de T083–T092)
+- [x] T095C: Implementar UI de cajas con alcance, alta, renombre, desactivación y confirmaciones accesibles [RF-30, RF-31, RF-93, RF-152, RF-153, RF-154] (Depende de T064–T065 y T088–T092)
+- [x] T095H: Implementar UI de medios de pago con alcance, activación/desactivación y confirmaciones accesibles [RF-93, RF-113, RF-152, RF-153, RF-154] (Depende de T066 y T088–T092)
+- [x] T095D: Implementar UI de moneda OWNER con concurrencia optimista y motivos distintos de historial, incertidumbre y bloqueo permanente por dispositivo irrecuperable [RF-06, RF-07, RF-133, RF-152, RF-153, RF-154, RF-205, RF-206, RF-305, RF-308] (Depende de T077B y T088–T092)
 
 ## 4. Inventario
 
-- [ ] T096: Crear branch_stocks tenant con cantidad decimal y prohibir edición fuera del servicio de inventario [RF-39, RF-163]
-- [ ] T097: Crear inventory_movements append-only con unicidad `(source_type, source_id, source_line_id, effect_kind)` y trigger defensivo; probar efectos TRANSFER_OUT/TRANSFER_IN válidos y duplicados rechazados [RF-62, RF-63, RF-66, RF-163]
-- [ ] T098: Inicializar en cero un producto inventariable en todas las sucursales sin movimiento [RF-39]
-- [ ] T099: Inicializar en cero los productos inventariables al crear una sucursal [RF-162]
-- [ ] T100: Implementar internamente el ajuste INCREASE con metadatos, observación y movimiento atómico, sin exponer aún el comando [RF-40, RF-60, RF-62, RF-245]
+- [x] T096: Crear branch_stocks tenant con cantidad decimal y prohibir edición fuera del servicio de inventario [RF-39, RF-163]
+- [x] T097: Crear inventory_movements append-only con unicidad `(source_type, source_id, source_line_id, effect_kind)` y trigger defensivo; probar efectos TRANSFER_OUT/TRANSFER_IN válidos y duplicados rechazados [RF-62, RF-63, RF-66, RF-163]
+- [x] T098: Inicializar en cero un producto inventariable en todas las sucursales sin movimiento [RF-39]
+- [x] T099: Inicializar en cero los productos inventariables al crear una sucursal [RF-162]
+- [x] T100: Implementar internamente el ajuste INCREASE con metadatos, observación y movimiento atómico, sin exponer aún el comando [RF-40, RF-60, RF-62, RF-245]
 - [ ] T101: Implementar internamente el ajuste DECREASE con lock y rechazo íntegro de stock negativo, sin exponer aún el comando [RF-60, RF-61, RF-62, RF-245]
 - [ ] T102: Autorizar motivos de ajuste de OWNER/ADMIN dentro de branch scope [RF-190]
 - [ ] T103: Autorizar motivos EMPLOYEE y rechazar INVENTARIO_INICIAL [RF-191, RF-192]

@@ -1,11 +1,17 @@
 import { randomUUID } from 'node:crypto';
 
-import { Body, ConflictException, Controller, ForbiddenException, Get, HttpException, HttpStatus, Param, Patch, Post, Req, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, HttpException, HttpStatus, Param, Patch, Post, Req, UnauthorizedException } from '@nestjs/common';
 
 import { PublicRoute } from '../auth/public-route.decorator.js';
 import { readSessionCookie } from '../auth/session-cookie.js';
 import { SessionAuthenticationService } from '../auth/session-authentication.service.js';
 import { OrganizationSettingsService } from './organization-settings.service.js';
+import {
+  PaymentMethodSettingsError,
+  PaymentMethodSettingsService,
+  paymentMethods,
+  type PaymentMethod,
+} from './payment-method-settings.service.js';
 import {
   GlobalMembershipDiscoveryService,
   OrganizationNotAvailableError,
@@ -46,6 +52,7 @@ export class OrganizationsController {
     private readonly timezones: OrganizationTimezoneService,
     private readonly currencies: OrganizationCurrencyChangeService,
     private readonly settings: OrganizationSettingsService,
+    private readonly paymentMethodsService: PaymentMethodSettingsService,
   ) {}
 
   @Get('settings')
@@ -57,6 +64,57 @@ export class OrganizationsController {
       userId: identity.userId,
       requestId: this.requestId(request),
     });
+  }
+
+  @Get('payment-methods')
+  async listPaymentMethods(@Req() request: OrganizationRequest) {
+    const identity = request.identity;
+    if (!identity) throw new UnauthorizedException();
+    try {
+      const items = await this.paymentMethodsService.list({
+        organizationId: identity.organizationId,
+        userId: identity.userId,
+        requestId: this.requestId(request),
+      });
+      return { paymentMethods: items };
+    } catch (error) {
+      if (error instanceof PaymentMethodSettingsError) {
+        throw new ForbiddenException({ code: error.code, title: 'Acceso denegado', detail: error.message });
+      }
+      throw error;
+    }
+  }
+
+  @Patch('payment-methods/:method')
+  async updatePaymentMethod(
+    @Req() request: OrganizationRequest,
+    @Param('method') method: string,
+    @Body() body: { enabled: boolean },
+  ) {
+    const identity = request.identity;
+    if (!identity) throw new UnauthorizedException();
+    if (!paymentMethods.includes(method as PaymentMethod)) {
+      throw new BadRequestException({ code: 'PAYMENT_METHOD_INVALID', title: 'Medio de pago inválido', detail: 'El medio de pago solicitado no es válido.' });
+    }
+    if (typeof body.enabled !== 'boolean') {
+      throw new BadRequestException({ code: 'PAYMENT_METHOD_ENABLED_INVALID', title: 'Estado inválido', detail: 'Debe especificar el campo booleano enabled.' });
+    }
+    try {
+      return await this.paymentMethodsService.setEnabled(
+        {
+          organizationId: identity.organizationId,
+          userId: identity.userId,
+          requestId: this.requestId(request),
+        },
+        method as PaymentMethod,
+        body.enabled,
+      );
+    } catch (error) {
+      if (error instanceof PaymentMethodSettingsError) {
+        throw new ForbiddenException({ code: error.code, title: 'Acceso denegado', detail: error.message });
+      }
+      throw error;
+    }
   }
 
   @Patch('currency')

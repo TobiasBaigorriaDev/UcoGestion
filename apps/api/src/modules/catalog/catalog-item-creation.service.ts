@@ -102,6 +102,7 @@ export class CatalogItemCreationService {
       },
       async (client) => {
         await this.requireOwnerOrAdmin(client, context);
+        await client.query('SELECT 1 FROM organizations WHERE id = $1 FOR UPDATE', [context.organizationId]);
 
         if (sku !== null) {
           const existingSku = await client.query<{ id: string }>(

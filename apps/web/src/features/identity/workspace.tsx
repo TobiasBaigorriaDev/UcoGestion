@@ -16,8 +16,24 @@ import { CatalogReadView, loadCatalog } from '../catalog/catalog-read';
 import { CatalogCategoryManagement, loadManagedCategories } from '../catalog/catalog-category-management';
 import { ExpenseCategoryManagement, loadExpenseCategories } from '../expenses/expense-category-management';
 import { CatalogItemManagement, loadManagedItems } from '../catalog/catalog-item-management';
+import { CustomerManagement, loadCustomers } from '../customers/customer-management';
+import { SupplierManagement, loadSuppliers } from '../suppliers/supplier-management';
+import { CashRegisterManagement, loadCashRegisters } from '../cash/cash-register-management';
+import { PaymentMethodsManagement, loadPaymentMethods } from '../organizations/payment-methods-management';
 
-type WorkspacePage = 'home' | 'settings' | 'users' | 'branches' | 'catalog' | 'catalog-categories' | 'catalog-items' | 'expense-categories';
+type WorkspacePage =
+  | 'home'
+  | 'settings'
+  | 'users'
+  | 'branches'
+  | 'catalog'
+  | 'catalog-categories'
+  | 'catalog-items'
+  | 'expense-categories'
+  | 'customers'
+  | 'suppliers'
+  | 'cash-registers'
+  | 'payment-methods';
 
 export function Workspace({ page = 'home' }: { page?: WorkspacePage }) {
   return <RemoteProvider><WorkspaceContent page={page} /></RemoteProvider>;
@@ -41,6 +57,14 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
   const managedCategories = useQuery({ queryKey: ['managed-categories', activeId], queryFn: () => loadManagedCategories(activeId ?? ''), enabled: page === 'catalog-categories' && !!activeId });
   const expenseCategories = useQuery({ queryKey: ['expense-categories', activeId], queryFn: () => loadExpenseCategories(activeId ?? ''), enabled: page === 'expense-categories' && !!activeId });
   const managedItems = useQuery({ queryKey: ['managed-items', activeId], queryFn: () => loadManagedItems(activeId ?? ''), enabled: page === 'catalog-items' && !!activeId });
+  const customers = useQuery({ queryKey: ['customers', activeId], queryFn: () => loadCustomers(activeId ?? ''), enabled: page === 'customers' && !!activeId });
+  const suppliers = useQuery({ queryKey: ['suppliers', activeId], queryFn: () => loadSuppliers(activeId ?? ''), enabled: page === 'suppliers' && !!activeId });
+  const cashRegisters = useQuery({
+    queryKey: ['cash-registers', activeId, activeBranchId],
+    queryFn: () => loadCashRegisters(activeId ?? '', activeBranchId ?? ''),
+    enabled: page === 'cash-registers' && !!activeId && !!activeBranchId,
+  });
+  const paymentMethods = useQuery({ queryKey: ['payment-methods', activeId], queryFn: () => loadPaymentMethods(activeId ?? ''), enabled: page === 'payment-methods' && !!activeId });
 
   useEffect(() => {
     const available = memberships.data;
@@ -74,7 +98,22 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
   const current = organizations.find((item) => item.organizationId === activeId);
   return <AppShell organizations={organizations.map((item) => ({ id: item.organizationId, name: item.organizationName, branches: item.organizationId === activeId ? branches.data?.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => ({ id: branch.id, name: branch.name })) ?? [] : [] }))}
     activeOrganizationId={activeId} activeBranchId={activeBranchId} onOrganizationChange={(id) => void changeOrganization(id)} onBranchChange={setActiveBranchId}
-    navigation={[{ href: '/workspace', label: 'Inicio' }, { href: '/workspace/catalog', label: 'Catálogo' }, { href: '/workspace/branches', label: 'Sucursales' }, ...(current?.role === 'OWNER' || current?.role === 'ADMIN' ? [{ href: '/workspace/users', label: 'Usuarios' }, { href: '/workspace/expense-categories', label: 'Categorías de gasto' }] : []), { href: '/workspace/settings', label: 'Configuración' }]}
+    navigation={[
+      { href: '/workspace', label: 'Inicio' },
+      { href: '/workspace/catalog', label: 'Catálogo' },
+      { href: '/workspace/branches', label: 'Sucursales' },
+      { href: '/workspace/customers', label: 'Clientes' },
+      { href: '/workspace/suppliers', label: 'Proveedores' },
+      { href: '/workspace/cash-registers', label: 'Cajas' },
+      ...(current?.role === 'OWNER' || current?.role === 'ADMIN'
+        ? [
+            { href: '/workspace/users', label: 'Usuarios' },
+            { href: '/workspace/expense-categories', label: 'Categorías de gasto' },
+            { href: '/workspace/payment-methods', label: 'Medios de pago' },
+          ]
+        : []),
+      { href: '/workspace/settings', label: 'Configuración' },
+    ]}
     currentPath={page === 'home' ? '/workspace' : page === 'catalog-categories' || page === 'catalog-items' ? '/workspace/catalog' : `/workspace/${page}`}>
       {switchError ? <ErrorSummary error={switchError} /> : null}
       {branches.error ? <><ErrorSummary error={branches.error instanceof ApiProblemError ? branches.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar las sucursales.' })} /><button type="button" onClick={() => void branches.refetch()}>Reintentar sucursales</button></> : null}
@@ -96,6 +135,32 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
       : page === 'catalog' ? catalog.error
         ? <><ErrorSummary error={catalog.error instanceof ApiProblemError ? catalog.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar el catálogo.' })} /><button type="button" onClick={() => void catalog.refetch()}>Reintentar</button></>
         : catalog.data && current ? <CatalogReadView key={`${activeId}:${activeBranchId ?? ''}`} role={current.role} data={catalog.data} branchId={activeBranchId} loadHistory={(branchId) => loadCatalog(activeId, branchId)} /> : <p role="status">Cargando catálogo…</p>
+      : page === 'customers' ? customers.error
+        ? <><ErrorSummary error={customers.error instanceof ApiProblemError ? customers.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar los clientes.' })} /><button type="button" onClick={() => void customers.refetch()}>Reintentar</button></>
+        : customers.data && current ? <CustomerManagement organizationId={activeId} role={current.role} customers={customers.data} onReload={() => void customers.refetch()} /> : <p role="status">Cargando clientes…</p>
+      : page === 'suppliers' ? suppliers.error
+        ? <><ErrorSummary error={suppliers.error instanceof ApiProblemError ? suppliers.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar los proveedores.' })} /><button type="button" onClick={() => void suppliers.refetch()}>Reintentar</button></>
+        : suppliers.data && current ? <SupplierManagement organizationId={activeId} role={current.role} suppliers={suppliers.data} onReload={() => void suppliers.refetch()} /> : <p role="status">Cargando proveedores…</p>
+      : page === 'cash-registers' ? !activeBranchId ? <p>Seleccioná una sucursal para ver sus cajas.</p>
+        : cashRegisters.error
+          ? <><ErrorSummary error={cashRegisters.error instanceof ApiProblemError ? cashRegisters.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar las cajas.' })} /><button type="button" onClick={() => void cashRegisters.refetch()}>Reintentar</button></>
+          : cashRegisters.data && current && branches.data ? (
+            <CashRegisterManagement
+              key={`${activeId}:${activeBranchId}`}
+              organizationId={activeId}
+              role={current.role}
+              branches={branches.data.branches.filter((b) => b.status === 'ACTIVE').map((b) => ({ id: b.id, name: b.name }))}
+              selectedBranchId={activeBranchId}
+              cashRegisters={cashRegisters.data}
+              onReload={() => void cashRegisters.refetch()}
+              onBranchChange={setActiveBranchId}
+            />
+          ) : <p role="status">Cargando cajas…</p>
+      : page === 'payment-methods' ? current?.role !== 'OWNER' && current?.role !== 'ADMIN'
+        ? <p role="alert">No tenés permiso para administrar medios de pago.</p>
+        : paymentMethods.error
+          ? <><ErrorSummary error={paymentMethods.error instanceof ApiProblemError ? paymentMethods.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar los medios de pago.' })} /><button type="button" onClick={() => void paymentMethods.refetch()}>Reintentar</button></>
+          : paymentMethods.data && current ? <PaymentMethodsManagement organizationId={activeId} role={current.role} methods={paymentMethods.data} onReload={() => void paymentMethods.refetch()} /> : <p role="status">Cargando medios de pago…</p>
       : page === 'branches' ? branches.error ? null : branches.data
         ? <BranchManagement organizationId={activeId} data={branches.data} onReload={() => void branches.refetch()} /> : <p role="status">Cargando sucursales…</p>
       : page === 'users' ? users.error
