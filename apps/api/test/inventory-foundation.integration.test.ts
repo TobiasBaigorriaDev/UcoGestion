@@ -10,6 +10,8 @@ import { CatalogItemCreationService } from '../src/modules/catalog/catalog-item-
 import { BranchManagementService } from '../src/modules/branches/branch-management.service.js';
 import { InventoryIncreaseService } from '../src/modules/inventory/inventory-increase.service.js';
 import { InventoryAdjustmentService } from '../src/modules/inventory/inventory-adjustment.service.js';
+import { StockThresholdService } from '../src/modules/inventory/stock-threshold.service.js';
+import { InventoryTransferService } from '../src/modules/inventory/inventory-transfer.service.js';
 
 describe('inventory foundation', () => {
   let container: StartedPostgreSqlContainer;
@@ -336,5 +338,316 @@ describe('inventory foundation', () => {
     expect((await admin.query('SELECT quantity FROM branch_stocks WHERE branch_id = $1 AND item_id = $2',
       [branch.id, item.id])).rows[0]?.quantity).toBe('1.000');
     expect((await admin.query('SELECT id FROM inventory_adjustments WHERE item_id = $1', [item.id])).rowCount).toBe(2);
+  });
+
+  it('T106 stores an optional threshold by branch and flags stock at or below it', async () => {
+    const first = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Threshold one' });
+    const second = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Threshold two' });
+    const item = await catalog.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name: 'Threshold item', type: 'PRODUCT', trackInventory: true });
+    const context = { organizationId: organizationA, userId: ownerA, requestId: randomUUID() };
+    const thresholds = new StockThresholdService(new TenantTransaction(runtime));
+    const adjustment = new InventoryAdjustmentService(new TenantTransaction(runtime));
+    expect(await thresholds.read(context, first.id, item.id)).toMatchObject({ quantity: '0.000', threshold: null, lowStock: false });
+    await thresholds.set(context, first.id, item.id, '1', randomUUID());
+    expect(await thresholds.read(context, first.id, item.id)).toMatchObject({ threshold: '1.000', lowStock: true });
+    await adjustment.confirm(context, { branchId: first.id, itemId: item.id,
+      direction: 'INCREASE', quantity: '1', reason: 'INVENTARIO_INICIAL' }, randomUUID());
+    expect(await thresholds.read(context, first.id, item.id)).toMatchObject({ quantity: '1.000', lowStock: true });
+    await adjustment.confirm(context, { branchId: first.id, itemId: item.id,
+      direction: 'INCREASE', quantity: '1', reason: 'INVENTARIO_INICIAL' }, randomUUID());
+    expect(await thresholds.read(context, first.id, item.id)).toMatchObject({ quantity: '2.000', lowStock: false });
+    expect(await thresholds.read(context, second.id, item.id)).toMatchObject({ threshold: null, lowStock: false });
+    await thresholds.set(context, first.id, item.id, null, randomUUID());
+    expect(await thresholds.read(context, first.id, item.id)).toMatchObject({ threshold: null, lowStock: false });
+    await thresholds.set(context, first.id, item.id, '0', randomUUID());
+    expect(await thresholds.read(context, first.id, item.id)).toMatchObject({ threshold: '0.000', lowStock: false });
+    await expect(thresholds.set(context, first.id, item.id, '-1', randomUUID())).rejects.toThrow();
+    await expect(thresholds.set(context, first.id, item.id, '0.0000', randomUUID())).rejects.toThrow();
+  });
+
+  it('T107 scopes threshold writes and stock reads by role and assigned branch', async () => {
+    const assigned = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Scoped stock' });
+    const other = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Other stock' });
+    const item = await catalog.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name: 'Visible stock item', type: 'PRODUCT', trackInventory: true });
+    const thresholds = new StockThresholdService(new TenantTransaction(runtime));
+    for (const role of ['ADMIN', 'EMPLOYEE', 'CASHIER'] as const) {
+      const userId = randomUUID(); const membershipId = randomUUID();
+      await admin.query('INSERT INTO users (id, email_normalized, password_hash, password_hash_version) VALUES ($1, $2, $3, 1)',
+        [userId, `${userId}@example.com`, '$argon2id$v=19$scope']);
+      await admin.query('INSERT INTO memberships (id, organization_id, user_id, role) VALUES ($1, $2, $3, $4)',
+        [membershipId, organizationA, userId, role]);
+      await admin.query('INSERT INTO membership_branches (organization_id, membership_id, branch_id) VALUES ($1, $2, $3)',
+        [organizationA, membershipId, assigned.id]);
+      const context = { organizationId: organizationA, userId, requestId: randomUUID() };
+      expect(await thresholds.read(context, assigned.id, item.id)).toMatchObject({ branchId: assigned.id, itemId: item.id });
+      await expect(thresholds.read(context, other.id, item.id)).rejects.toThrow();
+      if (role === 'CASHIER') {
+        await expect(thresholds.set(context, assigned.id, item.id, '1', randomUUID())).rejects.toThrow();
+      } else {
+        await expect(thresholds.set(context, assigned.id, item.id, '1', randomUUID())).resolves.toBeDefined();
+        await expect(thresholds.set(context, other.id, item.id, '1', randomUUID())).rejects.toThrow();
+      }
+    }
+    expect(await thresholds.read({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      other.id, item.id)).toMatchObject({ threshold: null });
+    await expect(thresholds.read({ organizationId: organizationB, userId: ownerB, requestId: randomUUID() },
+      assigned.id, item.id)).rejects.toThrow();
+  });
+
+  it('T108 accepts only distinct active in-scope branches and tenant-owned inventoried items', async () => {
+    const origin = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Policy origin' });
+    const destination = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Policy destination' });
+    const foreign = await branches.create({ organizationId: organizationB, userId: ownerB, requestId: randomUUID() }, { name: 'Foreign destination' });
+    const item = await catalog.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name: 'Transfer policy item', type: 'PRODUCT', trackInventory: true });
+    const foreignItem = await catalog.create({ organizationId: organizationB, userId: ownerB, requestId: randomUUID() },
+      { name: 'Foreign transfer item', type: 'PRODUCT', trackInventory: true });
+    const service = new InventoryTransferService(new TenantTransaction(runtime));
+    const context = { organizationId: organizationA, userId: ownerA, requestId: randomUUID() };
+    const input = { originBranchId: origin.id, destinationBranchId: destination.id,
+      lines: [{ itemId: item.id, quantity: '1' }] };
+    await expect(service.validate(context, input)).resolves.toMatchObject(input);
+    await expect(service.validate(context, { ...input, destinationBranchId: origin.id })).rejects.toThrow();
+    await expect(service.validate(context, { ...input, destinationBranchId: foreign.id })).rejects.toThrow();
+    await expect(service.validate(context, { ...input, lines: [{ itemId: foreignItem.id, quantity: '1' }] })).rejects.toThrow();
+    await expect(service.validate(context, { ...input, lines: [{ itemId: item.id, quantity: '-1' }] })).rejects.toThrow();
+    await expect(service.validate(context, { ...input, lines: [
+      { itemId: item.id, quantity: '1' }, { itemId: item.id, quantity: '1' },
+    ] })).rejects.toThrow();
+    const outsider = randomUUID(); const membership = randomUUID();
+    await admin.query('INSERT INTO users (id, email_normalized, password_hash, password_hash_version) VALUES ($1, $2, $3, 1)',
+      [outsider, `${outsider}@example.com`, '$argon2id$v=19$transfer']);
+    await admin.query("INSERT INTO memberships (id, organization_id, user_id, role) VALUES ($1, $2, $3, 'EMPLOYEE')",
+      [membership, organizationA, outsider]);
+    await admin.query('INSERT INTO membership_branches (organization_id, membership_id, branch_id) VALUES ($1, $2, $3)',
+      [organizationA, membership, origin.id]);
+    await expect(service.validate({ ...context, userId: outsider }, input)).rejects.toThrow();
+    await admin.query('INSERT INTO membership_branches (organization_id, membership_id, branch_id) VALUES ($1, $2, $3)',
+      [organizationA, membership, destination.id]);
+    await expect(service.validate({ ...context, userId: outsider }, input)).resolves.toBeDefined();
+    const cashier = randomUUID(); const cashierMembership = randomUUID();
+    await admin.query('INSERT INTO users (id, email_normalized, password_hash, password_hash_version) VALUES ($1, $2, $3, 1)',
+      [cashier, `${cashier}@example.com`, '$argon2id$v=19$cashier']);
+    await admin.query("INSERT INTO memberships (id, organization_id, user_id, role) VALUES ($1, $2, $3, 'CASHIER')",
+      [cashierMembership, organizationA, cashier]);
+    await admin.query('INSERT INTO membership_branches (organization_id, membership_id, branch_id) VALUES ($1, $2, $3), ($1, $2, $4)',
+      [organizationA, cashierMembership, origin.id, destination.id]);
+    await expect(service.validate({ ...context, userId: cashier }, input)).rejects.toThrow();
+  });
+
+  it('T109 locks the global branch/item set and rejects any insufficient origin line', async () => {
+    const origin = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Lock origin' });
+    const destination = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Lock destination' });
+    const first = await catalog.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name: 'Lock item 1', type: 'PRODUCT', trackInventory: true });
+    const second = await catalog.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name: 'Lock item 2', type: 'PRODUCT', trackInventory: true });
+    const context = { organizationId: organizationA, userId: ownerA, requestId: randomUUID() };
+    const adjustment = new InventoryAdjustmentService(new TenantTransaction(runtime));
+    await adjustment.confirm(context, { branchId: origin.id, itemId: first.id,
+      direction: 'INCREASE', quantity: '2', reason: 'INVENTARIO_INICIAL' }, randomUUID());
+    await adjustment.confirm(context, { branchId: origin.id, itemId: second.id,
+      direction: 'INCREASE', quantity: '1', reason: 'INVENTARIO_INICIAL' }, randomUUID());
+    const transfer = new InventoryTransferService(new TenantTransaction(runtime));
+    const input = { originBranchId: origin.id, destinationBranchId: destination.id,
+      lines: [{ itemId: second.id, quantity: '2' }, { itemId: first.id, quantity: '1' }] };
+    await expect(transfer.checkAvailability(context, input)).rejects.toThrow(/stock/i);
+    expect((await admin.query('SELECT quantity FROM branch_stocks WHERE branch_id = $1 AND item_id = $2',
+      [origin.id, first.id])).rows[0]?.quantity).toBe('2.000');
+    expect((await admin.query("SELECT id FROM inventory_movements WHERE source_type = 'TRANSFER' AND item_id = ANY($1::uuid[])",
+      [[first.id, second.id]])).rowCount).toBe(0);
+    await expect(transfer.checkAvailability(context, { ...input,
+      lines: [{ itemId: second.id, quantity: '1' }, { itemId: first.id, quantity: '1' }] })).resolves.toBeDefined();
+  });
+
+  it('T110 commits every transfer line and effect together or none when one line lacks stock', async () => {
+    const origin = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Atomic origin' });
+    const destination = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Atomic destination' });
+    const first = await catalog.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name: 'Atomic item 1', type: 'PRODUCT', trackInventory: true });
+    const second = await catalog.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name: 'Atomic item 2', type: 'PRODUCT', trackInventory: true });
+    const context = { organizationId: organizationA, userId: ownerA, requestId: randomUUID() };
+    const adjustment = new InventoryAdjustmentService(new TenantTransaction(runtime));
+    await adjustment.confirm(context, { branchId: origin.id, itemId: first.id,
+      direction: 'INCREASE', quantity: '2', reason: 'INVENTARIO_INICIAL' }, randomUUID());
+    const transfer = new InventoryTransferService(new TenantTransaction(runtime));
+    const input = { originBranchId: origin.id, destinationBranchId: destination.id,
+      lines: [{ itemId: first.id, quantity: '1' }, { itemId: second.id, quantity: '1' }] };
+    await expect(transfer.confirm(context, input, randomUUID())).rejects.toThrow(/stock/i);
+    expect((await admin.query('SELECT id FROM stock_transfers WHERE origin_branch_id = $1', [origin.id])).rowCount).toBe(0);
+    expect((await admin.query('SELECT quantity FROM branch_stocks WHERE branch_id = $1 AND item_id = $2',
+      [origin.id, first.id])).rows[0]?.quantity).toBe('2.000');
+    await adjustment.confirm(context, { branchId: origin.id, itemId: second.id,
+      direction: 'INCREASE', quantity: '1', reason: 'INVENTARIO_INICIAL' }, randomUUID());
+    const key = randomUUID();
+    const result = await transfer.confirm(context, input, key);
+    expect(await transfer.confirm({ ...context, requestId: randomUUID() }, input, key)).toEqual(result);
+    expect((await admin.query('SELECT id FROM stock_transfer_lines WHERE transfer_id = $1', [result.id])).rowCount).toBe(2);
+    expect((await admin.query('SELECT id FROM inventory_movements WHERE source_id = $1', [result.id])).rowCount).toBe(4);
+    expect((await admin.query('SELECT quantity FROM branch_stocks WHERE branch_id = $1 AND item_id = $2',
+      [destination.id, second.id])).rows[0]?.quantity).toBe('1.000');
+    const foreignClient = await runtime.connect();
+    try {
+      await foreignClient.query('BEGIN READ ONLY');
+      await foreignClient.query("SELECT set_config('app.organization_id', $1, true)", [organizationB]);
+      expect((await foreignClient.query('SELECT id FROM stock_transfers WHERE id = $1', [result.id])).rowCount).toBe(0);
+      expect((await foreignClient.query('SELECT id FROM stock_transfer_lines WHERE transfer_id = $1', [result.id])).rowCount).toBe(0);
+      await foreignClient.query('COMMIT');
+    } finally { foreignClient.release(); }
+  });
+
+  it('T111 corrects a transfer only through one linked reverse transfer', async () => {
+    const origin = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Correction origin' });
+    const destination = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Correction destination' });
+    const item = await catalog.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name: 'Correction item', type: 'PRODUCT', trackInventory: true });
+    const context = { organizationId: organizationA, userId: ownerA, requestId: randomUUID() };
+    const adjustment = new InventoryAdjustmentService(new TenantTransaction(runtime));
+    await adjustment.confirm(context, { branchId: origin.id, itemId: item.id,
+      direction: 'INCREASE', quantity: '3', reason: 'INVENTARIO_INICIAL' }, randomUUID());
+    const transfer = new InventoryTransferService(new TenantTransaction(runtime));
+    const original = await transfer.confirm(context, { originBranchId: origin.id,
+      destinationBranchId: destination.id, lines: [{ itemId: item.id, quantity: '2' }] }, randomUUID());
+    await expect(transfer.compensate({ organizationId: organizationB, userId: ownerB,
+      requestId: randomUUID() }, original.id, randomUUID())).rejects.toThrow();
+    const key = randomUUID();
+    const correction = await transfer.compensate(context, original.id, key);
+    expect(correction).toMatchObject({ originBranchId: destination.id, destinationBranchId: origin.id,
+      lines: [{ itemId: item.id, quantity: '2' }] });
+    expect(await transfer.compensate({ ...context, requestId: randomUUID() }, original.id, key)).toEqual(correction);
+    await expect(transfer.compensate(context, original.id, randomUUID())).rejects.toThrow();
+    await expect(transfer.compensate(context, correction.id, randomUUID())).rejects.toThrow();
+    expect((await admin.query('SELECT original_transfer_id FROM stock_transfer_compensations WHERE compensation_transfer_id = $1',
+      [correction.id])).rows[0]?.original_transfer_id).toBe(original.id);
+    expect((await admin.query('SELECT quantity FROM branch_stocks WHERE branch_id = $1 AND item_id = $2',
+      [origin.id, item.id])).rows[0]?.quantity).toBe('3.000');
+    expect((await admin.query('SELECT count(*)::int AS n FROM inventory_movements WHERE source_id = ANY($1::uuid[])',
+      [[original.id, correction.id]])).rows[0]?.n).toBe(4);
+    await expect(admin.query('UPDATE stock_transfers SET origin_branch_id = $1 WHERE id = $2',
+      [destination.id, original.id])).rejects.toMatchObject({ code: '55000' });
+  });
+
+  it('T112 retries a transient inventory deadlock with one idempotency key', async () => {
+    const origin = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Retry origin' });
+    const destination = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Retry destination' });
+    const item = await catalog.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name: 'Retry item', type: 'PRODUCT', trackInventory: true });
+    const context = { organizationId: organizationA, userId: ownerA, requestId: randomUUID() };
+    await new InventoryAdjustmentService(new TenantTransaction(runtime)).confirm(context,
+      { branchId: origin.id, itemId: item.id, direction: 'INCREASE', quantity: '2', reason: 'INVENTARIO_INICIAL' }, randomUUID());
+    await admin.query('CREATE SEQUENCE inventory_deadlock_attempts');
+    await admin.query(`CREATE FUNCTION inject_inventory_deadlock() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF nextval('inventory_deadlock_attempts') <= 2 THEN
+        RAISE EXCEPTION 'injected deadlock' USING ERRCODE = '40P01';
+      END IF; RETURN NEW; END $$`);
+    await admin.query(`CREATE TRIGGER inject_inventory_deadlock BEFORE INSERT ON stock_transfers
+      FOR EACH ROW EXECUTE FUNCTION inject_inventory_deadlock()`);
+    try {
+      const transfer = new InventoryTransferService(new TenantTransaction(runtime));
+      const key = randomUUID();
+      const input = { originBranchId: origin.id, destinationBranchId: destination.id,
+        lines: [{ itemId: item.id, quantity: '1' }] };
+      const created = await transfer.confirm(context, input, key);
+      expect((await admin.query("SELECT last_value FROM inventory_deadlock_attempts")).rows[0]?.last_value).toBe('3');
+      expect(await transfer.confirm(context, input, key)).toEqual(created);
+      expect((await admin.query('SELECT count(*)::int AS n FROM stock_transfers WHERE id = $1',
+        [created.id])).rows[0]?.n).toBe(1);
+    } finally {
+      await admin.query('DROP TRIGGER inject_inventory_deadlock ON stock_transfers');
+      await admin.query('DROP FUNCTION inject_inventory_deadlock()');
+      await admin.query('DROP SEQUENCE inventory_deadlock_attempts');
+    }
+  });
+
+  it('T112 stops after three deadlocks and leaves no inventory effects', async () => {
+    const origin = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Exhaust origin' });
+    const destination = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Exhaust destination' });
+    const item = await catalog.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name: 'Exhaust item', type: 'PRODUCT', trackInventory: true });
+    const context = { organizationId: organizationA, userId: ownerA, requestId: randomUUID() };
+    await new InventoryAdjustmentService(new TenantTransaction(runtime)).confirm(context,
+      { branchId: origin.id, itemId: item.id, direction: 'INCREASE', quantity: '1', reason: 'INVENTARIO_INICIAL' }, randomUUID());
+    await admin.query('CREATE SEQUENCE inventory_exhaust_attempts');
+    await admin.query(`CREATE FUNCTION inject_inventory_exhaust() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN PERFORM nextval('inventory_exhaust_attempts');
+        RAISE EXCEPTION 'injected deadlock' USING ERRCODE = '40P01'; END $$`);
+    await admin.query(`CREATE TRIGGER inject_inventory_exhaust BEFORE INSERT ON stock_transfers
+      FOR EACH ROW EXECUTE FUNCTION inject_inventory_exhaust()`);
+    try {
+      const transfer = new InventoryTransferService(new TenantTransaction(runtime));
+      await expect(transfer.confirm(context, { originBranchId: origin.id, destinationBranchId: destination.id,
+        lines: [{ itemId: item.id, quantity: '1' }] }, randomUUID()))
+        .rejects.toThrow('Concurrent inventory modification.');
+      expect((await admin.query('SELECT last_value FROM inventory_exhaust_attempts')).rows[0]?.last_value).toBe('3');
+      expect((await admin.query('SELECT count(*)::int AS n FROM stock_transfers WHERE origin_branch_id = $1',
+        [origin.id])).rows[0]?.n).toBe(0);
+      expect((await admin.query('SELECT quantity FROM branch_stocks WHERE branch_id = $1 AND item_id = $2',
+        [origin.id, item.id])).rows[0]?.quantity).toBe('1.000');
+    } finally {
+      await admin.query('DROP TRIGGER inject_inventory_exhaust ON stock_transfers');
+      await admin.query('DROP FUNCTION inject_inventory_exhaust()');
+      await admin.query('DROP SEQUENCE inventory_exhaust_attempts');
+    }
+  });
+
+  it('T113 rejects one of two competing multi-line transfers without partial effects', async () => {
+    const origin = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Race origin' });
+    const destination = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Race destination' });
+    const first = await catalog.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name: 'Race first', type: 'PRODUCT', trackInventory: true });
+    const second = await catalog.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name: 'Race second', type: 'PRODUCT', trackInventory: true });
+    const context = { organizationId: organizationA, userId: ownerA, requestId: randomUUID() };
+    const adjustment = new InventoryAdjustmentService(new TenantTransaction(runtime));
+    for (const item of [first, second]) await adjustment.confirm(context,
+      { branchId: origin.id, itemId: item.id, direction: 'INCREASE', quantity: '1', reason: 'INVENTARIO_INICIAL' }, randomUUID());
+    const transfer = new InventoryTransferService(new TenantTransaction(runtime));
+    const lines = [{ itemId: first.id, quantity: '1' }, { itemId: second.id, quantity: '1' }];
+    const results = await Promise.allSettled([
+      transfer.confirm(context, { originBranchId: origin.id, destinationBranchId: destination.id, lines }, randomUUID()),
+      transfer.confirm({ ...context, requestId: randomUUID() }, { originBranchId: origin.id,
+        destinationBranchId: destination.id, lines: [...lines].reverse() }, randomUUID()),
+    ]);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    const transfers = await admin.query<{ id: string }>(
+      'SELECT id FROM stock_transfers WHERE origin_branch_id = $1 AND destination_branch_id = $2',
+      [origin.id, destination.id]);
+    expect(transfers.rowCount).toBe(1);
+    expect((await admin.query('SELECT count(*)::int AS n FROM inventory_movements WHERE source_id = $1',
+      [transfers.rows[0]?.id])).rows[0]?.n).toBe(4);
+    for (const item of [first, second]) {
+      expect((await admin.query('SELECT branch_id, quantity FROM branch_stocks WHERE item_id = $1 ORDER BY branch_id',
+        [item.id])).rows).toEqual(expect.arrayContaining([
+        { branch_id: origin.id, quantity: '0.000' }, { branch_id: destination.id, quantity: '1.000' },
+      ]));
+    }
+  });
+
+  it('T113 confirms opposite A-to-B and B-to-A transfers without inverse-order deadlock', async () => {
+    const a = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Opposite A' });
+    const b = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Opposite B' });
+    const items = await Promise.all(['Opposite item 1', 'Opposite item 2'].map((name) => catalog.create(
+      { organizationId: organizationA, userId: ownerA, requestId: randomUUID() },
+      { name, type: 'PRODUCT', trackInventory: true })));
+    const context = { organizationId: organizationA, userId: ownerA, requestId: randomUUID() };
+    const adjustment = new InventoryAdjustmentService(new TenantTransaction(runtime));
+    for (const branch of [a, b]) for (const item of items) await adjustment.confirm(context,
+      { branchId: branch.id, itemId: item.id, direction: 'INCREASE', quantity: '2', reason: 'INVENTARIO_INICIAL' }, randomUUID());
+    const transfer = new InventoryTransferService(new TenantTransaction(runtime));
+    const lines = items.map((item) => ({ itemId: item.id, quantity: '1' }));
+    const [forward, reverse] = await Promise.all([
+      transfer.confirm(context, { originBranchId: a.id, destinationBranchId: b.id, lines }, randomUUID()),
+      transfer.confirm({ ...context, requestId: randomUUID() }, { originBranchId: b.id,
+        destinationBranchId: a.id, lines: [...lines].reverse() }, randomUUID()),
+    ]);
+    expect((await admin.query('SELECT count(*)::int AS n FROM inventory_movements WHERE source_id = ANY($1::uuid[])',
+      [[forward.id, reverse.id]])).rows[0]?.n).toBe(8);
+    for (const branch of [a, b]) for (const item of items) expect((await admin.query(
+      'SELECT quantity FROM branch_stocks WHERE branch_id = $1 AND item_id = $2',
+      [branch.id, item.id])).rows[0]?.quantity).toBe('2.000');
   });
 });

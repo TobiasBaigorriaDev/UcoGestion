@@ -332,6 +332,23 @@ export const branchStocks = pgTable(
   ],
 );
 
+export const stockThresholds = pgTable(
+  'stock_thresholds',
+  {
+    organizationId: uuid('organization_id').notNull(),
+    branchId: uuid('branch_id').notNull(),
+    itemId: uuid('item_id').notNull(),
+    minimum: numeric('minimum', { precision: 20, scale: 3 }).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.branchId, table.itemId] }),
+    foreignKey({ columns: [table.organizationId, table.branchId, table.itemId],
+      foreignColumns: [branchStocks.organizationId, branchStocks.branchId, branchStocks.itemId],
+      name: 'stock_thresholds_stock_tenant_fk' }),
+  ],
+);
+
 export const inventoryAdjustments = pgTable(
   'inventory_adjustments',
   {
@@ -397,6 +414,62 @@ export const inventoryMovements = pgTable(
     foreignKey({ columns: [table.organizationId, table.branchId, table.itemId],
       foreignColumns: [branchStocks.organizationId, branchStocks.branchId, branchStocks.itemId],
       name: 'inventory_movements_stock_tenant_fk' }),
+  ],
+);
+
+export const stockTransfers = pgTable(
+  'stock_transfers',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull(),
+    originBranchId: uuid('origin_branch_id').notNull(),
+    destinationBranchId: uuid('destination_branch_id').notNull(),
+    actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('stock_transfers_organization_id_id_key').on(table.organizationId, table.id),
+    foreignKey({ columns: [table.organizationId, table.originBranchId],
+      foreignColumns: [branches.organizationId, branches.id], name: 'stock_transfers_origin_fk' }),
+    foreignKey({ columns: [table.organizationId, table.destinationBranchId],
+      foreignColumns: [branches.organizationId, branches.id], name: 'stock_transfers_destination_fk' }),
+  ],
+);
+
+export const stockTransferLines = pgTable(
+  'stock_transfer_lines',
+  {
+    id: uuid().primaryKey(),
+    organizationId: uuid('organization_id').notNull(),
+    transferId: uuid('transfer_id').notNull(),
+    itemId: uuid('item_id').notNull(),
+    quantity: numeric('quantity', { precision: 20, scale: 3 }).notNull(),
+  },
+  (table) => [
+    unique('stock_transfer_lines_organization_id_transfer_id_item_id_key')
+      .on(table.organizationId, table.transferId, table.itemId),
+    foreignKey({ columns: [table.organizationId, table.transferId],
+      foreignColumns: [stockTransfers.organizationId, stockTransfers.id], name: 'stock_transfer_lines_transfer_fk' }),
+    foreignKey({ columns: [table.organizationId, table.itemId],
+      foreignColumns: [catalogItems.organizationId, catalogItems.id], name: 'stock_transfer_lines_item_fk' }),
+  ],
+);
+
+export const stockTransferCompensations = pgTable(
+  'stock_transfer_compensations',
+  {
+    organizationId: uuid('organization_id').notNull(),
+    originalTransferId: uuid('original_transfer_id').notNull(),
+    compensationTransferId: uuid('compensation_transfer_id').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.organizationId, table.originalTransferId] }),
+    unique('stock_transfer_compensations_organization_id_compensation_transfer_id_key')
+      .on(table.organizationId, table.compensationTransferId),
+    foreignKey({ columns: [table.organizationId, table.originalTransferId],
+      foreignColumns: [stockTransfers.organizationId, stockTransfers.id] }),
+    foreignKey({ columns: [table.organizationId, table.compensationTransferId],
+      foreignColumns: [stockTransfers.organizationId, stockTransfers.id] }),
   ],
 );
 

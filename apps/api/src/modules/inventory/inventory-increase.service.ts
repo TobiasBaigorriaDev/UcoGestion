@@ -5,6 +5,7 @@ import type { PoolClient } from 'pg';
 import { z } from 'zod';
 
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
+import { retryInventoryTransaction } from './inventory-transaction-retry.js';
 
 export interface InventoryIncreaseInput {
   readonly branchId: string;
@@ -53,7 +54,7 @@ export class InventoryIncreaseService {
         [context.organizationId, input.branchId, result.rows[0]?.role, context.userId]);
       if (branch.rowCount !== 1) throw new Error('Sucursal no autorizada.');
     };
-    return this.transactions.runIdempotent(context, {
+    return retryInventoryTransaction(() => this.transactions.runIdempotent(context, {
       action: 'inventory.adjustment.increased',
       after: { direction: 'INCREASE', quantity: canonicalQuantity, reason: input.reason.trim(),
         observation: input.observation ?? null },
@@ -82,6 +83,6 @@ export class InventoryIncreaseService {
         [id, context.organizationId, input.branchId, input.itemId, context.userId,
           quantity, input.reason.trim(), input.observation ?? null]);
       return { id, branchId: input.branchId, itemId: input.itemId, quantity };
-    }, (body) => replaySchema.parse(body));
+    }, (body) => replaySchema.parse(body)));
   }
 }

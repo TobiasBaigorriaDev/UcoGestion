@@ -147,15 +147,15 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T103: Autorizar motivos EMPLOYEE y rechazar INVENTARIO_INICIAL [RF-191, RF-192]
 - [x] T104: Rechazar cualquier ajuste iniciado por CASHIER [RF-193]
 - [x] T105: Corregir ajuste confirmado solo mediante ajuste compensatorio enlazado [RF-63]
-- [ ] T105A: Exponer ajustes positivos, negativos y compensatorios con permisos por rol/motivo, RLS, branch scope, auditoría e idempotencia en la misma unidad transaccional [RF-40, RF-60, RF-61, RF-62, RF-63, RF-131, RF-132, RF-140, RF-190, RF-191, RF-192, RF-193] (Depende de T100–T105)
-- [ ] T106: Crear umbral opcional por producto/sucursal y calcular stock bajo [RF-57, RF-58, RF-59]
-- [ ] T107: Aplicar permisos de edición y consulta de umbral/stock por rol y branch scope [RF-227, RF-228, RF-229]
-- [ ] T108: Preparar contrato y política de transferencia entre sucursales activas distintas del mismo tenant y scope, sin exponer aún el comando [RF-64, RF-285]
-- [ ] T109: Reunir origen/destino y bloquear todo el conjunto por `(branch_id, item_id)` sin agrupar por dirección; rechazar falta en cualquier línea [RF-65, RF-164, RF-165]
-- [ ] T110: Exponer transferencia confirmando cabecera, líneas, efectos TRANSFER_OUT/TRANSFER_IN, proyección, auditoría e idempotencia en una transacción indivisible [RF-64, RF-65, RF-66, RF-131, RF-132, RF-140, RF-166, RF-285] (Depende de T097 y T108–T109)
-- [ ] T111: Corregir transferencia únicamente con una transferencia compensatoria [RF-67]
-- [ ] T112: Reintentar deadlocks de inventario de forma acotada conservando idempotency key [RF-131, RF-164]
-- [ ] T113: Probar dos operaciones concurrentes sobre el mismo stock y transferencias A→B/B→A sin saldo negativo, parciales ni deadlock por orden inverso [RF-164, RF-165, RF-166]
+- [x] T105A: Exponer ajustes positivos, negativos y compensatorios con permisos por rol/motivo, RLS, branch scope, auditoría e idempotencia en la misma unidad transaccional [RF-40, RF-60, RF-61, RF-62, RF-63, RF-131, RF-132, RF-140, RF-190, RF-191, RF-192, RF-193] (Depende de T100–T105)
+- [x] T106: Crear umbral opcional por producto/sucursal y calcular stock bajo [RF-57, RF-58, RF-59]
+- [x] T107: Aplicar permisos de edición y consulta de umbral/stock por rol y branch scope [RF-227, RF-228, RF-229]
+- [x] T108: Preparar contrato y política de transferencia entre sucursales activas distintas del mismo tenant y scope, sin exponer aún el comando [RF-64, RF-285]
+- [x] T109: Reunir origen/destino y bloquear todo el conjunto por `(branch_id, item_id)` sin agrupar por dirección; rechazar falta en cualquier línea [RF-65, RF-164, RF-165]
+- [x] T110: Exponer transferencia confirmando cabecera, líneas, efectos TRANSFER_OUT/TRANSFER_IN, proyección, auditoría e idempotencia en una transacción indivisible [RF-64, RF-65, RF-66, RF-131, RF-132, RF-140, RF-166, RF-285] (Depende de T097 y T108–T109)
+- [x] T111: Corregir transferencia únicamente con una transferencia compensatoria [RF-67]
+- [x] T112: Reintentar deadlocks de inventario de forma acotada conservando idempotency key [RF-131, RF-164]
+- [x] T113: Probar dos operaciones concurrentes sobre el mismo stock y transferencias A→B/B→A sin saldo negativo, parciales ni deadlock por orden inverso [RF-164, RF-165, RF-166]
 - [ ] T114: Implementar verificador ledger/proyección que solo alerta divergencias [RF-62, RF-134]
 - [ ] T114A: Implementar UI de consulta de stock, mínimos y alertas por sucursal y rol [RF-57, RF-58, RF-59, RF-152, RF-153, RF-154, RF-227, RF-228, RF-229] (Depende de T106–T107 y T088–T092)
 - [ ] T114B: Implementar UI de ajustes y compensaciones con motivos/permisos, validación decimal y errores de stock [RF-40, RF-60, RF-61, RF-63, RF-133, RF-152, RF-153, RF-154, RF-190, RF-191, RF-192, RF-193] (Depende de T100–T107 y T088–T092)
