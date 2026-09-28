@@ -26,7 +26,7 @@ export class ExpenseCategoriesController {
 
   @Get('active')
   async listActive(@Req() request: ExpenseRequest) {
-    try { return { categories: (await this.categories.list(this.context(request))).filter((category) => category.status === 'ACTIVE') }; }
+    try { return { categories: await this.categories.listActiveForExpense(this.context(request)) }; }
     catch (error) { this.handleError(error); }
   }
 

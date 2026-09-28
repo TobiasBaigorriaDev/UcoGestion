@@ -53,6 +53,23 @@ export class ExpenseCategoryManagementService {
     });
   }
 
+  async listActiveForExpense(context: TenantTransactionContext): Promise<ExpenseCategoryResult[]> {
+    return this.transactions.read(context, async (client) => {
+      const membership = await client.query<{ role: string }>(`SELECT role FROM memberships
+        WHERE organization_id = $1 AND user_id = $2 AND status = 'ACTIVE' AND revoked_at IS NULL`,
+      [context.organizationId, context.userId]);
+      if (!['OWNER', 'ADMIN', 'CASHIER'].includes(membership.rows[0]?.role ?? '')) {
+        throw new ExpenseCategoryManagementError('EXPENSE_CATEGORY_MANAGEMENT_FORBIDDEN',
+          'No tenés permiso para seleccionar categorías de gasto.');
+      }
+      const result = await client.query<ExpenseCategoryResult>(`SELECT id, name, status,
+        version::integer AS version FROM expense_categories
+        WHERE organization_id = $1 AND status = 'ACTIVE' ORDER BY name, id`,
+      [context.organizationId]);
+      return result.rows;
+    });
+  }
+
   async create(
     context: TenantTransactionContext,
     input: ExpenseCategoryCreateInput,

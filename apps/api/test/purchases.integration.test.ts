@@ -472,4 +472,29 @@ describe('purchase foundation', () => {
     await expect(admin.query('UPDATE purchase_cancellations SET reason = $1 WHERE id = $2',
       ['alterado', cancelled.id])).rejects.toMatchObject({ code: '55000' });
   });
+
+  it('T173C limits historical purchase detail by tenant, branch and receiving employee', async () => {
+    const purchases = new PurchaseOperationsService(new TenantTransaction(runtime));
+    const input = { branchId: otherBranchId, supplierId, clientOperationId: randomUUID(),
+      lines: [{ itemId, quantity: '1', unitCost: '4.00' }] };
+    const branchPurchase = await purchases.confirmPending(context(), input, randomUUID());
+    expect((await purchases.detail(context(), branchPurchase.id)).total).toBe('4.00');
+    await expect(purchases.detail(context(otherOrganizationId), branchPurchase.id))
+      .rejects.toMatchObject({ status: 404 });
+    await expect(purchases.detail(context(organizationId, adminId), branchPurchase.id))
+      .rejects.toMatchObject({ status: 403 });
+    await expect(purchases.detail(context(organizationId, employeeId), branchPurchase.id))
+      .rejects.toMatchObject({ status: 403 });
+    await expect(purchases.detail(context(organizationId, cashierId), branchPurchase.id))
+      .rejects.toMatchObject({ status: 403 });
+
+    const employeePurchase = await purchases.confirmPending(context(organizationId, employeeId),
+      { ...input, branchId, clientOperationId: randomUUID() }, randomUUID());
+    expect((await purchases.detail(context(organizationId, employeeId), employeePurchase.id)).id)
+      .toBe(employeePurchase.id);
+    await expect(purchases.detail(context(organizationId, employeeId),
+      (await purchases.confirmPending(context(), { ...input, branchId,
+        clientOperationId: randomUUID() }, randomUUID())).id))
+      .rejects.toMatchObject({ status: 403 });
+  });
 });

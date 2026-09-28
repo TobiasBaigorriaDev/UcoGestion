@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { BadRequestException, Body, ConflictException, Controller, ForbiddenException,
-  Param, Post, Req, UnauthorizedException } from '@nestjs/common';
+  Get, Param, Post, Req, UnauthorizedException } from '@nestjs/common';
 import { z } from 'zod';
 
 import { IdempotencyKeyReusedError, IdempotencyReplayForbiddenError,
@@ -35,6 +35,12 @@ interface PurchasesRequest {
 @Controller('purchases')
 export class PurchasesController {
   constructor(private readonly purchases: PurchaseOperationsService) {}
+
+  @Get(':id')
+  async detail(@Req() request: PurchasesRequest, @Param('id') id: string) {
+    if (!z.uuid().safeParse(id).success) throw new BadRequestException();
+    return this.purchases.detail(this.context(request), id);
+  }
 
   @Post()
   async confirmPending(@Req() request: PurchasesRequest,

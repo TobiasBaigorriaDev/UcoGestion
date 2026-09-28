@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { BadRequestException, Body, ConflictException, Controller, ForbiddenException,
-  Post, Req, UnauthorizedException } from '@nestjs/common';
+  Get, Param, Post, Req, UnauthorizedException } from '@nestjs/common';
 import { z } from 'zod';
 
 import { IdempotencyKeyReusedError, IdempotencyReplayForbiddenError,
@@ -10,6 +10,7 @@ import { requireIdempotencyKey } from '../../core/validation/idempotency-key.js'
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
 import type { TenantTransactionContext } from '../../database/tenant-transaction.js';
 import { CashSessionDeviceError } from '../cash/index.js';
+import { ExpenseCancellationError } from './expense-cancellation-preparation.js';
 import { ExpenseCategorySelectionError } from './expense-category-selection.policy.js';
 import { ExpenseCashBalanceError, ExpenseOperationsService } from './expense-operations.service.js';
 import { ExpensePersistenceError } from './expense-persistence.js';
@@ -18,6 +19,8 @@ import { ExpenseAuthorizationError } from './expense-policy.js';
 const expenseSchema = z.strictObject({ branchId: z.uuid(), categoryId: z.uuid(),
   concept: z.string(), amount: z.string(), method: z.string(),
   cashSessionId: z.uuid().optional(), deviceId: z.uuid().optional() });
+const cancellationSchema = z.strictObject({ reason: z.string(),
+  cashSessionId: z.uuid().optional(), deviceId: z.uuid().optional() });
 interface ExpenseRequest { readonly headers: Record<string, string | string[] | undefined>;
   identity?: { readonly organizationId: string; readonly userId: string } }
 
@@ -25,11 +28,24 @@ interface ExpenseRequest { readonly headers: Record<string, string | string[] | 
 export class ExpensesController {
   constructor(private readonly operations: ExpenseOperationsService) {}
 
+  @Get(':id')
+  async detail(@Req() request: ExpenseRequest, @Param('id', new ZodValidationPipe(z.uuid())) id: string) {
+    return this.operations.detail(this.context(request), id);
+  }
+
   @Post()
   async create(@Req() request: ExpenseRequest,
     @Body(new ZodValidationPipe(expenseSchema)) body: z.infer<typeof expenseSchema>) {
     const key = requireIdempotencyKey(request.headers);
     try { return await this.operations.create(this.context(request), body, key); }
+    catch (error) { this.handleError(error); }
+  }
+
+  @Post(':id/cancellations')
+  async cancel(@Req() request: ExpenseRequest, @Param('id', new ZodValidationPipe(z.uuid())) id: string,
+    @Body(new ZodValidationPipe(cancellationSchema)) body: z.infer<typeof cancellationSchema>) {
+    const key = requireIdempotencyKey(request.headers);
+    try { return await this.operations.cancel(this.context(request), id, body, key); }
     catch (error) { this.handleError(error); }
   }
 
@@ -42,6 +58,12 @@ export class ExpensesController {
   }
 
   private handleError(error: unknown): never {
+    if (error instanceof ExpenseCancellationError) {
+      const body = { code: error.code, title: 'Anulación de gasto rechazada', detail: error.message };
+      if (error.code === 'EXPENSE_CANCELLATION_FORBIDDEN') throw new ForbiddenException(body);
+      if (error.code === 'EXPENSE_CANCELLATION_REASON_REQUIRED') throw new BadRequestException(body);
+      throw new ConflictException(body);
+    }
     if (error instanceof ExpenseAuthorizationError || error instanceof IdempotencyReplayForbiddenError) {
       throw new ForbiddenException({ code: error instanceof ExpenseAuthorizationError
         ? error.code : 'IDEMPOTENCY_REPLAY_FORBIDDEN', title: 'Gasto no autorizado', detail: error.message });

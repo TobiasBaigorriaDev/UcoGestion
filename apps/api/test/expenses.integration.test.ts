@@ -9,6 +9,7 @@ import { TenantTransaction } from '../src/database/tenant-transaction.js';
 import { ExpensePersistence } from '../src/modules/expenses/expense-persistence.js';
 import { ExpensePolicy } from '../src/modules/expenses/expense-policy.js';
 import { ExpenseOperationsService } from '../src/modules/expenses/expense-operations.service.js';
+import { ExpenseCancellationPreparation } from '../src/modules/expenses/expense-cancellation-preparation.js';
 
 describe('T166–T170 expense creation', () => {
   let container: StartedPostgreSqlContainer;
@@ -96,5 +97,97 @@ describe('T166–T170 expense creation', () => {
     await admin.query("UPDATE payment_method_settings SET enabled = false WHERE organization_id = $1 AND method = 'QR'", [org]);
     await expect(service.create(context(owner), { branchId: branch, categoryId: category, concept: 'QR', amount: '1.00', method: 'QR' }, randomUUID()))
       .rejects.toMatchObject({ code: 'EXPENSE_METHOD_NOT_AVAILABLE' });
+  });
+
+  it('T171 records one immutable cancellation with a reason without changing the expense', async () => {
+    const service = new ExpenseOperationsService(new TenantTransaction(runtime));
+    const expense = await service.create(context(), { branchId: branch, categoryId: category,
+      concept: 'Gasto original', amount: '3.50', method: 'TRANSFER' }, randomUUID());
+    const tx = new TenantTransaction(runtime), preparation = new ExpenseCancellationPreparation();
+    await expect(tx.runWithOptionalAudit(context(), async (client) => ({ result:
+      await preparation.prepare(client, context(), expense.id, '  ') })))
+      .rejects.toMatchObject({ code: 'EXPENSE_CANCELLATION_REASON_REQUIRED' });
+    const cancellation = await tx.runWithOptionalAudit(context(), async (client) => {
+      const prepared = await preparation.prepare(client, context(), expense.id, '  Error de carga  ');
+      await preparation.record(client, context(), prepared);
+      return { result: prepared };
+    });
+    expect(cancellation.reason).toBe('Error de carga');
+    expect((await admin.query('SELECT concept, amount::text FROM expenses WHERE id = $1', [expense.id])).rows[0])
+      .toMatchObject({ concept: 'Gasto original', amount: '3.50' });
+    await expect(tx.runWithOptionalAudit(context(), async (client) => ({ result:
+      await preparation.prepare(client, context(), expense.id, 'Otra vez') })))
+      .rejects.toMatchObject({ code: 'EXPENSE_ALREADY_CANCELLED' });
+    await expect(admin.query('DELETE FROM expense_cancellations WHERE id = $1', [cancellation.id]))
+      .rejects.toMatchObject({ code: '55000' });
+  });
+
+  it('T172 returns original cash in a valid session and device atomically', async () => {
+    const service = new ExpenseOperationsService(new TenantTransaction(runtime));
+    const expense = await service.create(context(owner), { branchId: branch, categoryId: category,
+      concept: 'Efectivo a revertir', amount: '4.00', method: 'CASH', cashSessionId: session, deviceId: device }, randomUUID());
+    const tx = new TenantTransaction(runtime), preparation = new ExpenseCancellationPreparation();
+    const input = { cashSessionId: session, deviceId: device };
+    await expect(tx.runWithOptionalAudit(context(), async (client) => ({ result:
+      await preparation.requireCashReturnSession(client, context(), expense.id,
+        { cashSessionId: session, deviceId: otherDevice }) }))).rejects.toThrow();
+    await tx.runWithOptionalAudit(context(), async (client) => {
+      const cash = await preparation.requireCashReturnSession(client, context(), expense.id, input);
+      const prepared = await preparation.prepare(client, context(), expense.id, 'Error');
+      await preparation.record(client, context(), prepared);
+      if (!cash) throw new Error('Expected cash return');
+      await preparation.recordCashReturn(client, context(), prepared, cash);
+      return { result: prepared.id };
+    });
+    expect((await admin.query('SELECT expected_cash::text FROM cash_sessions WHERE id = $1', [session])).rows[0]?.expected_cash).toBe('85.00');
+    expect((await admin.query("SELECT delta::text FROM cash_movements WHERE source_type = 'EXPENSE_CANCELLATION' AND source_id IN (SELECT id FROM expense_cancellations WHERE expense_id = $1)", [expense.id])).rows[0]?.delta).toBe('4.00');
+  });
+
+  it('T173 cancels noncash without touching cash and replays the audited result', async () => {
+    const service = new ExpenseOperationsService(new TenantTransaction(runtime));
+    const expense = await service.create(context(), { branchId: branch, categoryId: category,
+      concept: 'Duplicado', amount: '6.00', method: 'TRANSFER' }, randomUUID());
+    const before = (await admin.query('SELECT expected_cash::text FROM cash_sessions WHERE id = $1', [session])).rows[0]?.expected_cash;
+    const key = randomUUID();
+    const first = await service.cancel(context(), expense.id, { reason: 'Duplicado' }, key);
+    expect(await service.cancel(context(), expense.id, { reason: 'Duplicado' }, key)).toEqual(first);
+    expect(first.status).toBe('CANCELLED');
+    expect((await admin.query('SELECT expected_cash::text FROM cash_sessions WHERE id = $1', [session])).rows[0]?.expected_cash).toBe(before);
+    expect((await admin.query('SELECT effect_kind FROM expense_cancellations WHERE expense_id = $1', [expense.id])).rows[0]?.effect_kind).toBe('NONCASH_REVERSAL');
+    expect((await admin.query("SELECT count(*)::integer AS n FROM audit_events WHERE entity_type = 'expense' AND action = 'expense.cancelled' AND entity_id = $1", [expense.id])).rows[0]?.n).toBe(1);
+    await expect(service.cancel(context(), expense.id, { reason: 'Otro' }, randomUUID()))
+      .rejects.toMatchObject({ code: 'EXPENSE_ALREADY_CANCELLED' });
+    await expect(service.cancel(context(cashier), expense.id, { reason: 'Otro' }, randomUUID()))
+      .rejects.toMatchObject({ code: 'EXPENSE_CANCELLATION_FORBIDDEN' });
+    await expect(service.cancel(context(owner, foreignOrg), expense.id, { reason: 'Ajeno' }, randomUUID()))
+      .rejects.toMatchObject({ code: 'EXPENSE_CANCELLATION_NOT_AVAILABLE' });
+    expect(await new TenantTransaction(runtime).read(context(owner, foreignOrg), async (client) =>
+      (await client.query('SELECT id FROM expense_cancellations WHERE expense_id = $1', [expense.id])).rowCount)).toBe(0);
+  });
+
+  it('T173 rolls back cash cancellation on invalid device and commits one compensation', async () => {
+    const service = new ExpenseOperationsService(new TenantTransaction(runtime));
+    const expense = await service.create(context(), { branchId: branch, categoryId: category,
+      concept: 'Efectivo', amount: '2.00', method: 'CASH', cashSessionId: session, deviceId: device }, randomUUID());
+    const expected = (await admin.query('SELECT expected_cash::text FROM cash_sessions WHERE id = $1', [session])).rows[0]?.expected_cash;
+    await expect(service.cancel(context(), expense.id, { reason: 'Error', cashSessionId: session,
+      deviceId: otherDevice }, randomUUID())).rejects.toThrow();
+    expect((await admin.query('SELECT count(*)::integer AS n FROM expense_cancellations WHERE expense_id = $1', [expense.id])).rows[0]?.n).toBe(0);
+    expect((await admin.query('SELECT expected_cash::text FROM cash_sessions WHERE id = $1', [session])).rows[0]?.expected_cash).toBe(expected);
+    const first = await service.cancel(context(), expense.id, { reason: 'Error', cashSessionId: session,
+      deviceId: device }, randomUUID());
+    expect(first.status).toBe('CANCELLED');
+    expect((await admin.query('SELECT expected_cash::text FROM cash_sessions WHERE id = $1', [session])).rows[0]?.expected_cash)
+      .not.toBe(expected);
+    expect((await admin.query("SELECT count(*)::integer AS n FROM cash_movements WHERE source_type = 'EXPENSE_CANCELLATION' AND source_id = $1", [first.id])).rows[0]?.n).toBe(1);
+  });
+
+  it('T173 rejects ADMIN cancellation outside assigned branch', async () => {
+    const service = new ExpenseOperationsService(new TenantTransaction(runtime));
+    const expense = await service.create(context(owner), { branchId: otherBranch,
+      categoryId: category, concept: 'Otra sucursal', amount: '1.00', method: 'TRANSFER' }, randomUUID());
+    await expect(service.cancel(context(administrator), expense.id, { reason: 'Fuera de alcance' }, randomUUID()))
+      .rejects.toMatchObject({ code: 'EXPENSE_CANCELLATION_FORBIDDEN' });
+    expect((await admin.query('SELECT count(*)::integer AS n FROM expense_cancellations WHERE expense_id = $1', [expense.id])).rows[0]?.n).toBe(0);
   });
 });

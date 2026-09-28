@@ -81,6 +81,8 @@
     { "idx": 76, "version": "7", "when": 76, "tag": "0076_purchase_cancellations", "breakpoints": true },
     { "idx": 77, "version": "7", "when": 77, "tag": "0077_purchase_stock_reversal", "breakpoints": true },
     { "idx": 78, "version": "7", "when": 78, "tag": "0078_purchase_payment_reversals", "breakpoints": true },
-    { "idx": 79, "version": "7", "when": 79, "tag": "0079_expenses", "breakpoints": true }
+    { "idx": 79, "version": "7", "when": 79, "tag": "0079_expenses", "breakpoints": true },
+    { "idx": 80, "version": "7", "when": 80, "tag": "0080_expense_cancellations", "breakpoints": true },
+    { "idx": 81, "version": "7", "when": 81, "tag": "0081_audit_dashboard_read_indexes", "breakpoints": true }
   ]
 }

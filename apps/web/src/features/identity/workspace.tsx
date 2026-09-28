@@ -27,6 +27,8 @@ import { InventoryAdjustments } from '../inventory/inventory-adjustments';
 import { InventoryTransfers } from '../inventory/inventory-transfers';
 import { PosOnline } from '../sales/pos-online';
 import { SaleLookup } from '../sales/sale-lookup';
+import { PurchaseWorkspace } from '../purchases/purchase-workspace';
+import { ExpensePage } from '../expenses/expense-page';
 
 type WorkspacePage =
   | 'home'
@@ -45,7 +47,9 @@ type WorkspacePage =
   | 'inventory-adjustments'
   | 'inventory-transfers'
   | 'pos'
-  | 'sales';
+  | 'sales'
+  | 'purchases'
+  | 'expenses';
 
 export function Workspace({ page = 'home' }: { page?: WorkspacePage }) {
   return <RemoteProvider><WorkspaceContent page={page} /></RemoteProvider>;
@@ -135,6 +139,8 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
         { href: '/workspace/pos', label: 'POS' },
         { href: '/workspace/sales', label: 'Ventas' },
       ]),
+      ...(current?.role === 'CASHIER' ? [] : [{ href: '/workspace/purchases', label: 'Compras' }]),
+      ...(current?.role === 'EMPLOYEE' ? [] : [{ href: '/workspace/expenses', label: 'Gastos' }]),
       { href: '/workspace/inventory', label: 'Inventario' },
       ...(current?.role === 'CASHIER' ? [] : [{ href: '/workspace/inventory/adjustments', label: 'Ajustes' }]),
       ...(current?.role === 'CASHIER' ? [] : [{ href: '/workspace/inventory/transfers', label: 'Transferencias' }]),
@@ -154,7 +160,17 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
     currentPath={page === 'home' ? '/workspace' : page === 'catalog-categories' || page === 'catalog-items' ? '/workspace/catalog' : page === 'inventory-adjustments' ? '/workspace/inventory/adjustments' : page === 'inventory-transfers' ? '/workspace/inventory/transfers' : `/workspace/${page}`}>
       {switchError ? <ErrorSummary error={switchError} /> : null}
       {branches.error ? <><ErrorSummary error={branches.error instanceof ApiProblemError ? branches.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar las sucursales.' })} /><button type="button" onClick={() => void branches.refetch()}>Reintentar sucursales</button></> : null}
-      {page === 'sales' ? current?.role === 'EMPLOYEE'
+      {page === 'expenses' ? current?.role === 'EMPLOYEE'
+        ? <p role="alert">No tenés permiso para registrar gastos.</p>
+        : !activeBranchId || !current ? <p>Seleccioná una sucursal para registrar gastos.</p>
+        : <ExpensePage key={`${activeId}:${activeBranchId}`} organizationId={activeId}
+          branchId={activeBranchId} role={current.role} />
+      : page === 'purchases' ? current?.role === 'CASHIER'
+        ? <p role="alert">No tenés permiso para operar compras.</p>
+        : !activeBranchId || !current ? <p>Seleccioná una sucursal para registrar compras.</p>
+        : <PurchaseWorkspace key={`${activeId}:${activeBranchId}`} organizationId={activeId}
+          branchId={activeBranchId} role={current.role} />
+      : page === 'sales' ? current?.role === 'EMPLOYEE'
         ? <p role="alert">No tenés permiso para consultar ventas.</p>
         : !activeBranchId || !current
         ? <p>Seleccioná una sucursal para consultar ventas.</p>

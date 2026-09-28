@@ -161,4 +161,21 @@ describe('T157 purchase HTTP confirmation', () => {
       .send({ method: 'TRANSFER', amount: '2.00' }).expect(400);
     expect(pay.body.code).toBe('PURCHASE_PAYMENT_INVALID');
   });
+
+  it('T173C returns historical purchase state and rejects cashier reads', async () => {
+    const owner = await identity(ownerEmail);
+    const input = { branchId, supplierId, clientOperationId: randomUUID(),
+      lines: [{ itemId, quantity: '1', unitCost: '3.00' }] };
+    await request(app.getHttpServer()).post('/api/v1/purchases')
+      .set('Origin', 'http://localhost:3000').set('Cookie', owner.cookie)
+      .set('X-Organization-Id', organizationId).set('X-CSRF-Token', owner.csrf)
+      .set('Idempotency-Key', randomUUID()).send(input).expect(201);
+    const get = (cookie: string) => request(app.getHttpServer())
+      .get(`/api/v1/purchases/${input.clientOperationId}`)
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId);
+    expect((await get(owner.cookie).expect(200)).body).toMatchObject({ id: input.clientOperationId,
+      status: 'PENDING_PAYMENT', total: '3.00', items: [{ itemName: 'Producto', unitCost: '3.00' }] });
+    const cashier = await identity(cashierEmail);
+    await get(cashier.cookie).expect(403);
+  });
 });

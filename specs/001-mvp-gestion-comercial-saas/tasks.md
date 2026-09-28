@@ -222,26 +222,26 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T168: Autorizar gasto CASHIER solo en efectivo, sesión propia y dispositivo asociado [RF-209]
 - [x] T169: Rechazar cualquier gasto iniciado por EMPLOYEE [RF-210]
 - [x] T170: Exponer creación de gasto integrando permisos, categoría, medio, sesión/dispositivo, caja cuando corresponda, auditoría e idempotencia en una transacción [RF-52, RF-110, RF-111, RF-112, RF-131, RF-132, RF-140, RF-207, RF-208, RF-209, RF-210, RF-230, RF-231, RF-242, RF-243, RF-252] (Depende de T166–T169)
-- [ ] T171: Preparar anulación única con motivo y transición append-only sin alterar el gasto original [RF-261, RF-264]
-- [ ] T172: Preparar compensación efectiva con ingreso atómico en sesión/dispositivo válidos [RF-262]
-- [ ] T173: Exponer anulación de gasto con reversión administrativa no efectiva o ingreso efectivo bajo lock, auditoría e idempotencia atómicas [RF-131, RF-132, RF-140, RF-230, RF-231, RF-261, RF-262, RF-263, RF-264] (Depende de T171–T172)
-- [ ] T173A: Implementar UI de alta de compra OWNER/ADMIN y recepción EMPLOYEE PENDING_PAYMENT con costos contextuales y total cero [RF-100, RF-102, RF-133, RF-152, RF-153, RF-154, RF-185, RF-186, RF-187, RF-188, RF-225, RF-257] (Depende de T153–T159 y T088–T092)
-- [ ] T173C: Implementar UI de pago y anulación total de compras con medio/sesión válida, total exacto y estados históricos [RF-103, RF-104, RF-105, RF-106, RF-107, RF-108, RF-109, RF-133, RF-152, RF-153, RF-154, RF-188, RF-258, RF-259] (Depende de T160–T165, T173A y T088–T092)
-- [ ] T173B: Implementar UI de gastos por rol con selección válida de categoría/medio/sesión, anulación y errores accionables [RF-52, RF-110, RF-111, RF-112, RF-133, RF-152, RF-153, RF-154, RF-207, RF-208, RF-209, RF-210, RF-261, RF-264] (Depende de T166–T173 y T088–T092)
+- [x] T171: Preparar anulación única con motivo y transición append-only sin alterar el gasto original [RF-261, RF-264]
+- [x] T172: Preparar compensación efectiva con ingreso atómico en sesión/dispositivo válidos [RF-262]
+- [x] T173: Exponer anulación de gasto con reversión administrativa no efectiva o ingreso efectivo bajo lock, auditoría e idempotencia atómicas [RF-131, RF-132, RF-140, RF-230, RF-231, RF-261, RF-262, RF-263, RF-264] (Depende de T171–T172)
+- [x] T173A: Implementar UI de alta de compra OWNER/ADMIN y recepción EMPLOYEE PENDING_PAYMENT con costos contextuales y total cero [RF-100, RF-102, RF-133, RF-152, RF-153, RF-154, RF-185, RF-186, RF-187, RF-188, RF-225, RF-257] (Depende de T153–T159 y T088–T092)
+- [x] T173C: Implementar UI de pago y anulación total de compras con medio/sesión válida, total exacto y estados históricos [RF-103, RF-104, RF-105, RF-106, RF-107, RF-108, RF-109, RF-133, RF-152, RF-153, RF-154, RF-188, RF-258, RF-259] (Depende de T160–T165, T173A y T088–T092)
+- [x] T173B: Implementar UI de gastos por rol con selección válida de categoría/medio/sesión, anulación y errores accionables [RF-52, RF-110, RF-111, RF-112, RF-133, RF-152, RF-153, RF-154, RF-207, RF-208, RF-209, RF-210, RF-261, RF-264] (Depende de T166–T173 y T088–T092)
 
 ## 7. Auditoría, dashboard y reportes
 
-- [ ] T174: Consultar auditoría completa como OWNER y denegar el módulo a CASHIER/EMPLOYEE [RF-282]
-- [ ] T175: Limitar auditoría ADMIN a recursos globales administrables y branches asignadas [RF-282]
-- [ ] T176: Construir dashboard OWNER/ADMIN con filtros y métricas comerciales autorizadas [RF-142]
-- [ ] T177: Calcular resultado operativo como ventas netas menos gastos netos, sin margen [RF-143, RF-226, RF-286]
-- [ ] T178: Limitar dashboard CASHIER a sus ventas/sesiones y EMPLOYEE a catálogo/inventario [RF-144, RF-145]
-- [ ] T179: Crear dataset read-only de ventas con estado histórico y filtros autorizados [RF-146, RF-286, RF-287]
-- [ ] T179A: Crear dataset read-only de inventario actual y stock bajo [RF-58, RF-59, RF-146]
-- [ ] T179B: Crear dataset read-only de movimientos de inventario [RF-146]
+- [x] T174: Consultar auditoría completa como OWNER y denegar el módulo a CASHIER/EMPLOYEE [RF-282]
+- [x] T175: Limitar auditoría ADMIN a recursos globales administrables y branches asignadas [RF-282]
+- [x] T176: Construir dashboard OWNER/ADMIN con filtros y métricas comerciales autorizadas [RF-142]
+- [x] T177: Calcular resultado operativo como ventas netas menos gastos netos, sin margen [RF-143, RF-226, RF-286]
+- [x] T178: Limitar dashboard CASHIER a sus ventas/sesiones y EMPLOYEE a catálogo/inventario [RF-144, RF-145]
+- [x] T179: Crear dataset read-only de ventas con estado histórico y filtros autorizados [RF-146, RF-286, RF-287]
+- [x] T179A: Crear dataset read-only de inventario actual y stock bajo [RF-58, RF-59, RF-146]
+- [x] T179B: Crear dataset read-only de movimientos de inventario [RF-146]
 - [ ] T179C: Crear dataset read-only de caja y diferencias [RF-146]
-- [ ] T179D: Crear dataset read-only de compras con estado histórico [RF-146, RF-286]
-- [ ] T179E: Crear dataset read-only de gastos con estado histórico [RF-146, RF-286]
+- [x] T179D: Crear dataset read-only de compras con estado histórico [RF-146, RF-286]
+- [x] T179E: Crear dataset read-only de gastos con estado histórico [RF-146, RF-286]
 - [ ] T180: Aplicar y probar scope OWNER/ADMIN/CASHIER/EMPLOYEE a todos los datasets, incluyendo negativos cross-tenant y entre sucursales [RF-02, RF-144, RF-145, RF-148, RF-149, RF-150, RF-285] (Depende de T179–T179E)
 - [ ] T181: Interpretar períodos en timezone tenant y excluir anulados de netos sin ocultarlos [RF-286, RF-287]
 - [ ] T182: Exportar CSV filtrado neutralizando celdas ejecutables [RF-147, RF-288]

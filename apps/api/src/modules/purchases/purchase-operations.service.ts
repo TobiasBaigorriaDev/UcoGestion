@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { validatePositiveMoney } from '@uconext/shared';
 import type { PoolClient } from 'pg';
 
@@ -52,6 +53,54 @@ export class PurchaseOperationsService {
   private readonly sessions = new CashSessionDevicePolicy();
   private readonly cancellations = new PurchaseCancellationPreparation();
   constructor(private readonly transactions: TenantTransaction) {}
+
+  async detail(context: TenantTransactionContext, purchaseId: string) {
+    return this.transactions.read(context, async (client) => {
+      const found = await client.query<{ id: string; branch_id: string; actor_user_id: string;
+        supplier_name: string; total: string; currency_code: string;
+        confirmation_status: 'PAID' | 'PENDING_PAYMENT'; confirmed_at: Date }>(
+        `SELECT id, branch_id, actor_user_id, supplier_snapshot->>'name' AS supplier_name,
+          total::text AS total, currency_code, confirmation_status, confirmed_at
+         FROM purchases WHERE organization_id = $1 AND id = $2`,
+        [context.organizationId, purchaseId]);
+      const purchase = found.rows[0];
+      if (!purchase) throw new NotFoundException({ code: 'PURCHASE_NOT_AVAILABLE',
+        title: 'Compra no disponible', detail: 'No encontramos la compra solicitada.' });
+      const access = await client.query<{ role: string; allowed: boolean }>(`SELECT m.role,
+        (m.role = 'OWNER' OR EXISTS (SELECT 1 FROM effective_membership_branch_scope s
+          WHERE s.organization_id = m.organization_id AND s.membership_id = m.id
+            AND s.branch_id = $3)) AS allowed FROM memberships m
+        WHERE m.organization_id = $1 AND m.user_id = $2 AND m.status = 'ACTIVE'
+          AND m.revoked_at IS NULL`, [context.organizationId, context.userId, purchase.branch_id]);
+      const actor = access.rows[0];
+      if (!actor?.allowed || !['OWNER', 'ADMIN', 'EMPLOYEE'].includes(actor.role)
+        || actor.role === 'EMPLOYEE' && purchase.actor_user_id !== context.userId) {
+        throw new ForbiddenException({ code: 'PURCHASE_READ_FORBIDDEN',
+          title: 'Compra no disponible', detail: 'No tenés acceso a esta compra.' });
+      }
+      const items = await client.query<{ itemName: string; quantity: string; unitCost: string;
+        lineTotal: string }>(`SELECT item_name AS "itemName", quantity::text AS quantity,
+          unit_cost::text AS "unitCost", line_total::text AS "lineTotal"
+        FROM purchase_items WHERE organization_id = $1 AND purchase_id = $2 ORDER BY id`,
+      [context.organizationId, purchaseId]);
+      const payment = await client.query<{ method: string; amount: string }>(`SELECT method,
+        amount::text AS amount FROM purchase_payments
+        WHERE organization_id = $1 AND purchase_id = $2`, [context.organizationId, purchaseId]);
+      const cancellation = await client.query<{ reason: string; cancelledAt: Date }>(`SELECT reason,
+        cancelled_at AS "cancelledAt" FROM purchase_cancellations
+        WHERE organization_id = $1 AND purchase_id = $2`, [context.organizationId, purchaseId]);
+      const historical = cancellation.rows[0];
+      const paid = payment.rows[0];
+      return { id: purchase.id, branchId: purchase.branch_id,
+        status: historical ? 'CANCELLED' as const : paid || purchase.confirmation_status === 'PAID'
+          ? 'PAID' as const : 'PENDING_PAYMENT' as const,
+        total: purchase.total, currency: purchase.currency_code, supplierName: purchase.supplier_name,
+        confirmedAt: purchase.confirmed_at.toISOString(), items: items.rows,
+        payment: paid ?? null,
+        cancellation: historical ? { reason: historical.reason,
+          cancelledAt: historical.cancelledAt.toISOString() } : null };
+    });
+  }
 
   async confirmPending(context: TenantTransactionContext, input: ConfirmPendingPurchaseInput,
     key: string): Promise<ConfirmPendingPurchaseResult> {
