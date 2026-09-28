@@ -9,6 +9,7 @@ import {
 describe('payment rules', () => {
   it('requires strictly positive payments whose exact sum matches a positive sale total', () => {
     expect(arePaymentsValidForSale('10.00', ['4.00', '6.00'])).toBe(true);
+    expect(arePaymentsValidForSale('10.00', [])).toBe(false);
     expect(arePaymentsValidForSale('10.00', ['10.01'])).toBe(false);
     expect(arePaymentsValidForSale('10.00', ['10.00', '0.00'])).toBe(false);
   });

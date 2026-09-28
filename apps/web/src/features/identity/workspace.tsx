@@ -25,6 +25,8 @@ import { loadStocks } from '../inventory/inventory-api';
 import { loadAdjustments, loadTransfers } from '../inventory/inventory-api';
 import { InventoryAdjustments } from '../inventory/inventory-adjustments';
 import { InventoryTransfers } from '../inventory/inventory-transfers';
+import { PosOnline } from '../sales/pos-online';
+import { SaleLookup } from '../sales/sale-lookup';
 
 type WorkspacePage =
   | 'home'
@@ -41,7 +43,9 @@ type WorkspacePage =
   | 'payment-methods'
   | 'inventory'
   | 'inventory-adjustments'
-  | 'inventory-transfers';
+  | 'inventory-transfers'
+  | 'pos'
+  | 'sales';
 
 export function Workspace({ page = 'home' }: { page?: WorkspacePage }) {
   return <RemoteProvider><WorkspaceContent page={page} /></RemoteProvider>;
@@ -61,7 +65,7 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
   });
   const users = useQuery({ queryKey: ['user-management', activeId], queryFn: () => loadUserManagement(activeId ?? ''), enabled: page === 'users' && !!activeId });
   const branches = useQuery({ queryKey: ['branches', activeId], queryFn: () => loadBranches(activeId ?? ''), enabled: !!activeId });
-  const catalog = useQuery({ queryKey: ['catalog', activeId], queryFn: () => loadCatalog(activeId ?? ''), enabled: page === 'catalog' && !!activeId });
+  const catalog = useQuery({ queryKey: ['catalog', activeId], queryFn: () => loadCatalog(activeId ?? ''), enabled: (page === 'catalog' || page === 'pos') && !!activeId });
   const managedCategories = useQuery({ queryKey: ['managed-categories', activeId], queryFn: () => loadManagedCategories(activeId ?? ''), enabled: page === 'catalog-categories' && !!activeId });
   const expenseCategories = useQuery({ queryKey: ['expense-categories', activeId], queryFn: () => loadExpenseCategories(activeId ?? ''), enabled: page === 'expense-categories' && !!activeId });
   const managedItems = useQuery({ queryKey: ['managed-items', activeId], queryFn: () => loadManagedItems(activeId ?? ''), enabled: page === 'catalog-items' && !!activeId });
@@ -127,6 +131,10 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
     navigation={[
       { href: '/workspace', label: 'Inicio' },
       { href: '/workspace/catalog', label: 'Catálogo' },
+      ...(current?.role === 'EMPLOYEE' ? [] : [
+        { href: '/workspace/pos', label: 'POS' },
+        { href: '/workspace/sales', label: 'Ventas' },
+      ]),
       { href: '/workspace/inventory', label: 'Inventario' },
       ...(current?.role === 'CASHIER' ? [] : [{ href: '/workspace/inventory/adjustments', label: 'Ajustes' }]),
       ...(current?.role === 'CASHIER' ? [] : [{ href: '/workspace/inventory/transfers', label: 'Transferencias' }]),
@@ -146,7 +154,22 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
     currentPath={page === 'home' ? '/workspace' : page === 'catalog-categories' || page === 'catalog-items' ? '/workspace/catalog' : page === 'inventory-adjustments' ? '/workspace/inventory/adjustments' : page === 'inventory-transfers' ? '/workspace/inventory/transfers' : `/workspace/${page}`}>
       {switchError ? <ErrorSummary error={switchError} /> : null}
       {branches.error ? <><ErrorSummary error={branches.error instanceof ApiProblemError ? branches.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar las sucursales.' })} /><button type="button" onClick={() => void branches.refetch()}>Reintentar sucursales</button></> : null}
-      {page === 'catalog-items' ? current?.role !== 'OWNER' && current?.role !== 'ADMIN'
+      {page === 'sales' ? current?.role === 'EMPLOYEE'
+        ? <p role="alert">No tenés permiso para consultar ventas.</p>
+        : !activeBranchId || !current
+        ? <p>Seleccioná una sucursal para consultar ventas.</p>
+        : <SaleLookup key={`${activeId}:${activeBranchId}`} organizationId={activeId}
+          branchId={activeBranchId} role={current.role} />
+      : page === 'pos' ? current?.role === 'EMPLOYEE'
+        ? <p role="alert">No tenés permiso para confirmar ventas.</p>
+        : !activeBranchId
+        ? <p>Seleccioná una sucursal para vender.</p>
+        : catalog.error
+          ? <><ErrorSummary error={catalog.error instanceof ApiProblemError ? catalog.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar el catálogo.' })} /><button type="button" onClick={() => void catalog.refetch()}>Reintentar</button></>
+          : catalog.data && current ? <PosOnline key={`${activeId}:${activeBranchId}`} organizationId={activeId}
+            branchId={activeBranchId} role={current.role} items={catalog.data.items} />
+            : <p role="status">Cargando productos…</p>
+      : page === 'catalog-items' ? current?.role !== 'OWNER' && current?.role !== 'ADMIN'
         ? <p role="alert">No tenés permiso para administrar ítems.</p>
         : managedItems.error
           ? <><ErrorSummary error={managedItems.error instanceof ApiProblemError ? managedItems.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar los ítems.' })} /><button type="button" onClick={() => void managedItems.refetch()}>Reintentar</button></>

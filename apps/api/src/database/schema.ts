@@ -567,6 +567,7 @@ export const cashMovements = pgTable('cash_movements', {
   sourceType: text('source_type').notNull(),
   sourceId: uuid('source_id').notNull(),
   effectKind: text('effect_kind').notNull(),
+  reason: text('reason'),
   occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   unique('cash_movements_source_effect_key')
@@ -819,6 +820,28 @@ export const expenseCategoryHistoryReferences = pgTable(
   ],
 );
 
+export const expenses = pgTable('expenses', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+  branchId: uuid('branch_id').notNull(),
+  expenseCategoryId: uuid('expense_category_id').notNull(),
+  actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+  concept: text().notNull(),
+  amount: numeric({ precision: 20, scale: 2 }).notNull(),
+  method: text().notNull(),
+  currencyCode: text('currency_code').notNull(),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('expenses_tenant_id_key').on(table.organizationId, table.id),
+  foreignKey({ columns: [table.organizationId, table.branchId],
+    foreignColumns: [branches.organizationId, branches.id], name: 'expenses_branch_tenant_fk' }),
+  foreignKey({ columns: [table.organizationId, table.expenseCategoryId],
+    foreignColumns: [expenseCategories.organizationId, expenseCategories.id], name: 'expenses_category_tenant_fk' }),
+  foreignKey({ columns: [table.organizationId, table.method],
+    foreignColumns: [paymentMethodSettings.organizationId, paymentMethodSettings.method],
+    name: 'expenses_method_tenant_fk' }),
+]);
+
 
 export const idempotencyRecords = pgTable(
   'idempotency_records',
@@ -980,3 +1003,221 @@ export const supplierHistoryReferences = pgTable(
     ),
   ],
 );
+
+export const purchases = pgTable('purchases', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+  branchId: uuid('branch_id').notNull(),
+  supplierId: uuid('supplier_id').notNull(),
+  actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+  clientOperationId: uuid('client_operation_id').notNull(),
+  confirmationStatus: text('confirmation_status').notNull(),
+  currencyCode: text('currency_code').notNull(),
+  total: numeric({ precision: 20, scale: 2 }).notNull(),
+  supplierSnapshot: jsonb('supplier_snapshot').notNull(),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('purchases_tenant_id_key').on(table.organizationId, table.id),
+  unique('purchases_tenant_branch_id_key').on(table.organizationId, table.branchId, table.id),
+  unique('purchases_operation_key').on(table.organizationId, table.clientOperationId),
+  foreignKey({ columns: [table.organizationId, table.branchId],
+    foreignColumns: [branches.organizationId, branches.id], name: 'purchases_branch_tenant_fk' }),
+  foreignKey({ columns: [table.organizationId, table.supplierId],
+    foreignColumns: [suppliers.organizationId, suppliers.id], name: 'purchases_supplier_tenant_fk' }),
+]);
+
+export const purchaseItems = pgTable('purchase_items', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  purchaseId: uuid('purchase_id').notNull(),
+  itemId: uuid('item_id').notNull(),
+  itemName: text('item_name').notNull(),
+  itemType: text('item_type').notNull(),
+  sku: text(),
+  barcode: text(),
+  unit: text().notNull(),
+  categoryId: uuid('category_id'),
+  categoryName: text('category_name'),
+  trackInventory: boolean('track_inventory').notNull(),
+  quantity: numeric({ precision: 20, scale: 3 }).notNull(),
+  unitCost: numeric('unit_cost', { precision: 20, scale: 2 }).notNull(),
+  lineTotal: numeric('line_total', { precision: 20, scale: 2 }).notNull(),
+  currencyCode: text('currency_code').notNull(),
+}, (table) => [
+  foreignKey({ columns: [table.organizationId, table.purchaseId],
+    foreignColumns: [purchases.organizationId, purchases.id], name: 'purchase_items_purchase_tenant_fk' }),
+  foreignKey({ columns: [table.organizationId, table.itemId],
+    foreignColumns: [catalogItems.organizationId, catalogItems.id], name: 'purchase_items_item_tenant_fk' }),
+]);
+
+export const purchasePayments = pgTable('purchase_payments', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  purchaseId: uuid('purchase_id').notNull(),
+  method: text().notNull(),
+  amount: numeric({ precision: 20, scale: 2 }).notNull(),
+  currencyCode: text('currency_code').notNull(),
+  paidAt: timestamp('paid_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('purchase_payments_one_per_purchase').on(table.organizationId, table.purchaseId),
+  unique('purchase_payments_historical_reversal_key').on(table.organizationId, table.purchaseId,
+    table.id, table.method, table.amount, table.currencyCode),
+  foreignKey({ columns: [table.organizationId, table.purchaseId],
+    foreignColumns: [purchases.organizationId, purchases.id], name: 'purchase_payments_purchase_tenant_fk' }),
+  foreignKey({ columns: [table.organizationId, table.method],
+    foreignColumns: [paymentMethodSettings.organizationId, paymentMethodSettings.method],
+    name: 'purchase_payments_method_tenant_fk' }),
+]);
+
+export const purchaseCancellations = pgTable('purchase_cancellations', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  purchaseId: uuid('purchase_id').notNull(),
+  branchId: uuid('branch_id').notNull(),
+  actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+  reason: text().notNull(),
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('purchase_cancellations_purchase_unique').on(table.organizationId, table.purchaseId),
+  unique('purchase_cancellations_tenant_purchase_id_key').on(table.organizationId,
+    table.purchaseId, table.id),
+  foreignKey({ columns: [table.organizationId, table.branchId, table.purchaseId],
+    foreignColumns: [purchases.organizationId, purchases.branchId, purchases.id],
+    name: 'purchase_cancellations_purchase_fk' }),
+]);
+
+export const purchasePaymentReversals = pgTable('purchase_payment_reversals', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  purchaseId: uuid('purchase_id').notNull(),
+  cancellationId: uuid('cancellation_id').notNull(),
+  purchasePaymentId: uuid('purchase_payment_id').notNull(),
+  method: text().notNull(),
+  amount: numeric({ precision: 20, scale: 2 }).notNull(),
+  currencyCode: text('currency_code').notNull(),
+  reversedAt: timestamp('reversed_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('purchase_payment_reversals_payment_unique').on(table.organizationId, table.purchasePaymentId),
+  foreignKey({ columns: [table.organizationId, table.purchaseId, table.cancellationId],
+    foreignColumns: [purchaseCancellations.organizationId, purchaseCancellations.purchaseId,
+      purchaseCancellations.id], name: 'purchase_payment_reversals_cancellation_fk' }),
+  foreignKey({ columns: [table.organizationId, table.purchaseId, table.purchasePaymentId,
+    table.method, table.amount, table.currencyCode],
+    foreignColumns: [purchasePayments.organizationId, purchasePayments.purchaseId,
+      purchasePayments.id, purchasePayments.method, purchasePayments.amount,
+      purchasePayments.currencyCode], name: 'purchase_payment_reversals_payment_fk' }),
+]);
+
+export const sales = pgTable('sales', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+  branchId: uuid('branch_id').notNull(),
+  cashSessionId: uuid('cash_session_id').notNull(),
+  deviceId: uuid('device_id').notNull(),
+  customerId: uuid('customer_id'),
+  actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+  sessionOwnerUserId: uuid('session_owner_user_id').notNull().references(() => users.id),
+  clientOperationId: uuid('client_operation_id').notNull(),
+  status: text().notNull().default('CONFIRMED'),
+  currencyCode: text('currency_code').notNull(),
+  subtotal: numeric({ precision: 20, scale: 2 }).notNull(),
+  discount: numeric({ precision: 20, scale: 2 }).notNull(),
+  total: numeric({ precision: 20, scale: 2 }).notNull(),
+  receiptSnapshot: jsonb('receipt_snapshot').notNull(),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('sales_organization_id_id_key').on(table.organizationId, table.id),
+  unique('sales_tenant_branch_id_unique').on(table.organizationId, table.branchId, table.id),
+  unique('sales_organization_client_operation_key').on(table.organizationId, table.clientOperationId),
+  foreignKey({ columns: [table.organizationId, table.branchId],
+    foreignColumns: [branches.organizationId, branches.id], name: 'sales_branch_tenant_fk' }),
+  foreignKey({ columns: [table.organizationId, table.branchId, table.cashSessionId, table.deviceId],
+    foreignColumns: [cashSessions.organizationId, cashSessions.branchId, cashSessions.id, cashSessions.deviceId],
+    name: 'sales_session_device_fk' }),
+  foreignKey({ columns: [table.organizationId, table.customerId],
+    foreignColumns: [customers.organizationId, customers.id], name: 'sales_customer_tenant_fk' }),
+]);
+
+export const saleItems = pgTable('sale_items', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  saleId: uuid('sale_id').notNull(),
+  itemId: uuid('item_id').notNull(),
+  itemName: text('item_name').notNull(),
+  itemType: text('item_type').notNull(),
+  sku: text(),
+  barcode: text(),
+  unit: text().notNull(),
+  categoryId: uuid('category_id'),
+  categoryName: text('category_name'),
+  quantity: numeric({ precision: 20, scale: 3 }).notNull(),
+  unitPrice: numeric('unit_price', { precision: 20, scale: 2 }).notNull(),
+  priceVersion: bigint('price_version', { mode: 'number' }).notNull(),
+  lineTotal: numeric('line_total', { precision: 20, scale: 2 }).notNull(),
+  currencyCode: text('currency_code').notNull(),
+}, (table) => [
+  foreignKey({ columns: [table.organizationId, table.saleId],
+    foreignColumns: [sales.organizationId, sales.id], name: 'sale_items_sale_tenant_fk' }),
+  foreignKey({ columns: [table.organizationId, table.itemId],
+    foreignColumns: [catalogItems.organizationId, catalogItems.id], name: 'sale_items_item_tenant_fk' }),
+]);
+
+export const salePayments = pgTable('sale_payments', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  saleId: uuid('sale_id').notNull(),
+  method: text().notNull(),
+  appliedAmount: numeric('applied_amount', { precision: 20, scale: 2 }).notNull(),
+  receivedAmount: numeric('received_amount', { precision: 20, scale: 2 }),
+  changeAmount: numeric('change_amount', { precision: 20, scale: 2 }).notNull().default('0'),
+  currencyCode: text('currency_code').notNull(),
+}, (table) => [
+  unique('sale_payments_tenant_sale_id_unique').on(table.organizationId, table.saleId, table.id),
+  unique('sale_payments_historical_refund_identity_unique').on(table.organizationId,
+    table.saleId, table.id, table.method, table.appliedAmount, table.currencyCode),
+  foreignKey({ columns: [table.organizationId, table.saleId],
+    foreignColumns: [sales.organizationId, sales.id], name: 'sale_payments_sale_fk' }),
+  foreignKey({ columns: [table.organizationId, table.method],
+    foreignColumns: [paymentMethodSettings.organizationId, paymentMethodSettings.method],
+    name: 'sale_payments_method_fk' }),
+]);
+
+export const saleCancellations = pgTable('sale_cancellations', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  saleId: uuid('sale_id').notNull(),
+  branchId: uuid('branch_id').notNull(),
+  actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+  reason: text().notNull(),
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('sale_cancellations_sale_unique').on(table.organizationId, table.saleId),
+  unique('sale_cancellations_tenant_id_unique').on(table.organizationId, table.id),
+  unique('sale_cancellations_tenant_sale_id_unique').on(table.organizationId, table.saleId, table.id),
+  foreignKey({ columns: [table.organizationId, table.branchId, table.saleId],
+    foreignColumns: [sales.organizationId, sales.branchId, sales.id], name: 'sale_cancellations_sale_fk' }),
+  foreignKey({ columns: [table.organizationId, table.branchId],
+    foreignColumns: [branches.organizationId, branches.id], name: 'sale_cancellations_branch_fk' }),
+]);
+
+export const saleRefunds = pgTable('sale_refunds', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  saleId: uuid('sale_id').notNull(),
+  cancellationId: uuid('cancellation_id').notNull(),
+  salePaymentId: uuid('sale_payment_id').notNull(),
+  method: text().notNull(),
+  amount: numeric({ precision: 20, scale: 2 }).notNull(),
+  currencyCode: text('currency_code').notNull(),
+  refundedAt: timestamp('refunded_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('sale_refunds_payment_unique').on(table.organizationId, table.salePaymentId),
+  foreignKey({ columns: [table.organizationId, table.saleId, table.cancellationId],
+    foreignColumns: [saleCancellations.organizationId, saleCancellations.saleId, saleCancellations.id],
+    name: 'sale_refunds_cancellation_fk' }),
+  foreignKey({ columns: [table.organizationId, table.saleId, table.salePaymentId,
+    table.method, table.amount, table.currencyCode],
+    foreignColumns: [salePayments.organizationId, salePayments.saleId, salePayments.id,
+      salePayments.method, salePayments.appliedAmount, salePayments.currencyCode],
+    name: 'sale_refunds_payment_fk' }),
+]);

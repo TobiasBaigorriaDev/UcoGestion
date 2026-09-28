@@ -68,6 +68,19 @@
     { "idx": 63, "version": "7", "when": 63, "tag": "0063_devices", "breakpoints": true },
     { "idx": 64, "version": "7", "when": 64, "tag": "0064_cash_sessions", "breakpoints": true },
     { "idx": 65, "version": "7", "when": 65, "tag": "0065_cash_movements", "breakpoints": true },
-    { "idx": 66, "version": "7", "when": 66, "tag": "0066_cash_session_device", "breakpoints": true }
+    { "idx": 66, "version": "7", "when": 66, "tag": "0066_cash_session_device", "breakpoints": true },
+    { "idx": 67, "version": "7", "when": 67, "tag": "0067_cash_manual_reasons", "breakpoints": true },
+    { "idx": 68, "version": "7", "when": 68, "tag": "0068_sales_foundation", "breakpoints": true },
+    { "idx": 69, "version": "7", "when": 69, "tag": "0069_sale_stock", "breakpoints": true },
+    { "idx": 70, "version": "7", "when": 70, "tag": "0070_sale_payments", "breakpoints": true },
+    { "idx": 71, "version": "7", "when": 71, "tag": "0071_sale_cancellations", "breakpoints": true },
+    { "idx": 72, "version": "7", "when": 72, "tag": "0072_sale_refunds", "breakpoints": true },
+    { "idx": 73, "version": "7", "when": 73, "tag": "0073_purchase_foundation", "breakpoints": true },
+    { "idx": 74, "version": "7", "when": 74, "tag": "0074_purchase_stock", "breakpoints": true },
+    { "idx": 75, "version": "7", "when": 75, "tag": "0075_purchase_payments", "breakpoints": true },
+    { "idx": 76, "version": "7", "when": 76, "tag": "0076_purchase_cancellations", "breakpoints": true },
+    { "idx": 77, "version": "7", "when": 77, "tag": "0077_purchase_stock_reversal", "breakpoints": true },
+    { "idx": 78, "version": "7", "when": 78, "tag": "0078_purchase_payment_reversals", "breakpoints": true },
+    { "idx": 79, "version": "7", "when": 79, "tag": "0079_expenses", "breakpoints": true }
   ]
 }

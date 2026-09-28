@@ -169,59 +169,59 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T118: Preparar apertura online con monto no negativo, actor, caja, branch y dispositivo, sin exponer aún el comando [RF-91, RF-230, RF-253]
 - [x] T119: Aplicar scope y permisos de apertura de OWNER/ADMIN/CASHIER y rechazo EMPLOYEE [RF-93, RF-94, RF-95]
 - [x] T120: Rechazar operaciones desde un dispositivo distinto al asociado a la sesión [RF-231, RF-232]
-- [ ] T121: Conservar dispositivo y registrar actor real cuando cambia el usuario autorizado [RF-233]
-- [ ] T121A: Exponer apertura online integrando lock de caja, unicidad, scope, rol, dispositivo, auditoría e idempotencia; probar aperturas concurrentes [RF-91, RF-92, RF-93, RF-94, RF-95, RF-131, RF-132, RF-140, RF-230, RF-232, RF-253] (Depende de T116 y T118–T121)
-- [ ] T122: Exponer ingreso manual positivo con motivo, sesión/dispositivo bajo lock, permisos, auditoría e idempotencia atómicas [RF-93, RF-94, RF-95, RF-96, RF-131, RF-132, RF-140, RF-231, RF-252]
-- [ ] T123: Exponer retiro manual con sesión/dispositivo bajo lock, permisos, auditoría e idempotencia y rechazo íntegro por efectivo insuficiente [RF-93, RF-94, RF-95, RF-96, RF-131, RF-132, RF-140, RF-231, RF-242, RF-243, RF-252]
-- [ ] T124: Calcular efectivo esperado desde movimientos consolidados del servidor [RF-97]
-- [ ] T132: Calcular quote backend con líneas HALF_UP y cantidades válidas [RF-43, RF-44, RF-45, RF-244, RF-254]
-- [ ] T133: Validar descuento global porcentual o fijo y permisos OWNER/ADMIN [RF-47, RF-48, RF-49, RF-247, RF-248]
-- [ ] T134: Definir contrato PRICE_CHANGED que rechace la confirmación, devuelva cotización segura y exija aceptación explícita con una nueva clave antes de reintentar [RF-254, RF-255]
-- [ ] T135: Preparar persistencia interna de venta confirmada sin borrador con ID global y snapshots de ítems, moneda, organización, sucursal y cliente, sin exponer aún el comando [RF-72, RF-205, RF-267, RF-269, RF-270]
-- [ ] T136: Asociar cliente activo opcional o consumidor final sin cliente ficticio [RF-77, RF-214]
-- [ ] T137: Validar sesión abierta, branch y dispositivo al confirmar venta [RF-73, RF-230, RF-231]
-- [ ] T138: Aplicar permisos OWNER/ADMIN/CASHIER y rechazar EMPLOYEE en venta [RF-74, RF-194, RF-195, RF-196, RF-197]
-- [ ] T139: Conservar actor y titular distintos sin transferir la sesión [RF-198]
-- [ ] T140: Bloquear stock canónicamente y rechazar venta online sin disponibilidad [RF-75, RF-164, RF-165, RF-166]
-- [ ] T141: Omitir validación y movimientos para ítems sin control de inventario [RF-76]
-- [ ] T142: Validar pagos positivos habilitados cuya suma exacta cubra una venta mayor a cero [RF-78, RF-113, RF-249]
-- [ ] T143: Calcular recibido y vuelto efectivo sin alterar total ni efecto neto de caja [RF-79]
-- [ ] T144: Confirmar venta total cero sin línea de pago pero con sesión, stock y permisos [RF-250, RF-295]
-- [ ] T145: Exponer confirmación de venta integrando precio aceptado, sesión/dispositivo, permisos, cliente, pagos, stock, caja, recibo, auditoría e idempotencia en una transacción [RF-72, RF-73, RF-74, RF-75, RF-76, RF-77, RF-78, RF-79, RF-80, RF-81, RF-131, RF-132, RF-194, RF-195, RF-196, RF-197, RF-198, RF-249, RF-250, RF-254, RF-255, RF-267, RF-269, RF-270, RF-283, RF-295] (Depende de T132–T144)
-- [ ] T146: Probar que el receipt snapshot y la etiqueta no fiscal permanecen reproducibles tras cambiar maestros o anular la venta [RF-80, RF-81, RF-84, RF-270]
-- [ ] T147: Renderizar vista imprimible y PDF regenerable sin afectar la venta ante fallos [RF-82, RF-83]
-- [ ] T148: Preparar política interna de anulación solo para OWNER/ADMIN y motivo inmutable [RF-26, RF-84, RF-85]
-- [ ] T149: Preparar reversión interna de inventario mediante movimientos compensatorios trazables [RF-86, RF-251]
-- [ ] T150: Preparar reintegros por medios históricos originales aunque estén inactivos [RF-87, RF-89, RF-251, RF-260]
-- [ ] T151: Preparar validación bajo lock de sesión, dispositivo y efectivo disponible para reintegro efectivo [RF-88, RF-90, RF-242, RF-243]
-- [ ] T152: Exponer anulación confirmando estado append-only, reintegros, stock, caja, auditoría e idempotencia atómicamente [RF-26, RF-84, RF-85, RF-86, RF-87, RF-88, RF-89, RF-90, RF-131, RF-132, RF-140, RF-251, RF-260] (Depende de T148–T151)
-- [ ] T152A: Implementar carrito POS online con búsqueda/barcode, cantidades, precios vigentes y estados accesibles [RF-38, RF-72, RF-133, RF-152, RF-153, RF-154, RF-244, RF-254] (Depende de T075, T093 y T132–T136)
-- [ ] T152C: Implementar checkout POS con descuento autorizado, pagos mixtos, vuelto, total cero y aceptación explícita de PRICE_CHANGED [RF-47, RF-48, RF-49, RF-72, RF-78, RF-79, RF-133, RF-152, RF-153, RF-154, RF-249, RF-250, RF-254, RF-255, RF-295] (Depende de T137–T145 y T152A)
-- [ ] T152B: Implementar UI de consulta y anulación de venta con motivo, permisos y errores accionables [RF-26, RF-84, RF-85, RF-133, RF-152, RF-153, RF-154] (Depende de T148–T152 y T088–T092)
-- [ ] T152D: Implementar recibo imprimible/PDF y recuperación de fallos de impresión sin acoplarlo a confirmación [RF-80, RF-81, RF-82, RF-83, RF-133, RF-152, RF-153, RF-154] (Depende de T146–T147 y T152B)
+- [x] T121: Conservar dispositivo y registrar actor real cuando cambia el usuario autorizado [RF-233]
+- [x] T121A: Exponer apertura online integrando lock de caja, unicidad, scope, rol, dispositivo, auditoría e idempotencia; probar aperturas concurrentes [RF-91, RF-92, RF-93, RF-94, RF-95, RF-131, RF-132, RF-140, RF-230, RF-232, RF-253] (Depende de T116 y T118–T121)
+- [x] T122: Exponer ingreso manual positivo con motivo, sesión/dispositivo bajo lock, permisos, auditoría e idempotencia atómicas [RF-93, RF-94, RF-95, RF-96, RF-131, RF-132, RF-140, RF-231, RF-252]
+- [x] T123: Exponer retiro manual con sesión/dispositivo bajo lock, permisos, auditoría e idempotencia y rechazo íntegro por efectivo insuficiente [RF-93, RF-94, RF-95, RF-96, RF-131, RF-132, RF-140, RF-231, RF-242, RF-243, RF-252]
+- [x] T124: Calcular efectivo esperado desde movimientos consolidados del servidor [RF-97]
+- [x] T132: Calcular quote backend con líneas HALF_UP y cantidades válidas [RF-43, RF-44, RF-45, RF-244, RF-254]
+- [x] T133: Validar descuento global porcentual o fijo y permisos OWNER/ADMIN [RF-47, RF-48, RF-49, RF-247, RF-248]
+- [x] T134: Definir contrato PRICE_CHANGED que rechace la confirmación, devuelva cotización segura y exija aceptación explícita con una nueva clave antes de reintentar [RF-254, RF-255]
+- [x] T135: Preparar persistencia interna de venta confirmada sin borrador con ID global y snapshots de ítems, moneda, organización, sucursal y cliente, sin exponer aún el comando [RF-72, RF-205, RF-267, RF-269, RF-270]
+- [x] T136: Asociar cliente activo opcional o consumidor final sin cliente ficticio [RF-77, RF-214]
+- [x] T137: Validar sesión abierta, branch y dispositivo al confirmar venta [RF-73, RF-230, RF-231]
+- [x] T138: Aplicar permisos OWNER/ADMIN/CASHIER y rechazar EMPLOYEE en venta [RF-74, RF-194, RF-195, RF-196, RF-197]
+- [x] T139: Conservar actor y titular distintos sin transferir la sesión [RF-198]
+- [x] T140: Bloquear stock canónicamente y rechazar venta online sin disponibilidad [RF-75, RF-164, RF-165, RF-166]
+- [x] T141: Omitir validación y movimientos para ítems sin control de inventario [RF-76]
+- [x] T142: Validar pagos positivos habilitados cuya suma exacta cubra una venta mayor a cero [RF-78, RF-113, RF-249]
+- [x] T143: Calcular recibido y vuelto efectivo sin alterar total ni efecto neto de caja [RF-79]
+- [x] T144: Confirmar venta total cero sin línea de pago pero con sesión, stock y permisos [RF-250, RF-295]
+- [x] T145: Exponer confirmación de venta integrando precio aceptado, sesión/dispositivo, permisos, cliente, pagos, stock, caja, recibo, auditoría e idempotencia en una transacción [RF-72, RF-73, RF-74, RF-75, RF-76, RF-77, RF-78, RF-79, RF-80, RF-81, RF-131, RF-132, RF-194, RF-195, RF-196, RF-197, RF-198, RF-249, RF-250, RF-254, RF-255, RF-267, RF-269, RF-270, RF-283, RF-295] (Depende de T132–T144)
+- [x] T146: Probar que el receipt snapshot y la etiqueta no fiscal permanecen reproducibles tras cambiar maestros o anular la venta [RF-80, RF-81, RF-84, RF-270]
+- [x] T147: Renderizar vista imprimible y PDF regenerable sin afectar la venta ante fallos [RF-82, RF-83]
+- [x] T148: Preparar política interna de anulación solo para OWNER/ADMIN y motivo inmutable [RF-26, RF-84, RF-85]
+- [x] T149: Preparar reversión interna de inventario mediante movimientos compensatorios trazables [RF-86, RF-251]
+- [x] T150: Preparar reintegros por medios históricos originales aunque estén inactivos [RF-87, RF-89, RF-251, RF-260]
+- [x] T151: Preparar validación bajo lock de sesión, dispositivo y efectivo disponible para reintegro efectivo [RF-88, RF-90, RF-242, RF-243]
+- [x] T152: Exponer anulación confirmando estado append-only, reintegros, stock, caja, auditoría e idempotencia atómicamente [RF-26, RF-84, RF-85, RF-86, RF-87, RF-88, RF-89, RF-90, RF-131, RF-132, RF-140, RF-251, RF-260] (Depende de T148–T151)
+- [x] T152A: Implementar carrito POS online con búsqueda/barcode, cantidades, precios vigentes y estados accesibles [RF-38, RF-72, RF-133, RF-152, RF-153, RF-154, RF-244, RF-254] (Depende de T075, T093 y T132–T136)
+- [x] T152C: Implementar checkout POS con descuento autorizado, pagos mixtos, vuelto, total cero y aceptación explícita de PRICE_CHANGED [RF-47, RF-48, RF-49, RF-72, RF-78, RF-79, RF-133, RF-152, RF-153, RF-154, RF-249, RF-250, RF-254, RF-255, RF-295] (Depende de T137–T145 y T152A)
+- [x] T152B: Implementar UI de consulta y anulación de venta con motivo, permisos y errores accionables [RF-26, RF-84, RF-85, RF-133, RF-152, RF-153, RF-154] (Depende de T148–T152 y T088–T092)
+- [x] T152D: Implementar recibo imprimible/PDF y recuperación de fallos de impresión sin acoplarlo a confirmación [RF-80, RF-81, RF-82, RF-83, RF-133, RF-152, RF-153, RF-154] (Depende de T146–T147 y T152B)
 
 ## 6. Compras y gastos
 
-- [ ] T153: Preparar persistencia interna de compra PENDING_PAYMENT con proveedor activo, branch, líneas y snapshots, sin exponer aún el comando [RF-100, RF-102, RF-218, RF-269]
-- [ ] T154: Autorizar compra PENDING_PAYMENT a OWNER/ADMIN según scope [RF-185, RF-186]
-- [ ] T155: Permitir recepción EMPLOYEE como PENDING_PAYMENT sin efectos financieros [RF-187, RF-225]
-- [ ] T156: Rechazar toda operación de compras iniciada por CASHIER [RF-188]
-- [ ] T157: Exponer confirmación PENDING_PAYMENT integrando permisos, snapshots, stock/ledger, auditoría e idempotencia en una transacción [RF-100, RF-101, RF-102, RF-131, RF-132, RF-140, RF-185, RF-186, RF-187, RF-188, RF-225, RF-269] (Depende de T153–T156)
-- [ ] T158: Preparar confirmación PAID para OWNER/ADMIN con pago y stock atómicos, sin exponer aún el comando [RF-185, RF-186, RF-189]
-- [ ] T159: Preparar caso de total cero PAID sin crear un pago de importe cero [RF-246, RF-257]
-- [ ] T160: Preparar pago de PENDING_PAYMENT con un único pago positivo exactamente igual al saldo y transición append-only [RF-103, RF-258]
-- [ ] T161: Exigir sesión/dispositivo bajo lock y registrar salida atómica al pagar compra en efectivo [RF-104, RF-230, RF-231, RF-242, RF-243]
-- [ ] T162: Pagar compra por medio no efectivo sin requerir ni modificar caja [RF-105]
-- [ ] T162A: Exponer confirmación de compra PAID integrando permisos, pago, stock, caja si es efectivo, auditoría e idempotencia [RF-100, RF-101, RF-104, RF-105, RF-131, RF-132, RF-140, RF-185, RF-186, RF-189, RF-230, RF-231, RF-242, RF-243, RF-257, RF-269] (Depende de T158–T162)
-- [ ] T162B: Exponer pago posterior de PENDING_PAYMENT con total exacto, sesión/medio válido, estado append-only, auditoría e idempotencia [RF-103, RF-104, RF-105, RF-131, RF-132, RF-140, RF-230, RF-231, RF-242, RF-243, RF-258] (Depende de T160–T162)
-- [ ] T163: Preparar anulación única con motivo y transición append-only sin modificar datos originales [RF-106, RF-259]
-- [ ] T164: Preparar locks y rechazo total si falta stock para cualquier reversión [RF-107, RF-166]
-- [ ] T165: Exponer anulación revirtiendo inventario y medio histórico, con sesión/dispositivo y efecto de caja cuando corresponda, auditoría e idempotencia atómicas [RF-106, RF-107, RF-108, RF-109, RF-131, RF-132, RF-140, RF-166, RF-230, RF-231, RF-251, RF-259, RF-260] (Depende de T163–T164)
-- [ ] T166: Preparar persistencia interna de gasto con categoría activa, concepto, importe, branch, actor y timestamp, sin exponer aún el comando [RF-52, RF-110, RF-252]
-- [ ] T167: Autorizar gasto OWNER/ADMIN dentro de scope y, si es efectivo, exigir sesión válida y dispositivo operativo [RF-207, RF-208, RF-230, RF-231]
-- [ ] T168: Autorizar gasto CASHIER solo en efectivo, sesión propia y dispositivo asociado [RF-209]
-- [ ] T169: Rechazar cualquier gasto iniciado por EMPLOYEE [RF-210]
-- [ ] T170: Exponer creación de gasto integrando permisos, categoría, medio, sesión/dispositivo, caja cuando corresponda, auditoría e idempotencia en una transacción [RF-52, RF-110, RF-111, RF-112, RF-131, RF-132, RF-140, RF-207, RF-208, RF-209, RF-210, RF-230, RF-231, RF-242, RF-243, RF-252] (Depende de T166–T169)
+- [x] T153: Preparar persistencia interna de compra PENDING_PAYMENT con proveedor activo, branch, líneas y snapshots, sin exponer aún el comando [RF-100, RF-102, RF-218, RF-269]
+- [x] T154: Autorizar compra PENDING_PAYMENT a OWNER/ADMIN según scope [RF-185, RF-186]
+- [x] T155: Permitir recepción EMPLOYEE como PENDING_PAYMENT sin efectos financieros [RF-187, RF-225]
+- [x] T156: Rechazar toda operación de compras iniciada por CASHIER [RF-188]
+- [x] T157: Exponer confirmación PENDING_PAYMENT integrando permisos, snapshots, stock/ledger, auditoría e idempotencia en una transacción [RF-100, RF-101, RF-102, RF-131, RF-132, RF-140, RF-185, RF-186, RF-187, RF-188, RF-225, RF-269] (Depende de T153–T156)
+- [x] T158: Preparar confirmación PAID para OWNER/ADMIN con pago y stock atómicos, sin exponer aún el comando [RF-185, RF-186, RF-189]
+- [x] T159: Preparar caso de total cero PAID sin crear un pago de importe cero [RF-246, RF-257]
+- [x] T160: Preparar pago de PENDING_PAYMENT con un único pago positivo exactamente igual al saldo y transición append-only [RF-103, RF-258]
+- [x] T161: Exigir sesión/dispositivo bajo lock y registrar salida atómica al pagar compra en efectivo [RF-104, RF-230, RF-231, RF-242, RF-243]
+- [x] T162: Pagar compra por medio no efectivo sin requerir ni modificar caja [RF-105]
+- [x] T162A: Exponer confirmación de compra PAID integrando permisos, pago, stock, caja si es efectivo, auditoría e idempotencia [RF-100, RF-101, RF-104, RF-105, RF-131, RF-132, RF-140, RF-185, RF-186, RF-189, RF-230, RF-231, RF-242, RF-243, RF-257, RF-269] (Depende de T158–T162)
+- [x] T162B: Exponer pago posterior de PENDING_PAYMENT con total exacto, sesión/medio válido, estado append-only, auditoría e idempotencia [RF-103, RF-104, RF-105, RF-131, RF-132, RF-140, RF-230, RF-231, RF-242, RF-243, RF-258] (Depende de T160–T162)
+- [x] T163: Preparar anulación única con motivo y transición append-only sin modificar datos originales [RF-106, RF-259]
+- [x] T164: Preparar locks y rechazo total si falta stock para cualquier reversión [RF-107, RF-166]
+- [x] T165: Exponer anulación revirtiendo inventario y medio histórico, con sesión/dispositivo y efecto de caja cuando corresponda, auditoría e idempotencia atómicas [RF-106, RF-107, RF-108, RF-109, RF-131, RF-132, RF-140, RF-166, RF-230, RF-231, RF-251, RF-259, RF-260] (Depende de T163–T164)
+- [x] T166: Preparar persistencia interna de gasto con categoría activa, concepto, importe, branch, actor y timestamp, sin exponer aún el comando [RF-52, RF-110, RF-252]
+- [x] T167: Autorizar gasto OWNER/ADMIN dentro de scope y, si es efectivo, exigir sesión válida y dispositivo operativo [RF-207, RF-208, RF-230, RF-231]
+- [x] T168: Autorizar gasto CASHIER solo en efectivo, sesión propia y dispositivo asociado [RF-209]
+- [x] T169: Rechazar cualquier gasto iniciado por EMPLOYEE [RF-210]
+- [x] T170: Exponer creación de gasto integrando permisos, categoría, medio, sesión/dispositivo, caja cuando corresponda, auditoría e idempotencia en una transacción [RF-52, RF-110, RF-111, RF-112, RF-131, RF-132, RF-140, RF-207, RF-208, RF-209, RF-210, RF-230, RF-231, RF-242, RF-243, RF-252] (Depende de T166–T169)
 - [ ] T171: Preparar anulación única con motivo y transición append-only sin alterar el gasto original [RF-261, RF-264]
 - [ ] T172: Preparar compensación efectiva con ingreso atómico en sesión/dispositivo válidos [RF-262]
 - [ ] T173: Exponer anulación de gasto con reversión administrativa no efectiva o ingreso efectivo bajo lock, auditoría e idempotencia atómicas [RF-131, RF-132, RF-140, RF-230, RF-231, RF-261, RF-262, RF-263, RF-264] (Depende de T171–T172)

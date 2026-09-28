@@ -24,6 +24,7 @@
     "@uconext/shared": "workspace:*",
     "argon2": "0.45.1",
     "drizzle-orm": "0.44.7",
+    "pdf-lib": "^1.17.1",
     "pg": "8.23.0",
     "pino": "^10.3.1",
     "prom-client": "^15.1.3",

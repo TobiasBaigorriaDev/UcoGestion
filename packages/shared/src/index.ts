@@ -166,6 +166,8 @@ export const arePaymentsValidForSale = (
     return payments.length === 0;
   }
 
+  if (payments.length === 0) return false;
+
   const paymentAmounts: Decimal[] = [];
   for (const payment of payments) {
     const validatedPayment = parseMoneyInput(payment);
@@ -181,3 +183,20 @@ export const arePaymentsValidForSale = (
 
 export const isPositiveReversalAmount = (amount: unknown): boolean =>
   validatePositiveMoney(amount) !== undefined;
+
+export const calculateSaleLine = (quantity: string, unitPrice: string): string => {
+  const price = validateNonNegativeMoney(unitPrice);
+  if (price === undefined) throw new RangeError('Invalid unit price');
+  return new Decimal(parseCanonicalDecimal(quantity))
+    .times(new Decimal(price)).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2);
+};
+
+export const sumMoney = (amounts: readonly string[]): string =>
+  amounts.reduce((sum, amount) => sum.plus(new Decimal(parseCanonicalDecimal(amount))), new Decimal(0)).toFixed(2);
+
+export const subtractMoney = (left: string, right: string): string =>
+  new Decimal(parseCanonicalDecimal(left)).minus(new Decimal(parseCanonicalDecimal(right))).toFixed(2);
+
+export const calculatePercentageDiscount = (subtotal: string, percentage: string): string =>
+  new Decimal(parseCanonicalDecimal(subtotal)).times(new Decimal(parseCanonicalDecimal(percentage)))
+    .div(100).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2);

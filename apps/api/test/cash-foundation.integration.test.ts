@@ -9,6 +9,7 @@ import { TenantTransaction } from '../src/database/tenant-transaction.js';
 import { DeviceAuthorizationService } from '../src/modules/cash/device-authorization.service.js';
 import { CashOpeningPreparation } from '../src/modules/cash/cash-opening-preparation.js';
 import { CashSessionDevicePolicy } from '../src/modules/cash/cash-session-device.policy.js';
+import { CashOperationsService } from '../src/modules/cash/cash-operations.service.js';
 
 describe('cash foundation', () => {
   let container: StartedPostgreSqlContainer;
@@ -277,6 +278,150 @@ describe('cash foundation', () => {
       VALUES ($1, $2, $3, $4, $5, $6, '1.00', 'ARS', 'MANUAL', $7, 'IN')`,
     [randomUUID(), organizationId, branchId, sessionId, ownerId, otherDevice.id, randomUUID()]))
       .rejects.toMatchObject({ code: '23503' });
+  });
+
+  it('T121 keeps the session device while recording the authenticated replacement actor', async () => {
+    const registerId = randomUUID();
+    const sessionId = randomUUID();
+    const device = await devices.authorizeOnline(context(ownerId), branchId);
+    await admin.query('INSERT INTO cash_registers (id, organization_id, branch_id, name) VALUES ($1, $2, $3, $4)',
+      [registerId, organizationId, branchId, 'Actor handoff']);
+    await admin.query(`INSERT INTO cash_sessions (id, organization_id, branch_id, cash_register_id,
+      owner_user_id, device_id, origin, status, opening_cash, expected_cash, currency_code)
+      VALUES ($1, $2, $3, $4, $5, $6, 'ONLINE', 'OPEN', '5.00', '5.00', 'ARS')`,
+    [sessionId, organizationId, branchId, registerId, cashierId, device.id]);
+    const policy = new CashSessionDevicePolicy();
+    await withRuntime(adminId, async (client) => {
+      expect(await policy.requireAuthorizedActor(client, context(adminId), sessionId, device.id))
+        .toMatchObject({ id: sessionId, deviceId: device.id, actorUserId: adminId });
+    });
+    await withRuntime(cashierId, async (client) => {
+      expect(await policy.requireAuthorizedActor(client, context(cashierId), sessionId, device.id))
+        .toMatchObject({ id: sessionId, deviceId: device.id, actorUserId: cashierId });
+    });
+    await withRuntime(employeeId, async (client) => {
+      await expect(policy.requireAuthorizedActor(client, context(employeeId), sessionId, device.id))
+        .rejects.toMatchObject({ code: 'CASH_SESSION_ACTOR_FORBIDDEN' });
+    });
+    const row = await admin.query('SELECT owner_user_id, device_id FROM cash_sessions WHERE id = $1', [sessionId]);
+    expect(row.rows[0]).toMatchObject({ owner_user_id: cashierId, device_id: device.id });
+  });
+
+  it('T121A opens once under concurrent requests and replays the original audited result', async () => {
+    const registerId = randomUUID();
+    const device = await devices.authorizeOnline(context(ownerId), branchId);
+    await admin.query('INSERT INTO cash_registers (id, organization_id, branch_id, name) VALUES ($1, $2, $3, $4)',
+      [registerId, organizationId, branchId, 'Concurrent opening']);
+    const service = new CashOperationsService(new TenantTransaction(runtime));
+    const input = { branchId, cashRegisterId: registerId, deviceId: device.id, openingCash: '10.00' };
+    const firstContext = context(ownerId);
+    const first = await service.open(firstContext, input, 'opening-key');
+    expect(first).toMatchObject({ branchId, cashRegisterId: registerId, deviceId: device.id,
+      ownerUserId: ownerId, openingCash: '10.00' });
+    expect(await service.open(context(ownerId), input, 'opening-key')).toEqual(first);
+    await expect(service.open(context(ownerId), { ...input, openingCash: '11.00' }, 'opening-key'))
+      .rejects.toMatchObject({ name: 'IdempotencyKeyReusedError' });
+    const otherRegister = randomUUID();
+    await admin.query('INSERT INTO cash_registers (id, organization_id, branch_id, name) VALUES ($1, $2, $3, $4)',
+      [otherRegister, organizationId, branchId, 'Racing opening']);
+    const racingInput = { ...input, cashRegisterId: otherRegister };
+    const outcomes = await Promise.allSettled([
+      service.open(context(ownerId), racingInput, 'race-a'),
+      service.open(context(ownerId), racingInput, 'race-b'),
+    ]);
+    expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+    expect(outcomes.filter((outcome) => outcome.status === 'rejected')).toHaveLength(1);
+    expect((await admin.query('SELECT id FROM cash_sessions WHERE cash_register_id = $1', [otherRegister])).rowCount).toBe(1);
+    const audit = await admin.query('SELECT actor_user_id, device_id FROM audit_events WHERE entity_id = $1', [first.id]);
+    expect(audit.rows).toEqual([{ actor_user_id: ownerId, device_id: device.id }]);
+    await expect(service.open({ organizationId: foreignOrganizationId, userId: ownerId,
+      requestId: randomUUID() }, input, 'foreign-opening'))
+      .rejects.toMatchObject({ code: 'CASH_OPENING_FORBIDDEN' });
+  });
+
+  it('T122 records a positive manual deposit with reason, real actor and one atomic effect', async () => {
+    const registerId = randomUUID();
+    const device = await devices.authorizeOnline(context(ownerId), branchId);
+    await admin.query('INSERT INTO cash_registers (id, organization_id, branch_id, name) VALUES ($1, $2, $3, $4)',
+      [registerId, organizationId, branchId, 'Manual deposit']);
+    const service = new CashOperationsService(new TenantTransaction(runtime));
+    const session = await service.open(context(cashierId), { branchId, cashRegisterId: registerId,
+      deviceId: device.id, openingCash: '2.00' }, randomUUID());
+    const input = { cashSessionId: session.id, deviceId: device.id, amount: '3.50', reason: 'Cambio' };
+    const deposit = await service.deposit(context(adminId), input, 'deposit-key');
+    expect(deposit).toMatchObject({ cashSessionId: session.id, actorUserId: adminId,
+      deviceId: device.id, amount: '3.50', expectedCash: '5.50' });
+    expect(await service.deposit(context(adminId), input, 'deposit-key')).toEqual(deposit);
+    await expect(service.deposit(context(adminId), { ...input, amount: '4.00' }, 'deposit-key'))
+      .rejects.toMatchObject({ name: 'IdempotencyKeyReusedError' });
+    await expect(service.deposit(context(employeeId), input, 'employee-key'))
+      .rejects.toMatchObject({ code: 'CASH_SESSION_ACTOR_FORBIDDEN' });
+    const movement = await admin.query('SELECT actor_user_id, device_id, delta, reason FROM cash_movements WHERE id = $1',
+      [deposit.id]);
+    expect(movement.rows).toEqual([{ actor_user_id: adminId, device_id: device.id,
+      delta: '3.50', reason: 'Cambio' }]);
+    expect((await admin.query('SELECT expected_cash FROM cash_sessions WHERE id = $1', [session.id]))
+      .rows[0]?.expected_cash).toBe('5.50');
+    expect((await admin.query('SELECT actor_user_id FROM audit_events WHERE entity_id = $1', [deposit.id]))
+      .rows[0]?.actor_user_id).toBe(adminId);
+    await admin.query(`INSERT INTO cash_session_state_transitions
+      (id, organization_id, cash_session_id, actor_user_id, from_status, to_status)
+      VALUES ($1, $2, $3, $4, 'OPEN', 'CLOSING')`,
+    [randomUUID(), organizationId, session.id, cashierId]);
+    expect(await service.deposit(context(adminId), input, 'deposit-key')).toEqual(deposit);
+  });
+
+  it('T123 rejects an excessive withdrawal completely after the session lock', async () => {
+    const registerId = randomUUID();
+    const device = await devices.authorizeOnline(context(ownerId), branchId);
+    const otherDevice = await devices.authorizeOnline(context(ownerId), branchId);
+    await admin.query('INSERT INTO cash_registers (id, organization_id, branch_id, name) VALUES ($1, $2, $3, $4)',
+      [registerId, organizationId, branchId, 'Manual withdrawal']);
+    const service = new CashOperationsService(new TenantTransaction(runtime));
+    const session = await service.open(context(cashierId), { branchId, cashRegisterId: registerId,
+      deviceId: device.id, openingCash: '5.00' }, randomUUID());
+    const input = { cashSessionId: session.id, deviceId: device.id, amount: '3.00', reason: 'Retiro' };
+    await expect(service.withdraw(context(ownerId), { ...input, deviceId: otherDevice.id }, randomUUID()))
+      .rejects.toMatchObject({ code: 'CASH_SESSION_DEVICE_CONFLICT' });
+    const outcomes = await Promise.allSettled([
+      service.withdraw(context(ownerId), input, 'withdraw-a'),
+      service.withdraw(context(ownerId), input, 'withdraw-b'),
+    ]);
+    const successes = outcomes.filter((outcome) => outcome.status === 'fulfilled');
+    const failures = outcomes.filter((outcome) => outcome.status === 'rejected');
+    expect(successes).toHaveLength(1);
+    expect(failures).toHaveLength(1);
+    expect((failures[0] as PromiseRejectedResult).reason).toMatchObject({ code: 'CASH_INSUFFICIENT_EXPECTED' });
+    const result = (successes[0] as PromiseFulfilledResult<Awaited<ReturnType<typeof service.withdraw>>>).value;
+    expect(result).toMatchObject({ amount: '3.00', expectedCash: '2.00' });
+    expect(await service.withdraw(context(ownerId), input,
+      outcomes[0]?.status === 'fulfilled' ? 'withdraw-a' : 'withdraw-b')).toEqual(result);
+    expect((await admin.query('SELECT id FROM cash_movements WHERE cash_session_id = $1', [session.id])).rowCount).toBe(1);
+    expect((await admin.query('SELECT id FROM audit_events WHERE entity_id = $1', [result.id])).rowCount).toBe(1);
+    expect((await admin.query('SELECT expected_cash FROM cash_sessions WHERE id = $1', [session.id]))
+      .rows[0]?.expected_cash).toBe('2.00');
+  });
+
+  it('T124 calculates expected cash from the consolidated server ledger', async () => {
+    const registerId = randomUUID();
+    const device = await devices.authorizeOnline(context(ownerId), branchId);
+    await admin.query('INSERT INTO cash_registers (id, organization_id, branch_id, name) VALUES ($1, $2, $3, $4)',
+      [registerId, organizationId, branchId, 'Expected cash']);
+    const service = new CashOperationsService(new TenantTransaction(runtime));
+    const session = await service.open(context(ownerId), { branchId, cashRegisterId: registerId,
+      deviceId: device.id, openingCash: '8.25' }, randomUUID());
+    await service.deposit(context(ownerId), { cashSessionId: session.id, deviceId: device.id,
+      amount: '2.50', reason: 'Cambio' }, randomUUID());
+    await service.withdraw(context(ownerId), { cashSessionId: session.id, deviceId: device.id,
+      amount: '1.10', reason: 'Retiro' }, randomUUID());
+    await admin.query(`INSERT INTO cash_movements (id, organization_id, branch_id, cash_session_id,
+      actor_user_id, device_id, delta, currency_code, source_type, source_id, effect_kind)
+      VALUES ($1, $2, $3, $4, $5, $6, '4.00', 'ARS', 'SALE', $7, 'IN')`,
+    [randomUUID(), organizationId, branchId, session.id, ownerId, device.id, randomUUID()]);
+    expect(await service.calculateExpectedCash(context(ownerId), session.id, device.id))
+      .toMatchObject({ cashSessionId: session.id, expectedCash: '13.65' });
+    await expect(service.calculateExpectedCash(context(adminId), session.id, randomUUID()))
+      .rejects.toMatchObject({ code: 'CASH_SESSION_DEVICE_CONFLICT' });
   });
 
   async function withRuntime<T>(userId: string, operation: (client: import('pg').PoolClient) => Promise<T>): Promise<T> {

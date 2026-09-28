@@ -14,6 +14,8 @@ export interface ProblemDetailsInput {
   readonly code: string;
   readonly currentTotal?: string | undefined;
   readonly currentVersion?: number | undefined;
+  readonly quote?: unknown;
+  readonly quoteFingerprint?: string | undefined;
   readonly detail: string;
   readonly fieldErrors?: FieldErrors | undefined;
   readonly instance: string;
@@ -31,6 +33,8 @@ export const createProblemDetails = ({
   code,
   currentTotal,
   currentVersion,
+  quote,
+  quoteFingerprint,
   detail,
   fieldErrors,
   instance,
@@ -42,6 +46,8 @@ export const createProblemDetails = ({
   code,
   ...(currentTotal === undefined ? {} : { currentTotal }),
   ...(currentVersion === undefined ? {} : { currentVersion }),
+  ...(quote === undefined ? {} : { quote }),
+  ...(quoteFingerprint === undefined ? {} : { quoteFingerprint }),
   detail,
   ...(fieldErrors === undefined ? {} : { fieldErrors }),
   instance,
@@ -115,6 +121,8 @@ export class ProblemDetailsExceptionFilter implements ExceptionFilter {
     let fieldErrors: FieldErrors | undefined;
     let currentVersion: number | undefined;
     let currentTotal: string | undefined;
+    let quote: unknown;
+    let quoteFingerprint: string | undefined;
 
     if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
       const resp = exceptionResponse as Record<string, unknown>;
@@ -124,6 +132,11 @@ export class ProblemDetailsExceptionFilter implements ExceptionFilter {
       if (typeof resp.message === 'string' && typeof resp.detail !== 'string') detail = resp.message;
       if (typeof resp.currentVersion === 'number') currentVersion = resp.currentVersion;
       if (typeof resp.currentTotal === 'string') currentTotal = resp.currentTotal;
+      if (code === 'PRICE_CHANGED' && typeof resp.quote === 'object' && resp.quote !== null &&
+        typeof resp.quoteFingerprint === 'string') {
+        quote = resp.quote;
+        quoteFingerprint = resp.quoteFingerprint;
+      }
       if (typeof resp.fieldErrors === 'object' && resp.fieldErrors !== null) {
         fieldErrors = resp.fieldErrors as FieldErrors;
       }
@@ -144,6 +157,8 @@ export class ProblemDetailsExceptionFilter implements ExceptionFilter {
       code,
       currentTotal,
       currentVersion,
+      quote,
+      quoteFingerprint,
       detail,
       fieldErrors,
       instance,
