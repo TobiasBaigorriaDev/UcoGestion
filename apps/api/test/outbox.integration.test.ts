@@ -91,6 +91,24 @@ describe('outbox dispatcher and worker', () => {
     }
   });
 
+  it('claims report PDF jobs without consuming unrelated outbox work', async () => {
+    const emailId = await insertJob(pool, `email-${randomUUID()}`);
+    const reportId = randomUUID();
+    const cleanupId = randomUUID();
+    await pool.query(`INSERT INTO outbox_jobs (id,organization_id,job_key,job_type,payload,
+      actor_user_id,authorization_class)
+      VALUES ($1,$2,$3,'REPORT_PDF','{}',$4,'REPORT_EXPORT')`,
+    [reportId, organizationA, `report-${reportId}`, actorUserId]);
+    await pool.query(`INSERT INTO outbox_jobs (id,organization_id,job_key,job_type,payload,
+      actor_user_id,authorization_class)
+      VALUES ($1,$2,$3,'OBJECT_FILE_CLEANUP','{}',$4,'OBJECT_FILE_CLEANUP')`,
+    [cleanupId, organizationA, `cleanup-${cleanupId}`, actorUserId]);
+    const claims = await new OutboxDispatcher(pool, 'REPORT_ARTIFACTS').claim(10, 60);
+    expect(claims.map((job) => job.jobId)).toContain(reportId);
+    expect(claims.map((job) => job.jobId)).toContain(cleanupId);
+    expect(claims.map((job) => job.jobId)).not.toContain(emailId);
+  });
+
   it('re-authorizes each tenant job and handles completion, rollback, backoff, and dead-lettering', async () => {
     const completedJobId = await insertJob(pool, 'complete-job');
     const failedJobId = await insertJob(pool, 'failing-job');

@@ -83,6 +83,10 @@
     { "idx": 78, "version": "7", "when": 78, "tag": "0078_purchase_payment_reversals", "breakpoints": true },
     { "idx": 79, "version": "7", "when": 79, "tag": "0079_expenses", "breakpoints": true },
     { "idx": 80, "version": "7", "when": 80, "tag": "0080_expense_cancellations", "breakpoints": true },
-    { "idx": 81, "version": "7", "when": 81, "tag": "0081_audit_dashboard_read_indexes", "breakpoints": true }
+    { "idx": 81, "version": "7", "when": 81, "tag": "0081_audit_dashboard_read_indexes", "breakpoints": true },
+    { "idx": 82, "version": "7", "when": 82, "tag": "0082_cash_session_closures", "breakpoints": true },
+    { "idx": 83, "version": "7", "when": 83, "tag": "0083_object_files", "breakpoints": true },
+    { "idx": 84, "version": "7", "when": 84, "tag": "0084_report_exports", "breakpoints": true },
+    { "idx": 85, "version": "7", "when": 85, "tag": "0085_report_artifact_outbox_claim", "breakpoints": true }
   ]
 }

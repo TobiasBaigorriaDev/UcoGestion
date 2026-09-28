@@ -239,17 +239,17 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 - [x] T179: Crear dataset read-only de ventas con estado histórico y filtros autorizados [RF-146, RF-286, RF-287]
 - [x] T179A: Crear dataset read-only de inventario actual y stock bajo [RF-58, RF-59, RF-146]
 - [x] T179B: Crear dataset read-only de movimientos de inventario [RF-146]
-- [ ] T179C: Crear dataset read-only de caja y diferencias [RF-146]
+- [x] T179C: Crear dataset read-only de caja y diferencias [RF-146]
 - [x] T179D: Crear dataset read-only de compras con estado histórico [RF-146, RF-286]
 - [x] T179E: Crear dataset read-only de gastos con estado histórico [RF-146, RF-286]
-- [ ] T180: Aplicar y probar scope OWNER/ADMIN/CASHIER/EMPLOYEE a todos los datasets, incluyendo negativos cross-tenant y entre sucursales [RF-02, RF-144, RF-145, RF-148, RF-149, RF-150, RF-285] (Depende de T179–T179E)
-- [ ] T181: Interpretar períodos en timezone tenant y excluir anulados de netos sin ocultarlos [RF-286, RF-287]
-- [ ] T182: Exportar CSV filtrado neutralizando celdas ejecutables [RF-147, RF-288]
-- [ ] T183: Implementar ObjectStoragePort, archivos temporales y URL firmada con expiración [RF-147]
-- [ ] T184: Generar PDF filtrado mediante outbox y revalidar scope en el worker [RF-147, RF-151]
-- [ ] T184A: Implementar UI de dashboard por rol con filtros, estados y equivalente textual de gráficos [RF-142, RF-143, RF-144, RF-145, RF-152, RF-153, RF-154, RF-226, RF-286] (Depende de T176–T178 y T088–T092)
-- [ ] T184B: Implementar UI de auditoría con filtros, scope y estados accesibles [RF-133, RF-152, RF-153, RF-154, RF-282] (Depende de T174–T175 y T088–T092)
-- [ ] T184C: Implementar UI de reportes con datasets/filtros autorizados, CSV/PDF y seguimiento accesible de exportaciones [RF-133, RF-146, RF-147, RF-148, RF-149, RF-150, RF-152, RF-153, RF-154, RF-286, RF-287, RF-288] (Depende de T179–T184 y T088–T092)
+- [x] T180: Aplicar y probar scope OWNER/ADMIN/CASHIER/EMPLOYEE a todos los datasets, incluyendo negativos cross-tenant y entre sucursales [RF-02, RF-144, RF-145, RF-148, RF-149, RF-150, RF-285] (Depende de T179–T179E)
+- [x] T181: Interpretar períodos en timezone tenant y excluir anulados de netos sin ocultarlos [RF-286, RF-287]
+- [x] T182: Exportar CSV filtrado neutralizando celdas ejecutables [RF-147, RF-288]
+- [x] T183: Implementar ObjectStoragePort, archivos temporales y URL firmada con expiración [RF-147]
+- [x] T184: Generar PDF filtrado mediante outbox y revalidar scope en el worker [RF-147, RF-151]
+- [x] T184A: Implementar UI de dashboard por rol con filtros, estados y equivalente textual de gráficos [RF-142, RF-143, RF-144, RF-145, RF-152, RF-153, RF-154, RF-226, RF-286] (Depende de T176–T178 y T088–T092)
+- [x] T184B: Implementar UI de auditoría con filtros, scope y estados accesibles [RF-133, RF-152, RF-153, RF-154, RF-282] (Depende de T174–T175 y T088–T092)
+- [x] T184C: Implementar UI de reportes con datasets/filtros autorizados, CSV/PDF y seguimiento accesible de exportaciones [RF-133, RF-146, RF-147, RF-148, RF-149, RF-150, RF-152, RF-153, RF-154, RF-286, RF-287, RF-288] (Depende de T179–T184 y T088–T092)
 
 ## 8. Offline POS
 

@@ -2,6 +2,8 @@ import { Injectable, Module, type OnModuleDestroy } from '@nestjs/common';
 import { Pool } from 'pg';
 
 import { TenantTransaction } from '../../database/tenant-transaction.js';
+import { objectStorageOptionsFromEnvironment, S3ObjectStorage } from '../../core/objects/s3-object-storage.js';
+import { ReportExportService } from './report-export.service.js';
 import { ReportsController } from './reports.controller.js';
 import { ReportsService } from './reports.service.js';
 
@@ -17,6 +19,11 @@ class ReportsDatabase implements OnModuleDestroy {
   providers: [ReportsDatabase, { provide: ReportsService,
     useFactory: (database: ReportsDatabase) =>
       new ReportsService(new TenantTransaction(database.pool)),
-    inject: [ReportsDatabase] }],
+    inject: [ReportsDatabase] },
+  { provide: ReportExportService,
+    useFactory: (database: ReportsDatabase, reports: ReportsService) =>
+      new ReportExportService(new TenantTransaction(database.pool), reports,
+        new S3ObjectStorage(objectStorageOptionsFromEnvironment())),
+    inject: [ReportsDatabase, ReportsService] }],
 })
 export class ReportsModule {}

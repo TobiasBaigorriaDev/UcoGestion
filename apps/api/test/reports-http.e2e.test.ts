@@ -85,4 +85,64 @@ describe('report HTTP datasets', () => {
     await get('/api/v1/reports/sales', employee).expect(403);
     await get('/api/v1/reports/expenses', employee).expect(403);
   });
+
+  it('exports only authorized filtered rows and neutralizes executable CSV cells', async () => {
+    const categoryId = randomUUID();
+    const expenseId = randomUUID();
+    const hiddenBranchId = randomUUID();
+    await pool.query(`INSERT INTO branches (id,organization_id,name) VALUES ($1,$2,'Oculta')`,
+    [hiddenBranchId, organizationId]);
+    await pool.query(`INSERT INTO expense_categories (id,organization_id,name)
+      VALUES ($1,$2,'Servicios')`, [categoryId, organizationId]);
+    await pool.query(`INSERT INTO expenses (id,organization_id,branch_id,
+      expense_category_id,actor_user_id,concept,amount,method,currency_code)
+      SELECT $1,$2,$3,$4,user_id,'=2+2',5,'TRANSFER','ARS'
+      FROM memberships WHERE organization_id = $2 AND role = 'OWNER'`,
+    [expenseId, organizationId, branchId, categoryId]);
+    await pool.query(`INSERT INTO expenses (id,organization_id,branch_id,
+      expense_category_id,actor_user_id,concept,amount,method,currency_code)
+      SELECT gen_random_uuid(),$1,$2,$3,user_id,'NO_EXPORTAR',1,'TRANSFER','ARS'
+      FROM memberships WHERE organization_id = $1 AND role = 'OWNER'`,
+    [organizationId, hiddenBranchId, categoryId]);
+    await pool.query(`INSERT INTO expenses (id,organization_id,branch_id,
+      expense_category_id,actor_user_id,concept,amount,method,currency_code)
+      SELECT gen_random_uuid(),$1,$2,$3,m.user_id,'Fila-' || n::text,1,'TRANSFER','ARS'
+      FROM memberships m CROSS JOIN generate_series(1,101) AS n
+      WHERE m.organization_id = $1 AND m.role = 'OWNER'`,
+    [organizationId, branchId, categoryId]);
+    const owner = await cookie(ownerEmail);
+    const csv = await get(`/api/v1/reports/expenses/csv?branchId=${branchId}`, owner)
+      .expect(200);
+    expect(csv.headers['content-type']).toContain('text/csv');
+    expect(csv.text).toContain("'=2+2");
+    expect(csv.text).toContain(expenseId);
+    expect(csv.text).toContain('Fila-101');
+    expect(csv.text).not.toContain('NO_EXPORTAR');
+    const employee = await cookie(employeeEmail);
+    await get('/api/v1/reports/expenses/csv', employee).expect(403);
+  });
+
+  it('queues a filtered PDF export with CSRF and idempotency and exposes its status', async () => {
+    const owner = await cookie(ownerEmail);
+    const csrf = await request(app.getHttpServer()).get('/api/v1/auth/csrf')
+      .set('Cookie', owner).expect(200);
+    const post = () => request(app.getHttpServer()).post('/api/v1/reports/expenses/exports')
+      .set('Cookie', owner).set('Origin', 'http://localhost:3000')
+      .set('X-Organization-Id', organizationId)
+      .set('X-CSRF-Token', csrf.body.csrfToken as string)
+      .set('Idempotency-Key', 'report-export-http-1')
+      .send({ branchId });
+    const created = await post().expect(201);
+    expect(created.body).toMatchObject({ status: 'QUEUED', id: expect.any(String) });
+    expect((await post().expect(201)).body).toEqual(created.body);
+    await request(app.getHttpServer()).post('/api/v1/reports/expenses/exports')
+      .set('Cookie', owner).set('Origin', 'http://localhost:3000')
+      .set('X-Organization-Id', organizationId)
+      .set('X-CSRF-Token', csrf.body.csrfToken as string)
+      .set('Idempotency-Key', 'report-export-http-1')
+      .send({ branchId, from: '2026-01-01' }).expect(409);
+    const status = await get(`/api/v1/reports/exports/${created.body.id as string}`, owner)
+      .expect(200);
+    expect(status.body).toMatchObject({ status: 'QUEUED' });
+  });
 });

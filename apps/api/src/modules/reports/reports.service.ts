@@ -55,6 +55,21 @@ export class ReportsService {
   async list(context: TenantTransactionContext, dataset: ReportDataset,
     query: ReportQuery): Promise<ReportResult> {
     return this.transactions.read(context, async (client) => {
+      const { role, branches } = await this.authorize(client, context, dataset, query);
+      if (dataset === 'sales') return this.sales(client, context, role, branches, query);
+      if (dataset === 'inventory') return this.inventory(client, context, branches, query);
+      if (dataset === 'inventory-movements') {
+        return this.inventoryMovements(client, context, branches, query);
+      }
+      if (dataset === 'cash') return this.cash(client, context, role, branches, query);
+      if (dataset === 'purchases') return this.purchases(client, context, branches, query);
+      if (dataset === 'expenses') return this.expenses(client, context, branches, query);
+      throw new Error(`Unsupported report dataset: ${dataset}`);
+    });
+  }
+
+  async authorize(client: PoolClient, context: TenantTransactionContext,
+    dataset: ReportDataset, query: ReportQuery): Promise<{ role: string; branches: string[] }> {
       const membership = await client.query<{ id: string; role: string }>(`SELECT id, role
         FROM memberships WHERE organization_id = $1 AND user_id = $2
           AND status = 'ACTIVE' AND revoked_at IS NULL`,
@@ -75,16 +90,7 @@ export class ReportsService {
         throw new ReportAccessError('REPORT_BRANCH_FORBIDDEN');
       }
       const selected = query.branchId ? [query.branchId] : branchIds;
-      if (dataset === 'sales') return this.sales(client, context, member.role, selected, query);
-      if (dataset === 'inventory') return this.inventory(client, context, selected, query);
-      if (dataset === 'inventory-movements') {
-        return this.inventoryMovements(client, context, selected, query);
-      }
-      if (dataset === 'cash') return this.cash(client, context, member.role, selected, query);
-      if (dataset === 'purchases') return this.purchases(client, context, selected, query);
-      if (dataset === 'expenses') return this.expenses(client, context, selected, query);
-      throw new Error(`Unsupported report dataset: ${dataset}`);
-    });
+      return { role: member.role, branches: selected };
   }
 
   private async expenses(client: PoolClient, context: TenantTransactionContext,
@@ -172,15 +178,19 @@ export class ReportsService {
     const rows = await client.query<{ id: string; branch_id: string; cash_register_id: string;
       owner_user_id: string; status: string; origin: string; opening_cash: string;
       expected_cash: string; currency_code: string; opened_at: Date; movement_total: string;
-      movement_count: string; occurred_cursor: string }>(`SELECT s.id, s.branch_id,
+      movement_count: string; counted_cash: string | null; difference: string | null;
+      occurred_cursor: string }>(`SELECT s.id, s.branch_id,
       s.cash_register_id, s.owner_user_id,
       s.status, s.origin, s.opening_cash::text, s.expected_cash::text, s.currency_code,
+      c.counted_cash::text, c.difference::text,
       s.opened_at,
       to_char(s.opened_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
         AS occurred_cursor,
       coalesce(sum(m.delta),0)::numeric(20,2)::text AS movement_total,
       count(m.id)::text AS movement_count
       FROM cash_sessions s JOIN organizations o ON o.id = s.organization_id
+      LEFT JOIN cash_session_closures c ON c.organization_id = s.organization_id
+        AND c.cash_session_id = s.id
       LEFT JOIN cash_movements m ON m.organization_id = s.organization_id
         AND m.cash_session_id = s.id
       WHERE s.organization_id = $1 AND s.branch_id = ANY($2::uuid[])
@@ -190,7 +200,8 @@ export class ReportsService {
         AND ($6::text IS NULL OR s.status = $6)
         AND ($7::timestamptz IS NULL OR (s.opened_at, s.id) < ($7::timestamptz, $8::uuid))
       GROUP BY s.id, s.branch_id, s.cash_register_id, s.owner_user_id,
-        s.status, s.origin, s.opening_cash, s.expected_cash, s.currency_code, s.opened_at
+        s.status, s.origin, s.opening_cash, s.expected_cash, s.currency_code, s.opened_at,
+        c.counted_cash, c.difference
       ORDER BY s.opened_at DESC, s.id DESC LIMIT $9`,
     [context.organizationId, branches, query.from ?? null, query.to ?? null,
       role === 'CASHIER' ? context.userId : null, query.status ?? null,
@@ -203,7 +214,7 @@ export class ReportsService {
       openingCash: row.opening_cash, expectedCash: row.expected_cash,
       movementTotal: row.movement_total, movementCount: Number(row.movement_count),
       currencyCode: row.currency_code, openedAt: row.opened_at.toISOString(),
-      countedCash: null, difference: null })),
+      countedCash: row.counted_cash, difference: row.difference })),
       nextCursor: rows.rows.length > query.limit && last
         ? encodeCursor({ id: last.id, sortValue: last.occurred_cursor }) : null };
   }
@@ -271,7 +282,7 @@ export class ReportsService {
     const predicate = `s.organization_id = $1 AND s.branch_id = ANY($2::uuid[])
       AND ($3::date IS NULL OR s.confirmed_at >= ($3::date::timestamp AT TIME ZONE o.timezone))
       AND ($4::date IS NULL OR s.confirmed_at < ($4::date::timestamp AT TIME ZONE o.timezone))
-      AND ($5::uuid IS NULL OR (s.actor_user_id = $5 AND s.session_owner_user_id = $5))
+      AND ($5::uuid IS NULL OR s.actor_user_id = $5)
       AND ($6::text IS NULL OR (CASE WHEN sc.id IS NULL THEN 'CONFIRMED' ELSE 'CANCELLED' END) = $6)`;
     const totals = await client.query<{ net: string }>(`SELECT
       coalesce(sum(s.total) FILTER (WHERE sc.id IS NULL),0)::numeric(20,2)::text AS net

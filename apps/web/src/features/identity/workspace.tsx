@@ -29,6 +29,9 @@ import { PosOnline } from '../sales/pos-online';
 import { SaleLookup } from '../sales/sale-lookup';
 import { PurchaseWorkspace } from '../purchases/purchase-workspace';
 import { ExpensePage } from '../expenses/expense-page';
+import { DashboardWorkspace } from '../insights/dashboard-workspace';
+import { AuditWorkspace } from '../insights/audit-workspace';
+import { ReportsWorkspace } from '../insights/reports-workspace';
 
 type WorkspacePage =
   | 'home'
@@ -49,7 +52,9 @@ type WorkspacePage =
   | 'pos'
   | 'sales'
   | 'purchases'
-  | 'expenses';
+  | 'expenses'
+  | 'audit'
+  | 'reports';
 
 export function Workspace({ page = 'home' }: { page?: WorkspacePage }) {
   return <RemoteProvider><WorkspaceContent page={page} /></RemoteProvider>;
@@ -65,7 +70,7 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
   const settings = useQuery({
     queryKey: ['organization-settings', activeId],
     queryFn: () => loadOrganizationSettings(activeId ?? ''),
-    enabled: page === 'settings' && !!activeId,
+    enabled: (page === 'settings' || page === 'home' || page === 'audit' || page === 'reports') && !!activeId,
   });
   const users = useQuery({ queryKey: ['user-management', activeId], queryFn: () => loadUserManagement(activeId ?? ''), enabled: page === 'users' && !!activeId });
   const branches = useQuery({ queryKey: ['branches', activeId], queryFn: () => loadBranches(activeId ?? ''), enabled: !!activeId });
@@ -142,6 +147,7 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
       ...(current?.role === 'CASHIER' ? [] : [{ href: '/workspace/purchases', label: 'Compras' }]),
       ...(current?.role === 'EMPLOYEE' ? [] : [{ href: '/workspace/expenses', label: 'Gastos' }]),
       { href: '/workspace/inventory', label: 'Inventario' },
+      { href: '/workspace/reports', label: 'Reportes' },
       ...(current?.role === 'CASHIER' ? [] : [{ href: '/workspace/inventory/adjustments', label: 'Ajustes' }]),
       ...(current?.role === 'CASHIER' ? [] : [{ href: '/workspace/inventory/transfers', label: 'Transferencias' }]),
       { href: '/workspace/branches', label: 'Sucursales' },
@@ -153,6 +159,7 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
             { href: '/workspace/users', label: 'Usuarios' },
             { href: '/workspace/expense-categories', label: 'Categorías de gasto' },
             { href: '/workspace/payment-methods', label: 'Medios de pago' },
+            { href: '/workspace/audit', label: 'Auditoría' },
           ]
         : []),
       { href: '/workspace/settings', label: 'Configuración' },
@@ -160,7 +167,19 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
     currentPath={page === 'home' ? '/workspace' : page === 'catalog-categories' || page === 'catalog-items' ? '/workspace/catalog' : page === 'inventory-adjustments' ? '/workspace/inventory/adjustments' : page === 'inventory-transfers' ? '/workspace/inventory/transfers' : `/workspace/${page}`}>
       {switchError ? <ErrorSummary error={switchError} /> : null}
       {branches.error ? <><ErrorSummary error={branches.error instanceof ApiProblemError ? branches.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar las sucursales.' })} /><button type="button" onClick={() => void branches.refetch()}>Reintentar sucursales</button></> : null}
-      {page === 'expenses' ? current?.role === 'EMPLOYEE'
+      {page === 'reports' && current ? settings.error
+        ? <><ErrorSummary error={settings.error instanceof ApiProblemError ? settings.error : new ApiProblemError({ status: 0, code: 'SETTINGS_LOAD_FAILED', message: 'No pudimos cargar la zona horaria de la organización.' })} /><button type="button" onClick={() => void settings.refetch()}>Reintentar</button></>
+        : settings.data ? <ReportsWorkspace key={activeId} organizationId={activeId}
+          role={current.role} timezone={settings.data.timezone} branches={branches.data?.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => ({ id: branch.id, name: branch.name })) ?? []} />
+        : <p role="status">Cargando zona horaria…</p>
+      : page === 'audit' ? current?.role !== 'OWNER' && current?.role !== 'ADMIN'
+        ? <p role="alert">No tenés acceso a la auditoría.</p>
+        : settings.error
+          ? <><ErrorSummary error={settings.error instanceof ApiProblemError ? settings.error : new ApiProblemError({ status: 0, code: 'SETTINGS_LOAD_FAILED', message: 'No pudimos cargar la zona horaria de la organización.' })} /><button type="button" onClick={() => void settings.refetch()}>Reintentar</button></>
+          : settings.data ? <AuditWorkspace key={activeId} organizationId={activeId} timezone={settings.data.timezone}
+          branches={branches.data?.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => ({ id: branch.id, name: branch.name })) ?? []} />
+          : <p role="status">Cargando zona horaria…</p>
+      : page === 'expenses' ? current?.role === 'EMPLOYEE'
         ? <p role="alert">No tenés permiso para registrar gastos.</p>
         : !activeBranchId || !current ? <p>Seleccioná una sucursal para registrar gastos.</p>
         : <ExpensePage key={`${activeId}:${activeBranchId}`} organizationId={activeId}
@@ -269,6 +288,11 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
         : settings.data && current
           ? <OrganizationSettings key={activeId} organizationId={activeId} role={current.role} initial={settings.data} />
           : <p role="status">Cargando configuración…</p>
-        : <section><h1>{current?.organizationName}</h1><p>Organización activa. Elegí Configuración para revisar el perfil comercial.</p></section>}
+        : page === 'home' && current ? settings.error
+          ? <><ErrorSummary error={settings.error instanceof ApiProblemError ? settings.error : new ApiProblemError({ status: 0, code: 'SETTINGS_LOAD_FAILED', message: 'No pudimos cargar la zona horaria de la organización.' })} /><button type="button" onClick={() => void settings.refetch()}>Reintentar</button></>
+          : settings.data ? <DashboardWorkspace key={activeId} organizationId={activeId}
+          role={current.role} timezone={settings.data.timezone} branches={branches.data?.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => ({ id: branch.id, name: branch.name })) ?? []} />
+          : <p role="status">Cargando zona horaria…</p>
+        : <section><h1>{current?.organizationName}</h1><p>Organización activa.</p></section>}
     </AppShell>;
 }

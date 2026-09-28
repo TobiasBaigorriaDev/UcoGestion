@@ -36,6 +36,7 @@ export interface OutboxWorkerOptions {
   retryBaseSeconds: number;
   tenantTransactions: TenantTransaction;
   workerUserId: string;
+  onDeadLetter?: (claim: ClaimedOutboxJob, client: PoolClient) => Promise<void>;
 }
 
 export type OutboxProcessResult =
@@ -62,12 +63,12 @@ interface OutboxJobRow {
 }
 
 export class OutboxDispatcher {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly pool: Pool, private readonly jobType?: 'REPORT_ARTIFACTS') {}
 
   async claim(limit: number, leaseSeconds: number): Promise<ClaimedOutboxJob[]> {
     const result = await this.pool.query<ClaimedOutboxJobRow>(
       `SELECT job_id AS "jobId", organization_id AS "organizationId", job_type AS "jobType", lease_id AS "leaseId"
-      FROM claim_outbox_jobs($1, $2)`,
+      FROM ${this.jobType === 'REPORT_ARTIFACTS' ? 'claim_report_artifact_jobs' : 'claim_outbox_jobs'}($1, $2)`,
       [limit, leaseSeconds],
     );
 
@@ -83,6 +84,7 @@ export class OutboxWorker {
   private readonly retryBaseSeconds: number;
   private readonly tenantTransactions: TenantTransaction;
   private readonly workerUserId: string;
+  private readonly onDeadLetter: OutboxWorkerOptions['onDeadLetter'];
 
   constructor(options: OutboxWorkerOptions) {
     this.authorizer = options.authorizer;
@@ -92,6 +94,7 @@ export class OutboxWorker {
     this.retryBaseSeconds = options.retryBaseSeconds;
     this.tenantTransactions = options.tenantTransactions;
     this.workerUserId = options.workerUserId;
+    this.onDeadLetter = options.onDeadLetter;
   }
 
   async processAvailable(limit: number, leaseSeconds: number): Promise<OutboxProcessResult[]> {
@@ -216,6 +219,8 @@ export class OutboxWorker {
         if (!row) {
           throw new Error('The failed outbox job lease is no longer valid.');
         }
+
+        if (row.status === 'DEAD_LETTER') await this.onDeadLetter?.(claim, client);
 
         return row.status === 'DEAD_LETTER'
           ? { jobId: claim.jobId, status: 'DEAD_LETTER' as const }

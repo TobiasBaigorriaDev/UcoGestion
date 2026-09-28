@@ -555,6 +555,27 @@ export const cashSessionStateTransitions = pgTable('cash_session_state_transitio
 }, (table) => [foreignKey({ columns: [table.organizationId, table.cashSessionId],
   foreignColumns: [cashSessions.organizationId, cashSessions.id], name: 'cash_session_transitions_session_fk' })]);
 
+export const cashSessionClosures = pgTable('cash_session_closures', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull(),
+  branchId: uuid('branch_id').notNull(),
+  cashSessionId: uuid('cash_session_id').notNull(),
+  actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+  expectedCash: numeric('expected_cash', { precision: 20, scale: 2 }).notNull(),
+  countedCash: numeric('counted_cash', { precision: 20, scale: 2 }).notNull(),
+  difference: numeric({ precision: 20, scale: 2 }).notNull(),
+  currencyCode: text('currency_code').notNull(),
+  closedAt: timestamp('closed_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('cash_session_closures_session_unique').on(table.organizationId, table.cashSessionId),
+  foreignKey({ columns: [table.organizationId, table.cashSessionId],
+    foreignColumns: [cashSessions.organizationId, cashSessions.id],
+    name: 'cash_session_closures_session_fk' }),
+  foreignKey({ columns: [table.organizationId, table.branchId],
+    foreignColumns: [branches.organizationId, branches.id],
+    name: 'cash_session_closures_branch_fk' }),
+]);
+
 export const cashMovements = pgTable('cash_movements', {
   id: uuid().primaryKey(),
   organizationId: uuid('organization_id').notNull(),
@@ -903,6 +924,37 @@ export const outboxJobs = pgTable(
   },
   (table) => [unique('outbox_jobs_organization_job_key_key').on(table.organizationId, table.jobKey)],
 );
+
+export const objectFiles = pgTable('object_files', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+  actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+  storageKey: text('storage_key').notNull(),
+  fileName: text('file_name').notNull(),
+  contentType: text('content_type').notNull(),
+  sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+}, (table) => [unique('object_files_tenant_id_key').on(table.organizationId, table.id),
+  unique('object_files_storage_key_key').on(table.storageKey)]);
+
+export const reportExports = pgTable('report_exports', {
+  id: uuid().primaryKey(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+  actorUserId: uuid('actor_user_id').notNull().references(() => users.id),
+  dataset: text().notNull(),
+  format: text().notNull(),
+  filters: jsonb().notNull(),
+  status: text().notNull().default('QUEUED'),
+  fileId: uuid('file_id'),
+  errorCode: text('error_code'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique('report_exports_tenant_id_key').on(table.organizationId, table.id),
+  foreignKey({ columns: [table.organizationId, table.fileId],
+    foreignColumns: [objectFiles.organizationId, objectFiles.id], name: 'report_exports_file_fk' }),
+]);
 
 export const customers = pgTable(
   'customers',
