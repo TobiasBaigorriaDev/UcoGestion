@@ -14,6 +14,19 @@ const problem = {
 };
 
 describe('ApiClient', () => {
+  it('T199 blocks ordinary API requests offline before invoking transport', async () => {
+    const fetcher = vi.fn<typeof fetch>();
+    const client = new ApiClient(fetcher, '/api/v1', () => false);
+    for (const [path, method] of [['/organizations/settings', 'PATCH'], ['/memberships', 'POST'],
+      ['/purchases', 'POST'], ['/expenses', 'POST'], ['/inventory/adjustments', 'POST'],
+      ['/sales/id/cancel', 'POST'], ['/cash-sessions/id/close', 'POST'], ['/reports/sales', 'GET'],
+      ['/catalog/items', 'POST']] as const) {
+      await expect(client.request(path, { method, body: method === 'GET' ? undefined : {} }))
+        .rejects.toMatchObject({ code: 'OFFLINE_NOT_ALLOWED' });
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it('sends tenant, CSRF and idempotency context with same-origin JSON requests', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify({ id: 'customer-1' }), {

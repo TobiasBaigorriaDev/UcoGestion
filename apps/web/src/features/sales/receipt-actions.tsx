@@ -5,10 +5,12 @@ import { useState } from 'react';
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
 import { problemFromResponse } from '../../lib/api/problem-details';
+import { requireBusinessOnline } from '../../lib/api/online-only';
 import styles from './pos.module.css';
 
 async function receiptBlob(organizationId: string, saleId: string,
   kind: 'print' | 'pdf'): Promise<Blob> {
+  requireBusinessOnline();
   const suffix = kind === 'pdf' ? 'receipt.pdf' : 'receipt/print';
   let response: Response;
   try {

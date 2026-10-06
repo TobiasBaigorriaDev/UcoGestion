@@ -16,6 +16,7 @@ import { ExpensesModule } from './modules/expenses/expenses.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
 import { InventoryLedgerMonitor } from './modules/inventory/inventory-ledger-monitor.js';
 import { OrganizationsModule } from './modules/organizations/organizations.module.js';
+import { OfflineSyncModule } from './modules/offline-sync/offline-sync.module.js';
 import { SalesModule } from './modules/sales/sales.module.js';
 import { PurchasesModule } from './modules/purchases/purchases.module.js';
 import { ReportsModule } from './modules/reports/reports.module.js';
@@ -35,6 +36,7 @@ import { UsersModule } from './modules/users/users.module.js';
     ExpensesModule,
     InventoryModule,
     OrganizationsModule,
+    OfflineSyncModule,
     SalesModule,
     PurchasesModule,
     ReportsModule,

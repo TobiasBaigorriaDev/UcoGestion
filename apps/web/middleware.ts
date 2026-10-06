@@ -13,7 +13,7 @@ export const generateNonce = (): string => {
 export const createCsp = (nonce: string): string => {
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'`,
     `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`,
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
@@ -89,7 +89,7 @@ export const config = {
         { key: 'next-router-prefetch', type: 'header' },
         { key: 'purpose', type: 'header', value: 'prefetch' },
       ],
-      source: '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+      source: '/((?!_next/static|_next/image|favicon.ico|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     },
   ],
 };

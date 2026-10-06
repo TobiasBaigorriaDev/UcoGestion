@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
 
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { Pool } from 'pg';
@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { runMigrations } from '../src/database/migrate.js';
 import { TenantTransaction } from '../src/database/tenant-transaction.js';
 import { DeviceAuthorizationService } from '../src/modules/cash/device-authorization.service.js';
+import { DeviceCertificate } from '../src/modules/offline-sync/device-certificate.js';
 import { CashOpeningPreparation } from '../src/modules/cash/cash-opening-preparation.js';
 import { CashSessionDevicePolicy } from '../src/modules/cash/cash-session-device.policy.js';
 import { CashOperationsService } from '../src/modules/cash/cash-operations.service.js';
@@ -84,6 +85,29 @@ describe('cash foundation', () => {
       expect((await client.query('SELECT id FROM devices WHERE id = $1', [device.id])).rowCount).toBe(0);
       await client.query('ROLLBACK');
     } finally { client.release(); }
+  });
+
+  it('T185 provisions a POS key and opaque certificate, with scoped authorization and idempotent replay', async () => {
+    const certificate = new DeviceCertificate(randomBytes(32));
+    const key = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+    const publicKey = key.publicKey.export({ format: 'pem', type: 'spki' }).toString();
+    const requestKey = randomUUID();
+    const first = await devices.authorizePos(context(ownerId), branchId, publicKey, requestKey, certificate);
+    const second = await devices.authorizePos(context(ownerId), branchId, publicKey, requestKey, certificate);
+    expect(second).toEqual(first);
+    expect(certificate.open(first.certificate)).toMatchObject({ deviceId: first.id,
+      organizationId, thumbprint: certificate.thumbprint(publicKey) });
+    const row = await admin.query('SELECT public_key, public_key_thumbprint, authorized_at, last_seen_at, last_sync_at FROM devices WHERE id = $1', [first.id]);
+    expect(row.rows[0]).toMatchObject({ public_key: publicKey, public_key_thumbprint: certificate.thumbprint(publicKey) });
+    expect(row.rows[0]?.authorized_at).toBeInstanceOf(Date);
+    expect(row.rows[0]?.last_seen_at).toBeInstanceOf(Date);
+    expect(row.rows[0]?.last_sync_at).toBeNull();
+    await expect(devices.authorizePos(context(employeeId), branchId, publicKey, randomUUID(), certificate))
+      .rejects.toMatchObject({ code: 'DEVICE_AUTHORIZATION_FORBIDDEN' });
+    await expect(devices.authorizePos(context(adminId), otherBranchId, publicKey, randomUUID(), certificate))
+      .rejects.toMatchObject({ code: 'DEVICE_BRANCH_FORBIDDEN' });
+    await expect(devices.authorizePos(context(ownerId), foreignBranchId, publicKey, randomUUID(), certificate))
+      .rejects.toMatchObject({ code: 'DEVICE_BRANCH_NOT_AVAILABLE' });
   });
 
   it('T116 preserves a conflicting offline session while one normal session blocks online opening', async () => {

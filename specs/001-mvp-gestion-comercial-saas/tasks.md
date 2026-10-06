@@ -253,32 +253,38 @@ D01 y D02 resueltas: RF-302–RF-316 se implementan mediante exposiciones/barrer
 
 ## 8. Offline POS
 
-- [ ] T185: Autorizar dispositivo POS registrando tenant, branch, autorizador, estado, contacto y clave pública; emitir certificado opaco autenticado/cifrado, no bearer y ligado al thumbprint [RF-127, RF-309, RF-312, RF-313]
-- [ ] T185A: Implementar service worker con `no-cache`, precache exclusivo de shell/assets y prueba negativa de API privada [RF-118, RF-171, RF-279]
-- [ ] T185B: Crear manifest y capability gate que impida autorizar offline sin Service Worker, IndexedDB y Web Crypto requeridos [RF-116, RF-152, RF-289] (Depende de T185A)
-- [ ] T188: Crear una base Dexie por organización/dispositivo con stores cifrados particionados por identidad y delivery_queue opaca común; probar migración y aislamiento [RF-173, RF-279, RF-309, RF-312]
-- [ ] T189: Crear clave ECDSA no exportable y DEK/KEK por PIN, con backoff persistente y bloqueo; separar desbloqueo/creación de la capacidad limitada de entrega [RF-171, RF-172, RF-173, RF-311] (Depende de T188)
-- [ ] T189A: Implementar SyncEnvelopeDecryptorPort con RSA-OAEP-3072/SHA-256, publicación firmada, rotación y restauración; impedir retirar claves referenciadas por exposiciones o sobres posibles [RF-310, RF-315] (Depende de T185)
-- [ ] T190: Cifrar registros legibles por identidad con AES-256-GCM, AAD/IV únicos y detectar alteración sin permitir acceso cruzado [RF-171, RF-173, RF-312, RF-277]
-- [ ] T190A: Construir sobre híbrido versionado: CEK AES-256-GCM, wrap RSA-OAEP, routing mínimo, duplicación interna y firma; excluir credenciales reutilizables [RF-309, RF-310, RF-315] (Depende de T189A–T190)
-- [ ] T190B: Implementar lease local con fencing token y recuperación tras crash para serializar secuencia entre pestañas/identidades sin consumirla al fallar [RF-175, RF-277, RF-309] (Depende de T188)
-- [ ] T191: Sellar operación bajo lease local con fencing: firma/hash, registro cifrado y sobre opaco en una transacción IndexedDB, sin bifurcar ni consumir secuencia ante fallo [RF-115, RF-175, RF-267, RF-277, RF-309, RF-310] (Depende de T189–T190B)
-- [ ] T191A: Migrar forward-only preservando byte por byte registros y sobres; bloquear actualización incompatible y conservar key IDs/formatos verificables [RF-175, RF-279, RF-310, RF-315] (Depende de T188–T191)
-- [ ] T186: Emitir bootstrap firmado con clave pública de ingestión/ACK vigentes y registrar exposición antes de entregar configuración utilizable; probar respuesta perdida, reintento y rotación [RF-116, RF-123, RF-167, RF-168, RF-302, RF-303, RF-310, RF-315] (Depende de T077A, T077C, T077D, T185, T185B y T189A)
-- [ ] T187: Emitir grant ligado a clave registrada, actor/tenant/dispositivo/scope/cajas/versión con 72 h desde validación y sync completos; probar que login y sync fallido no renuevan plazo [RF-114, RF-119, RF-169, RF-172] (Depende de T186 y T189)
-- [ ] T192: Abrir sesión offline con permisos, dispositivo y bootstrap/grant vigentes, persistiéndola con envelope atómicamente [RF-114, RF-115, RF-116, RF-119] (Depende de T185, T185A, T185B, T186, T187 y T188–T191A)
-- [ ] T193: Consultar offline únicamente catálogo permitido y configuración conocida [RF-117, RF-118]
-- [ ] T194: Crear venta offline de consumidor final sin cachear ni editar clientes [RF-117, RF-280]
-- [ ] T195: Validar ítems activos según conocimiento local y precios de versión verificable [RF-123, RF-256]
-- [ ] T196: Aplicar descuento offline solo con permiso vigente conocido y dejar evidencia [RF-49, RF-281]
-- [ ] T197: Persistir venta/pagos offline con referencia local estable e ID global [RF-117, RF-267, RF-268]
-- [ ] T198: Conservar occurred_at local separado de received_at servidor [RF-130, RF-272]
-- [ ] T199: Bloquear configuración, compras, gastos, ajustes, anulaciones, cierre y reportes offline [RF-118]
-- [ ] T200: Invalidar nuevas operaciones al expirar grant sin borrar pendientes [RF-119, RF-175]
-- [ ] T200A: Validar internamente formato, firma, grant histórico, versión y conocimiento de revocación sin producir efectos de negocio [RF-128, RF-129, RF-169, RF-172, RF-278] (Depende de T187 y T191)
-- [ ] T200B: Validar cadena, secuencias, dependencias e idempotencia por sobre, conservando dependientes pendientes ante fallo [RF-131, RF-175, RF-273, RF-274, RF-275, RF-276, RF-277] (Depende de T191 y T200A)
-- [ ] T213: Implementar apertura offline importada con lock de caja: OPEN si compatible, CONFLICTED si incompatible, conservando sesión previa; ACKED confirma la apertura persistida aun con conflicto comercial [RF-124, RF-131, RF-132, RF-158, RF-292] (Depende de T116, T187 y T191)
-- [ ] T201A: Implementar delivery/challenge y delivery/push con certificado opaco servidor, nonce JWS de un uso, prueba ECDSA sobre hash exacto, origin/content-type, límites y respuestas indistinguibles [RF-151, RF-312, RF-313, RF-314] (Depende de T013, T018, T185 y T190A)
+- [x] T185: Autorizar dispositivo POS registrando tenant, branch, autorizador, estado, contacto y clave pública; emitir certificado opaco autenticado/cifrado, no bearer y ligado al thumbprint [RF-127, RF-309, RF-312, RF-313]
+- [x] T185A: Implementar service worker con `no-cache`, precache exclusivo de shell/assets y prueba negativa de API privada [RF-118, RF-171, RF-279]
+- [x] T185B: Crear manifest y capability gate que impida autorizar offline sin Service Worker, IndexedDB y Web Crypto requeridos [RF-116, RF-152, RF-289] (Depende de T185A)
+- [x] T188: Crear una base Dexie por organización/dispositivo con stores cifrados particionados por identidad y delivery_queue opaca común; probar migración y aislamiento [RF-173, RF-279, RF-309, RF-312]
+- [x] T189: Crear clave ECDSA no exportable y DEK/KEK por PIN, con backoff persistente y bloqueo; separar desbloqueo/creación de la capacidad limitada de entrega [RF-171, RF-172, RF-173, RF-311] (Depende de T188)
+- [x] T189A: Implementar SyncEnvelopeDecryptorPort con RSA-OAEP-3072/SHA-256, publicación firmada, rotación y restauración; impedir retirar claves referenciadas por exposiciones o sobres posibles [RF-310, RF-315] (Depende de T185)
+- [x] T190: Cifrar registros legibles por identidad con AES-256-GCM, AAD/IV únicos y detectar alteración sin permitir acceso cruzado [RF-171, RF-173, RF-312, RF-277]
+- [x] T190A: Construir sobre híbrido versionado: CEK AES-256-GCM, wrap RSA-OAEP, routing mínimo, duplicación interna y firma; excluir credenciales reutilizables [RF-309, RF-310, RF-315] (Depende de T189A–T190)
+- [x] T190B: Implementar lease local con fencing token y recuperación tras crash para serializar secuencia entre pestañas/identidades sin consumirla al fallar [RF-175, RF-277, RF-309] (Depende de T188)
+- [x] T191: Sellar operación bajo lease local con fencing: firma/hash, registro cifrado y sobre opaco en una transacción IndexedDB, sin bifurcar ni consumir secuencia ante fallo [RF-115, RF-175, RF-267, RF-277, RF-309, RF-310] (Depende de T189–T190B)
+
+Evidencia T189A–T191: [implementación, pruebas y límites](offline-sealing-evidence.md).
+
+- [x] T191A: Migrar forward-only preservando byte por byte registros y sobres; bloquear actualización incompatible y conservar key IDs/formatos verificables [RF-175, RF-279, RF-310, RF-315] (Depende de T188–T191)
+- [x] T186: Emitir bootstrap firmado con clave pública de ingestión/ACK vigentes y registrar exposición antes de entregar configuración utilizable; probar respuesta perdida, reintento y rotación [RF-116, RF-123, RF-167, RF-168, RF-302, RF-303, RF-310, RF-315] (Depende de T077A, T077C, T077D, T185, T185B y T189A)
+- [x] T187: Emitir grant ligado a clave registrada, actor/tenant/dispositivo/scope/cajas/versión con 72 h desde validación y sync completos; probar que login y sync fallido no renuevan plazo [RF-114, RF-119, RF-169, RF-172] (Depende de T186 y T189)
+- [x] T192: Abrir sesión offline con permisos, dispositivo y bootstrap/grant vigentes, persistiéndola con envelope atómicamente [RF-114, RF-115, RF-116, RF-119] (Depende de T185, T185A, T185B, T186, T187 y T188–T191A)
+- [x] T193: Consultar offline únicamente catálogo permitido y configuración conocida [RF-117, RF-118]
+- [x] T194: Crear venta offline de consumidor final sin cachear ni editar clientes [RF-117, RF-280]
+- [x] T195: Validar ítems activos según conocimiento local y precios de versión verificable [RF-123, RF-256]
+- [x] T196: Aplicar descuento offline solo con permiso vigente conocido y dejar evidencia [RF-49, RF-281]
+- [x] T197: Persistir venta/pagos offline con referencia local estable e ID global [RF-117, RF-267, RF-268]
+- [x] T198: Conservar occurred_at local separado de received_at servidor [RF-130, RF-272]
+- [x] T199: Bloquear configuración, compras, gastos, ajustes, anulaciones, cierre y reportes offline [RF-118]
+- [x] T200: Invalidar nuevas operaciones al expirar grant sin borrar pendientes [RF-119, RF-175]
+- [x] T200A: Validar internamente formato, firma, grant histórico, versión y conocimiento de revocación sin producir efectos de negocio [RF-128, RF-129, RF-169, RF-172, RF-278] (Depende de T187 y T191)
+- [x] T200B: Validar cadena, secuencias, dependencias e idempotencia por sobre, conservando dependientes pendientes ante fallo [RF-131, RF-175, RF-273, RF-274, RF-275, RF-276, RF-277] (Depende de T191 y T200A)
+- [x] T213: Implementar apertura offline importada con lock de caja: OPEN si compatible, CONFLICTED si incompatible, conservando sesión previa; ACKED confirma la apertura persistida aun con conflicto comercial [RF-124, RF-131, RF-132, RF-158, RF-292] (Depende de T116, T187 y T191)
+- [x] T201A: Implementar delivery/challenge y delivery/push con certificado opaco servidor, nonce JWS de un uso, prueba ECDSA sobre hash exacto, origin/content-type, límites y respuestas indistinguibles [RF-151, RF-312, RF-313, RF-314] (Depende de T013, T018, T185 y T190A)
+
+Evidencia T200–T201A y T213: [implementación, gates y límites de etapa](offline-pos-block-03-evidence.md).
+
 - [ ] T201B: Probar que el guard de entrega solo alcanza ingestión/ACK mínimo: negar catálogo, recibos, status detallado y toda mutación ordinaria; incluir negativos cross-tenant y certificado/header discordante [RF-02, RF-04, RF-151, RF-312, RF-313, RF-314] (Depende de T201A)
 - [ ] T201: Integrar validadores e ingestión histórica en una TenantTransaction por sobre con RLS; aceptar actor revocado solo conforme al contexto original y devolver resultado estable [RF-128, RF-129, RF-131, RF-132, RF-169, RF-175, RF-273, RF-274, RF-278, RF-283, RF-313] (Depende de T200A–T200B, T201A–T201B y T213)
 - [ ] T202: Reintentar resultado incierto con la misma clave, payload y bytes de sobre; rechazar cambio de hash y no recrear la operación [RF-120, RF-275, RF-276, RF-315] (Depende de T201)

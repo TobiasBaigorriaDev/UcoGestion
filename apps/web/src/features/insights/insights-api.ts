@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { requireBusinessOnline } from '../../lib/api/online-only';
 
 import { ApiClient } from '../../lib/api/client';
 
@@ -104,6 +105,7 @@ export async function loadReportExport(organizationId: string, id: string): Prom
 
 export async function downloadReportCsv(organizationId: string, dataset: ReportDataset,
   filters: Omit<ReportFilters, 'cursor'>): Promise<void> {
+  requireBusinessOnline();
   const response = await fetch(`/api/v1/reports/${dataset}/csv${queryString(filters)}`, {
     credentials: 'include', cache: 'no-store', headers: { 'X-Organization-Id': organizationId, Accept: 'text/csv' },
   });

@@ -4,6 +4,13 @@ const nextConfig: NextConfig = {
   agentRules: false,
   reactStrictMode: true,
   transpilePackages: ['@uconext/ui'],
+  async headers() {
+    return [{ source: '/sw.js', headers: [
+      { key: 'Cache-Control', value: 'no-cache, max-age=0, must-revalidate' },
+      { key: 'Content-Security-Policy', value: "default-src 'none'; script-src 'self'; connect-src 'self'" },
+      { key: 'Service-Worker-Allowed', value: '/' },
+    ] }];
+  },
   async rewrites() {
     if (process.env.NODE_ENV !== 'development') return [];
     const apiOrigin = process.env.UCONEXT_API_INTERNAL_ORIGIN ?? 'http://localhost:4000';

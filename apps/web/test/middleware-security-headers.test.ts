@@ -26,6 +26,7 @@ describe('Web security headers and CSP middleware', () => {
     const csp = response.headers.get('content-security-policy');
     expect(csp).toBeDefined();
     expect(csp).toContain("'nonce-");
+    expect(csp).toContain("'wasm-unsafe-eval'");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain("frame-ancestors 'none'");

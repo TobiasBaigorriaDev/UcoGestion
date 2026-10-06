@@ -505,6 +505,7 @@ export const devices = pgTable('devices', {
   lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
   status: text().notNull(),
   publicKey: text('public_key'),
+  publicKeyThumbprint: text('public_key_thumbprint'),
   lastConfigVersion: bigint('last_config_version', { mode: 'number' }).notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
@@ -615,6 +616,12 @@ export const configurationVersions = pgTable('configuration_versions', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [unique('configuration_versions_org_version_key').on(table.organizationId, table.version)]);
 
+export const offlineIngestionKeyRegistry = pgTable('offline_ingestion_key_registry', {
+  keyId: text('key_id').primaryKey(),
+  publicKeyPem: text('public_key_pem').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const offlineGrants = pgTable('offline_grants', {
   id: uuid().primaryKey(),
   organizationId: uuid('organization_id').notNull(),
@@ -638,6 +645,16 @@ export const offlineGrants = pgTable('offline_grants', {
     .on(table.organizationId, table.id, table.deviceId, table.epoch),
 ]);
 
+export const offlineGrantAuthorizations = pgTable('offline_grant_authorizations', {
+  organizationId: uuid('organization_id').notNull(), grantId: uuid('grant_id').notNull(),
+  actorUserId: uuid('actor_user_id').notNull().references(() => users.id), branchId: uuid('branch_id').notNull(),
+  proofHash: text('proof_hash').notNull(), grantJws: text('grant_jws').notNull(),
+  issuedAt: timestamp('issued_at', { withTimezone: true }).notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+}, table => [primaryKey({ columns: [table.organizationId, table.grantId] }),
+  foreignKey({ columns: [table.organizationId, table.grantId], foreignColumns: [offlineGrants.organizationId, offlineGrants.id] }),
+  foreignKey({ columns: [table.organizationId, table.branchId], foreignColumns: [branches.organizationId, branches.id] })]);
+
 export const configurationBarriers = pgTable('configuration_barriers', {
   id: uuid().primaryKey(),
   organizationId: uuid('organization_id').notNull().references(() => organizations.id),
@@ -646,6 +663,12 @@ export const configurationBarriers = pgTable('configuration_barriers', {
   startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp('completed_at', { withTimezone: true }),
 }, (table) => [unique('configuration_barriers_org_id_key').on(table.organizationId, table.id)]);
+
+export const offlineSyncSessions = pgTable('offline_sync_sessions', {
+  organizationId: uuid('organization_id').notNull(), id: uuid().notNull(), deviceId: uuid('device_id').notNull(),
+}, table => [primaryKey({columns:[table.organizationId,table.id]}),
+  unique('offline_sync_sessions_device_identity_key').on(table.organizationId,table.id,table.deviceId),
+  foreignKey({columns:[table.organizationId,table.deviceId],foreignColumns:[devices.organizationId,devices.id],name:'offline_sync_sessions_device_fk'})]);
 
 export const syncOperations = pgTable('sync_operations', {
   id: uuid().primaryKey(),
@@ -658,13 +681,28 @@ export const syncOperations = pgTable('sync_operations', {
   operationHash: text('operation_hash').notNull(),
   status: text().notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }),
+  receivedAt: timestamp('received_at', { withTimezone: true }).notNull().default(sql`clock_timestamp()`),
+  sessionId: uuid('session_id'),
+  sessionSequence: bigint('session_sequence', { mode: 'bigint' }),
+  kind: text(),
+  envelopeHash: text('envelope_hash'),
 }, (table) => [
   foreignKey({ columns: [table.organizationId, table.grantId, table.deviceId, table.epoch],
     foreignColumns: [offlineGrants.organizationId, offlineGrants.id, offlineGrants.deviceId, offlineGrants.epoch],
     name: 'sync_operations_grant_fk' }),
   unique('sync_operations_device_epoch_sequence_key')
     .on(table.organizationId, table.deviceId, table.epoch, table.sequence),
+  foreignKey({ columns: [table.organizationId, table.sessionId, table.deviceId], foreignColumns: [offlineSyncSessions.organizationId, offlineSyncSessions.id, offlineSyncSessions.deviceId],
+    name: 'sync_operations_session_tenant_fk' }),
 ]);
+
+export const syncDeliveryChallenges = pgTable('sync_delivery_challenges', {
+  organizationId: uuid('organization_id').notNull(), deviceId: uuid('device_id').notNull(),
+  jtiHash: text('jti_hash').primaryKey(), certificateHash: text('certificate_hash').notNull(), origin: text().notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(), usedAt: timestamp('used_at', { withTimezone: true }),
+}, table => [foreignKey({ columns: [table.organizationId,table.deviceId], foreignColumns: [devices.organizationId,devices.id],
+  name: 'sync_delivery_challenges_device_fk' })]);
 
 export const configurationCheckpoints = pgTable('configuration_checkpoints', {
   id: uuid().primaryKey(),

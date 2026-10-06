@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import { connection } from 'next/server';
 
 import './globals.css';
+import { OfflineProvider } from './offline-provider';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   display: 'swap',
@@ -22,7 +23,7 @@ export default async function RootLayout({
   await connection();
   return (
     <html lang="es" className={plusJakartaSans.variable}>
-      <body>{children}</body>
+      <body><OfflineProvider />{children}</body>
     </html>
   );
 }

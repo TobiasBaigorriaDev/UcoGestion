@@ -117,8 +117,8 @@ describe('configuration barrier', () => {
     )).rows[0]?.count).toBe(3);
     await expect(pool.query(
       `INSERT INTO sync_operations
-         (id, organization_id, device_id, grant_id, epoch, sequence, prev_hash, operation_hash, status)
-       VALUES ($1, $2, $3, $4, $5, 1, $6, $7, 'PENDING')`,
+         (id, organization_id, device_id, grant_id, epoch, sequence, prev_hash, operation_hash, status, occurred_at)
+       VALUES ($1, $2, $3, $4, $5, 1, $6, $7, 'PENDING', '2026-10-06T12:00:00Z')`,
       [randomUUID(), organizationId, firstDeviceId, grantA.id, grantA.epoch,
         '0'.repeat(64), 'a'.repeat(64)],
     )).rejects.toThrow('closed or stale grant');
@@ -130,8 +130,8 @@ describe('configuration barrier', () => {
     const operationHash = 'a'.repeat(64);
     await pool.query(
       `INSERT INTO sync_operations
-         (id, organization_id, device_id, grant_id, epoch, sequence, prev_hash, operation_hash, status)
-       VALUES ($1, $2, $3, $4, $5, 1, $6, $7, 'ACKED')`,
+         (id, organization_id, device_id, grant_id, epoch, sequence, prev_hash, operation_hash, status, occurred_at)
+       VALUES ($1, $2, $3, $4, $5, 1, $6, $7, 'ACKED', '2026-10-06T12:00:00Z')`,
       [randomUUID(), organizationId, firstDeviceId, grant.id, grant.epoch,
         '0'.repeat(64), operationHash],
     );
@@ -167,8 +167,8 @@ describe('configuration barrier', () => {
 
     await pool.query(
       `INSERT INTO sync_operations
-         (id, organization_id, device_id, grant_id, epoch, sequence, prev_hash, operation_hash, status)
-       VALUES ($1, $2, $3, $4, $5, 2, $6, $7, 'ACKED')`,
+         (id, organization_id, device_id, grant_id, epoch, sequence, prev_hash, operation_hash, status, occurred_at)
+       VALUES ($1, $2, $3, $4, $5, 2, $6, $7, 'ACKED', '2026-10-06T12:00:00Z')`,
       [randomUUID(), organizationId, firstDeviceId, grant.id, grant.epoch,
         'f'.repeat(64), 'b'.repeat(64)],
     );

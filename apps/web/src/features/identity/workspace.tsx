@@ -32,6 +32,7 @@ import { ExpensePage } from '../expenses/expense-page';
 import { DashboardWorkspace } from '../insights/dashboard-workspace';
 import { AuditWorkspace } from '../insights/audit-workspace';
 import { ReportsWorkspace } from '../insights/reports-workspace';
+import { OnlineOnlyBoundary } from '../../offline/online-only-boundary';
 
 type WorkspacePage =
   | 'home'
@@ -57,7 +58,7 @@ type WorkspacePage =
   | 'reports';
 
 export function Workspace({ page = 'home' }: { page?: WorkspacePage }) {
-  return <RemoteProvider><WorkspaceContent page={page} /></RemoteProvider>;
+  return <OnlineOnlyBoundary><RemoteProvider><WorkspaceContent page={page} /></RemoteProvider></OnlineOnlyBoundary>;
 }
 
 function WorkspaceContent({ page }: { page: WorkspacePage }) {

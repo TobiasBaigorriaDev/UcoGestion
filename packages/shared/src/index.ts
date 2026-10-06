@@ -1,5 +1,14 @@
 import { Decimal } from 'decimal.js';
 
+// Keep bounded quantity/price products and 128-character discount inputs exact
+// until their final persisted HALF_UP rounding; Decimal's default 20 significant
+// digits can otherwise introduce a second rounding at large valid amounts.
+const CalculationDecimal = Decimal.clone({ precision: 160, rounding: Decimal.ROUND_HALF_UP });
+
+export { offlineBootstrapPayloadSchema, offlineConfigurationSchema, offlineGrantClaimsSchema,
+  offlineGrantProofPayload, offlineGrantProofSchema, signedOfflineDocumentSchema } from './offline-contracts.js';
+export type { OfflineBootstrapPayload, OfflineGrantClaims, OfflineGrantProof } from './offline-contracts.js';
+
 export const sharedPackageMarker = 'uconext-shared' as const;
 
 declare const canonicalDecimalBrand: unique symbol;
@@ -187,16 +196,26 @@ export const isPositiveReversalAmount = (amount: unknown): boolean =>
 export const calculateSaleLine = (quantity: string, unitPrice: string): string => {
   const price = validateNonNegativeMoney(unitPrice);
   if (price === undefined) throw new RangeError('Invalid unit price');
-  return new Decimal(parseCanonicalDecimal(quantity))
-    .times(new Decimal(price)).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2);
+  return new CalculationDecimal(parseCanonicalDecimal(quantity))
+    .times(new CalculationDecimal(price)).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2);
 };
 
 export const sumMoney = (amounts: readonly string[]): string =>
-  amounts.reduce((sum, amount) => sum.plus(new Decimal(parseCanonicalDecimal(amount))), new Decimal(0)).toFixed(2);
+  amounts.reduce((sum, amount) => sum.plus(new CalculationDecimal(parseCanonicalDecimal(amount))), new CalculationDecimal(0)).toFixed(2);
 
 export const subtractMoney = (left: string, right: string): string =>
-  new Decimal(parseCanonicalDecimal(left)).minus(new Decimal(parseCanonicalDecimal(right))).toFixed(2);
+  new CalculationDecimal(parseCanonicalDecimal(left)).minus(new CalculationDecimal(parseCanonicalDecimal(right))).toFixed(2);
 
 export const calculatePercentageDiscount = (subtotal: string, percentage: string): string =>
-  new Decimal(parseCanonicalDecimal(subtotal)).times(new Decimal(parseCanonicalDecimal(percentage)))
+  new CalculationDecimal(parseCanonicalDecimal(subtotal)).times(new CalculationDecimal(parseCanonicalDecimal(percentage)))
     .div(100).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2);
+
+export function consumeKnownStock(available: string, quantities: readonly string[]): string {
+  if (!/^(?:0|[1-9]\d{0,16})\.\d{3}$/.test(available)) throw new RangeError('Invalid known stock');
+  const remaining = quantities.reduce((stock, quantity) => stock.minus(
+    new CalculationDecimal(Quantity.from(quantity, 'FRACTIONAL').toString())), new CalculationDecimal(available));
+  if (remaining.isNegative()) throw new RangeError('Stock conocido insuficiente.');
+  return remaining.toFixed(3);
+}
+
+export * from './offline-operation-contracts.js';

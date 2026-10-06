@@ -1,4 +1,5 @@
 import { ApiProblemError, problemFromResponse } from './problem-details';
+import { isBusinessOnline, requireBusinessOnline } from './online-only';
 
 export { ApiProblemError } from './problem-details';
 
@@ -20,6 +21,7 @@ export class ApiClient {
   constructor(
     private readonly fetcher: typeof fetch = (input, init) => globalThis.fetch(input, init),
     private readonly basePath = '/api/v1',
+    private readonly online: () => boolean = isBusinessOnline,
   ) {}
 
   async request<T = void>(path: string, options: ApiRequestOptions<T>): Promise<T | undefined> {
@@ -28,6 +30,7 @@ export class ApiClient {
     }
     const method = options.method;
     if (method === 'GET' && options.body !== undefined) throw new Error('GET no admite body.');
+    requireBusinessOnline(this.online);
 
     const headers = new Headers({ Accept: 'application/json, application/problem+json' });
     if (method !== 'GET') headers.set('Content-Type', 'application/json');

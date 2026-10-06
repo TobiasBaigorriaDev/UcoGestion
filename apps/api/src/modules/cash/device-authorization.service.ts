@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
 import type { PoolClient } from 'pg';
+import { z } from 'zod';
 
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
+import { DeviceCertificate } from '../offline-sync/device-certificate.js';
 
 export class DeviceAuthorizationError extends Error {
   constructor(readonly code: 'DEVICE_AUTHORIZATION_FORBIDDEN' | 'DEVICE_BRANCH_NOT_AVAILABLE' | 'DEVICE_BRANCH_FORBIDDEN', message: string) {
@@ -19,8 +21,42 @@ export interface AuthorizedOnlineDevice {
   readonly status: 'ACTIVE';
 }
 
+export interface AuthorizedPosDevice extends AuthorizedOnlineDevice {
+  readonly thumbprint: string;
+  readonly certificate: string;
+}
+
 export class DeviceAuthorizationService {
   constructor(private readonly transactions: TenantTransaction) {}
+
+  async authorizePos(context: TenantTransactionContext, branchId: string, publicKey: string,
+    idempotencyKey: string, certificate: DeviceCertificate): Promise<AuthorizedPosDevice> {
+    const thumbprint = certificate.thumbprint(publicKey);
+    const id = randomUUID();
+    const auditEvent = {
+      action: 'AUTHORIZE_POS', entityType: 'device', entityId: id, operationId: id,
+      branchId, deviceId: id, before: {}, beforeAllowlist: [],
+      after: { status: 'ACTIVE', thumbprint }, afterAllowlist: ['status', 'thumbprint'],
+      context: {}, contextAllowlist: [],
+    };
+    return this.transactions.runIdempotent(context, auditEvent, {
+      actorUserId: context.userId, authorizationClass: 'DEVICE_AUTHORIZATION', branchId,
+      key: idempotencyKey, organizationId: context.organizationId,
+      payload: { branchId, thumbprint }, scope: 'device.authorize-pos',
+    }, (client) => this.requireAuthorizer(client, context, branchId), async (client) => {
+      await client.query(
+        `INSERT INTO devices (id, organization_id, branch_id, authorized_by_user_id,
+           authorized_at, last_seen_at, status, public_key, public_key_thumbprint)
+         VALUES ($1, $2, $3, $4, now(), now(), 'ACTIVE', $5, $6)`,
+        [id, context.organizationId, branchId, context.userId, publicKey, thumbprint],
+      );
+      return { id, organizationId: context.organizationId, branchId,
+        authorizedByUserId: context.userId, status: 'ACTIVE', thumbprint,
+        certificate: certificate.issue({ deviceId: id, organizationId: context.organizationId, thumbprint }) };
+    }, (body) => z.object({ id: z.string(), organizationId: z.string(), branchId: z.string(),
+      authorizedByUserId: z.string(), status: z.literal('ACTIVE'), thumbprint: z.string(),
+      certificate: z.string() }).parse(body));
+  }
 
   async authorizeOnline(context: TenantTransactionContext, branchId: string): Promise<AuthorizedOnlineDevice> {
     const id = randomUUID();

@@ -1,0 +1,32 @@
+.page {
+  min-height: 100dvh;
+  padding: 2rem 1rem;
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+.notice {
+  max-width: 42rem;
+  margin-inline: auto;
+  padding: 1.5rem;
+  border: 1px solid var(--color-text-secondary);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+
+.notice:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.notice h1 {
+  margin: 0 0 1rem;
+  font-size: var(--text-title);
+  line-height: 1.4;
+}
+
+.notice p {
+  margin: 0.75rem 0 0;
+  line-height: 1.5;
+}

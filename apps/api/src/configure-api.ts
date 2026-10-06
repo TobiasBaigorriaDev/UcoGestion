@@ -39,6 +39,11 @@ interface ConfigureApiOptions {
 }
 
 export const configureApi = (app: INestApplication, options: ConfigureApiOptions = {}): INestApplication => {
+  // The bounded delivery batch includes encrypted envelopes and base64 overhead.
+  // Register before Nest's default 100 KiB parser so valid offline sales can drain.
+  if ('useBodyParser' in app && typeof app.useBodyParser === 'function') {
+    app.useBodyParser('json', { limit: '5mb' });
+  }
   const logger = options.logger ?? createJsonLogger({ component: 'api' });
   const metrics = app.get(MetricsService);
   const securityHeaders = createSecurityHeaders({ isApi: true });
