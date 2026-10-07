@@ -1,3 +1,4 @@
+import { assertOfflineIdentity } from './offline-revocation';
 import { consumeKnownStock, sumMoney, subtractMoney } from '@uconext/shared';
 import { z } from 'zod';
 import { paymentBalance } from '../features/sales/pos-payment-rules';
@@ -21,12 +22,14 @@ export class OfflineSales {
     private readonly session: (userId: string, sessionId: string) => Promise<unknown>) {}
 
   async confirm(userId: string, input: unknown) {
+    await assertOfflineIdentity(this.db,userId);
     const request = offlineSaleConfirmSchema.parse(input);
     const requestHash = await hash(encode(request));
     const existing = await this.read(userId, 'sale', request.draftId);
     if (existing !== undefined) {
       const sale = offlineConfirmedSaleSchema.parse(existing);
       if (sale.requestHash !== requestHash) throw new Error('La misma venta recibió un payload distinto.');
+      await assertOfflineIdentity(this.db,userId);
       return sale.result;
     }
     await this.capabilities();

@@ -94,6 +94,11 @@
     { "idx": 89, "version": "7", "when": 89, "tag": "0089_offline_grant_authorizations", "breakpoints": true },
     { "idx": 90, "version": "7", "when": 90, "tag": "0090_offline_operation_times", "breakpoints": true },
     { "idx": 91, "version": "7", "when": 91, "tag": "0091_offline_envelope_order", "breakpoints": true },
-    { "idx": 92, "version": "7", "when": 92, "tag": "0092_offline_delivery_challenges", "breakpoints": true }
+    { "idx": 92, "version": "7", "when": 92, "tag": "0092_offline_delivery_challenges", "breakpoints": true },
+    {"idx": 93, "version": "7", "when": 93, "tag": "0093_offline_delivery_results", "breakpoints": true},
+    {"idx": 94, "version": "7", "when": 94, "tag": "0094_offline_revocation_checkpoints", "breakpoints": true},
+    {"idx": 95, "version": "7", "when": 95, "tag": "0095_offline_sales_incidents", "breakpoints": true},
+    {"idx": 96, "version": "7", "when": 96, "tag": "0096_inventory_incident_corrections", "breakpoints": true},
+    {"idx": 97, "version": "7", "when": 97, "tag": "0097_inventory_incident_resolution", "breakpoints": true}
   ]
 }

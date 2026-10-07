@@ -5,9 +5,9 @@ import { Decimal } from 'decimal.js';
 // digits can otherwise introduce a second rounding at large valid amounts.
 const CalculationDecimal = Decimal.clone({ precision: 160, rounding: Decimal.ROUND_HALF_UP });
 
-export { offlineBootstrapPayloadSchema, offlineConfigurationSchema, offlineGrantClaimsSchema,
+export { revocationCheckpointSchema, revocationCheckpointPayload, offlineAckClaimsSchema, offlineAckHeaderSchema, offlineBootstrapPayloadSchema, offlineConfigurationSchema, offlineGrantClaimsSchema,
   offlineGrantProofPayload, offlineGrantProofSchema, signedOfflineDocumentSchema } from './offline-contracts.js';
-export type { OfflineBootstrapPayload, OfflineGrantClaims, OfflineGrantProof } from './offline-contracts.js';
+export type { RevocationCheckpoint, OfflineAckClaims, OfflineBootstrapPayload, OfflineGrantClaims, OfflineGrantProof } from './offline-contracts.js';
 
 export const sharedPackageMarker = 'uconext-shared' as const;
 

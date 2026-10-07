@@ -135,11 +135,11 @@ export class SalesPersistence {
       if (!snapshotItem) throw new Error('Sale item unavailable');
       const saleItemId = randomUUID();
       await client.query(`INSERT INTO sale_items (id, organization_id, sale_id, item_id, item_name, item_type,
-        sku, barcode, unit, quantity, unit_price, price_version, line_total, currency_code)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        sku, barcode, unit, quantity, unit_price, price_version, line_total, currency_code, track_inventory)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [saleItemId, context.organizationId, input.id, line.itemId, snapshotItem.name, snapshotItem.type,
         snapshotItem.sku, snapshotItem.barcode, snapshotItem.base_unit, line.quantity,
-        line.unitPrice, line.priceVersion, line.lineTotal, input.quote.currency]);
+        line.unitPrice, line.priceVersion, line.lineTotal, input.quote.currency,snapshotItem.track_inventory]);
       if (snapshotItem.track_inventory) {
         await client.query('SELECT inventory_api.apply_sale_stock($1, $2, $3, $4)',
           [context.organizationId, input.id, saleItemId, context.userId]);

@@ -1,3 +1,5 @@
+import { assertOfflineCreation } from './offline-configuration-barrier';
+import { assertOfflineIdentity } from './offline-revocation';
 import { base64, bytes, encode, hash, unbase64 } from './offline-crypto';
 import { OfflineDatabase } from './offline-database';
 import { OfflineKeys } from './offline-keys';
@@ -78,8 +80,10 @@ export class OfflineSealer {
         replace: row.replace ?? false, userId: snapshot.userId, kind: row.kind, id: row.id,
         ciphertext: await this.cipher.encrypt(dek, { ...identity, kind: row.kind, id: row.id }, encode(row.value)),
       })));
-      await this.db.transaction('rw', [this.db.records, this.db.delivery_queue, this.db.meta], async () => {
+      await this.db.transaction('rw', [this.db.records, this.db.delivery_queue, this.db.meta,this.db.device_keys], async () => {
         await this.leases.assert(lease);
+        await assertOfflineIdentity(this.db,snapshot.userId);
+        await assertOfflineCreation(this.db);
         if (commit.sessionOpening && lease.cashSessionOpen) throw new Error('Este dispositivo ya tiene una sesión abierta.');
         await commit.assertCanCommit?.();
         await commit.assertBeforeCommit?.();

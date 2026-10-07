@@ -1,5 +1,7 @@
 import { createVerify, randomUUID } from 'node:crypto';
 
+import { z } from 'zod';
+import { toJsonValue,type JsonValue } from '../../core/idempotency/idempotency.service.js';
 import type { PoolClient } from 'pg';
 
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
@@ -88,9 +90,9 @@ export class ConfigurationBarrierService {
     });
   }
 
-  async begin(context: TenantTransactionContext): Promise<{ readonly id: string; readonly epoch: number }> {
+  async begin(context: TenantTransactionContext,key?:string): Promise<{ readonly id: string; readonly epoch: number }> {
     const id = randomUUID();
-    return this.transactions.run(context, this.audit('configuration.barrier_started', id, 'configuration_barrier'),
+    return this.command(context, this.audit('configuration.barrier_started', id, 'configuration_barrier'),key,{action:'BEGIN'},
       async (client) => {
         await this.requireManager(client, context);
         const epoch = await this.lockCurrentEpoch(client, context.organizationId);
@@ -107,16 +109,17 @@ export class ConfigurationBarrierService {
           [id, context.organizationId, epoch],
         );
         return { id, epoch };
-      });
+      },value=>z.object({id:z.uuid(),epoch:z.number().int().positive()}).parse(value));
   }
 
   async submitCheckpoint(
     context: TenantTransactionContext,
     barrierId: string,
     checkpoint: DeviceCheckpoint,
+    key?:string,
   ): Promise<void> {
-    return this.transactions.run(context,
-      this.audit('configuration.checkpoint_recorded', barrierId, 'configuration_barrier'),
+    return this.command(context,
+      this.audit('configuration.checkpoint_recorded', barrierId, 'configuration_barrier'),key,{barrierId,checkpoint},
       async (client) => {
         await this.requireManager(client, context);
         await this.lockCurrentEpoch(client, context.organizationId);
@@ -141,11 +144,11 @@ export class ConfigurationBarrierService {
         const verifier = createVerify('SHA256');
         verifier.update(canonicalPayload);
         verifier.end();
-        if (!verifier.verify(row.public_key, Buffer.from(checkpoint.signature, 'base64'))) {
+        if (!verifier.verify({key:row.public_key,dsaEncoding:Buffer.from(checkpoint.signature,'base64').length===64 ? 'ieee-p1363':'der'}, Buffer.from(checkpoint.signature, 'base64'))) {
           throw new ConfigurationBarrierError('CONFIGURATION_CHECKPOINT_SIGNATURE_INVALID',
             'La firma del dispositivo no verifica el checkpoint.');
         }
-        await this.requireAckContinuity(client, context.organizationId, row.device_id, row.epoch,
+        await this.requireAckContinuity(client, context.organizationId, row.device_id,
           checkpoint.sequence, checkpoint.headHash);
         await client.query(
           `INSERT INTO configuration_checkpoints
@@ -156,12 +159,12 @@ export class ConfigurationBarrierService {
             row.device_id, row.epoch, checkpoint.sequence, checkpoint.headHash,
             canonicalPayload, checkpoint.signature],
         );
-      });
+      },()=>undefined);
   }
 
-  async complete(context: TenantTransactionContext, barrierId: string): Promise<void> {
-    return this.transactions.run(context,
-      this.audit('configuration.barrier_completed', barrierId, 'configuration_barrier'),
+  async complete(context: TenantTransactionContext, barrierId: string,key?:string): Promise<void> {
+    return this.command(context,
+      this.audit('configuration.barrier_completed', barrierId, 'configuration_barrier'),key,{barrierId},
       async (client) => {
         await this.requireManager(client, context);
         await this.lockCurrentEpoch(client, context.organizationId);
@@ -184,7 +187,7 @@ export class ConfigurationBarrierService {
             throw new ConfigurationBarrierError('CONFIGURATION_CHECKPOINT_MISSING',
               'Falta el checkpoint de una autorización que pudo crear operaciones.');
           }
-          await this.requireAckContinuity(client, context.organizationId, grant.device_id, grant.epoch,
+          await this.requireAckContinuity(client, context.organizationId, grant.device_id,
             checkpoint.sequence, checkpoint.head_hash);
         }
         await client.query(
@@ -206,18 +209,39 @@ export class ConfigurationBarrierService {
           `UPDATE organizations SET config_epoch = config_epoch + 1 WHERE id = $1`,
           [context.organizationId],
         );
-      });
+      },()=>undefined);
+  }
+
+  async pendingGrants(context:TenantTransactionContext,barrierId:string,deviceId:string) {
+    return this.transactions.read(context,async client=>{
+      await this.requireManager(client,context);
+      const barrier=await this.activeBarrier(client,context.organizationId,barrierId);
+      return (await client.query<{id:string;epoch:number}>(`SELECT id,epoch::integer AS epoch FROM offline_grants
+        WHERE organization_id=$1 AND device_id=$2 AND epoch<=$3 AND closed_at IS NULL ORDER BY id`,
+      [context.organizationId,deviceId,barrier.epoch])).rows;
+    });
+  }
+  private async command<T>(context:TenantTransactionContext,audit:ReturnType<ConfigurationBarrierService['audit']>,
+    key:string|undefined,payload:unknown,operation:(client:PoolClient)=>Promise<T>,decode:(value:JsonValue)=>T):Promise<T> {
+    if (!key) return this.transactions.run(context,audit,operation);
+    const stored=await this.transactions.runIdempotent(context,audit,{organizationId:context.organizationId,actorUserId:context.userId,
+      authorizationClass:'CONFIGURATION_BARRIER',branchId:null,scope:audit.action,key,payload:toJsonValue(payload)},
+    client=>this.requireManager(client,context),async client=>({value:toJsonValue((await operation(client)) ?? null)}),body=>{
+      if (!body || typeof body!=='object' || Array.isArray(body) || !('value' in body)) throw new Error('CONFIGURATION_REPLAY_INVALID');
+      return {value:body.value ?? null};
+    });
+    return decode(stored.value);
   }
 
   private async requireAckContinuity(client: PoolClient, organizationId: string, deviceId: string,
-    epoch: number, sequence: number, headHash: string): Promise<void> {
+    sequence: number, headHash: string): Promise<void> {
     const operations = await client.query<{
       sequence: number; prev_hash: string; operation_hash: string; status: string;
     }>(
       `SELECT sequence::integer AS sequence, prev_hash, operation_hash, status
-       FROM sync_operations WHERE organization_id = $1 AND device_id = $2 AND epoch = $3
+       FROM sync_operations WHERE organization_id = $1 AND device_id = $2
        ORDER BY sequence`,
-      [organizationId, deviceId, epoch],
+      [organizationId, deviceId],
     );
     if (operations.rows.length !== sequence) {
       throw new ConfigurationBarrierError('CONFIGURATION_CHECKPOINT_STALE',

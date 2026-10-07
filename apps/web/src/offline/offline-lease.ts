@@ -9,6 +9,7 @@ export class OfflineLease {
       const current = await this.db.meta.get('device-chain');
       if (current && current.expiresAt > this.now()) throw new Error('Device sequence lease busy.');
       const lease: DeviceChain = { key: 'device-chain', owner, fence: (BigInt(current?.fence ?? '0') + 1n).toString(),
+        ...(current?.deviceRevoked ? {deviceRevoked:true}: {}),
         ...(current?.cashSessionOpen ? { cashSessionOpen: true } : {}),
         expiresAt: this.now() + duration, sequence: current?.sequence ?? '0', headHash: current?.headHash ?? null };
       await this.db.meta.put(lease);

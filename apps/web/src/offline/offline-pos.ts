@@ -39,7 +39,7 @@ export class OfflinePos {
     const ciphertext = await this.cipher.encrypt(dek, { organizationId: this.db.organizationId,
       deviceId: this.db.deviceId, userId, kind: 'sale-draft', id: draft.id },
     new TextEncoder().encode(JSON.stringify(draft)));
-    await this.db.transaction('rw', this.db.records, async () => {
+    await this.db.transaction('rw', [this.db.records,this.db.device_keys,this.db.meta], async () => {
       await this.assertAuthorization(userId, authorized);
       if (this.keys.dekFor(userId) !== dek) throw new Error('Offline identity changed.');
       await this.db.putEncrypted(userId, 'sale-draft', draft.id, ciphertext);

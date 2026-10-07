@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="es"><meta charset="utf-8"><title>Verificación de apertura POS offline</title>
 <body><p id="status">Cargando módulos</p><script type="module">
+import { OfflineConfigurationBarrier } from '../../src/offline/offline-configuration-barrier.ts';
+import { OfflineRevocation } from '../../src/offline/offline-revocation.ts';
 import { OfflineDatabase } from '../../src/offline/offline-database.ts';
 import { OfflineKeys } from '../../src/offline/offline-keys.ts';
 import { OfflineLease } from '../../src/offline/offline-lease.ts';
@@ -17,6 +19,7 @@ const register = '66666666-6666-4666-8666-666666666666';
 const db = new OfflineDatabase(org, device);
 const keys = new OfflineKeys(db);
 let pos;
+let currentAuthorization;
 let envelopeFault = false;
 db.delivery_queue.hook('creating', () => { if (envelopeFault) throw new Error('Injected envelope failure'); });
 const url64 = data => base64(data).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -36,6 +39,7 @@ async function connect() {
   const sealer = new OfflineSealer(db, keys, new OfflineLease(db), {
     certificate: 'opaque-test-certificate', publication: fixture.publication, trustedSigner: trusted, trustedSigningKeyId: 'trusted',
   });
+  currentAuthorization=authorization;
   pos = new OfflinePos(db, keys, authorization, sealer);
   return authorization;
 }
@@ -75,6 +79,9 @@ window.posHarness = {
     await (await connect()).install(actor, signed, grant);
   },
   async resume() { await db.open(); await keys.unlock(actor, 'offline-pin'); await connect(); },
+  freeze: id=>new OfflineConfigurationBarrier(db,currentAuthorization).freeze({id,epoch:1}),
+  checkpoints: ()=>new OfflineConfigurationBarrier(db,currentAuthorization).checkpoints(),
+  revoke: target=>new OfflineRevocation(db,keys).learn(target),
   open: () => pos.open(actor, { cashRegisterId: register, openingCash: '10.00' }),
   prepare: (sessionId, input = {}) => pos.prepareSale(actor, { sessionId, lines: [{ itemId: org, quantity: '1' }], ...input }),
   confirm: draftId => pos.confirmSale(actor, { draftId, payments: [{ method: 'CASH', appliedAmount: '10.00', receivedAmount: '15.00' }] }),

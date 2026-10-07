@@ -46,7 +46,7 @@ export async function readHistoricalEnvelopeContext(client: PoolClient, input: H
       bootstrap.ackKey.keyId !== row.signing_key_id) throw new Error();
     return { ...input, signingKeyId: bootstrap.ackKey.keyId, signingPublicKey: bootstrap.ackKey.publicKeyPem,
       devicePublicKey: row.public_key, branchId: row.branch_id, epoch: row.epoch, configurationVersion: row.configuration_version,
-      bootstrapHash: claims.bootstrapHash, currency: bootstrap.configuration.currency,
+      configuration:bootstrap.configuration, bootstrapHash: claims.bootstrapHash, currency: bootstrap.configuration.currency,
       cashRegisterIds: bootstrap.configuration.cashRegisters.map(register => register.id), knowledge };
   } catch { throw new Error('OFFLINE_HISTORY_INVALID'); }
 }

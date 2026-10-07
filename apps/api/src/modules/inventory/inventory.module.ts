@@ -2,6 +2,7 @@ import { Injectable, Module, type OnModuleDestroy } from '@nestjs/common';
 import { Pool } from 'pg';
 
 import { TenantTransaction } from '../../database/tenant-transaction.js';
+import { InventoryIncidentService } from './inventory-incident.service.js';
 import { InventoryAdjustmentService } from './inventory-adjustment.service.js';
 import { InventoryController } from './inventory.controller.js';
 import { InventoryTransferService } from './inventory-transfer.service.js';
@@ -18,6 +19,7 @@ class InventoryDatabase implements OnModuleDestroy {
   controllers: [InventoryController],
   providers: [
     InventoryDatabase,
+    { provide:InventoryIncidentService,useFactory:(database:InventoryDatabase)=>new InventoryIncidentService(new TenantTransaction(database.pool)),inject:[InventoryDatabase] },
     { provide: InventoryAdjustmentService,
       useFactory: (database: InventoryDatabase) => new InventoryAdjustmentService(new TenantTransaction(database.pool)),
       inject: [InventoryDatabase] },

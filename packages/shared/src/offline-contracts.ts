@@ -43,3 +43,16 @@ export const offlineGrantClaimsSchema = z.strictObject({
   iat: z.number().int().nonnegative(), exp: z.number().int().nonnegative(),
 }).refine(value => value.exp > value.iat && value.exp - value.iat <= 72 * 60 * 60, { message: 'Invalid grant lifetime.' });
 export type OfflineGrantClaims = z.infer<typeof offlineGrantClaimsSchema>;
+
+export const offlineAckClaimsSchema = z.strictObject({ version:z.literal(1), operationId:z.uuid(),
+  envelopeHash:z.string().regex(/^[0-9a-f]{64}$/),status:z.enum(['ACKED','SECURITY_REJECTED']),keyId:z.string().min(1).max(128) });
+export const offlineAckHeaderSchema = z.strictObject({alg:z.literal('ES256'),typ:z.literal('uco-offline-ack+jwt'),kid:z.string().min(1).max(128)});
+export type OfflineAckClaims = z.infer<typeof offlineAckClaimsSchema>;
+
+export const revocationCheckpointSchema=z.strictObject({organizationId:z.uuid(),deviceId:z.uuid(),actorUserId:z.uuid().nullable(),
+  sequence:z.string().regex(/^(?:0|[1-9]\d{0,18})$/),headHash:z.string().regex(/^[0-9a-f]{64}$/),signature:z.string().max(128)});
+export type RevocationCheckpoint=z.infer<typeof revocationCheckpointSchema>;
+export function revocationCheckpointPayload(value:Omit<RevocationCheckpoint,'signature'>):string {
+  return JSON.stringify({domain:'UcoNext:revocation-knowledge:v1',organizationId:value.organizationId,deviceId:value.deviceId,
+    actorUserId:value.actorUserId,sequence:value.sequence,headHash:value.headHash});
+}

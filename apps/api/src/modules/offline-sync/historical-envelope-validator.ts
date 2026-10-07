@@ -3,6 +3,7 @@ import { createDecipheriv, createHash, verify } from 'node:crypto';
 import { offlineConfirmedSaleSchema, offlineGrantClaimsSchema } from '@uconext/shared';
 import { z } from 'zod';
 
+import { validateHistoricalSaleSnapshot } from './historical-sale-snapshot.js';
 import { DeviceCertificate, type DeviceCertificateClaims } from './device-certificate.js';
 import { IngestionKeyUnavailableError, type SyncEnvelopeDecryptorPort } from './sync-envelope-decryptor.js';
 
@@ -59,6 +60,7 @@ function rejectCredentials(value: unknown): void {
  * The knowledge cutoffs are inclusive last-legitimate device sequences. Their durable
  * collection belongs to T204; no current-status check can substitute for this evidence. */
 export interface HistoricalEnvelopeContext {
+  readonly configuration?: unknown;
   readonly grantJws: string; readonly signingKeyId: string; readonly signingPublicKey: string;
   readonly devicePublicKey: string; readonly organizationId: string; readonly deviceId: string;
   readonly actorUserId: string; readonly branchId: string; readonly epoch: string;
@@ -148,6 +150,7 @@ export class HistoricalEnvelopeValidator {
           !claims.cashRegisterIds.includes(opening.cashRegisterId) || !history.cashRegisterIds.includes(opening.cashRegisterId)) throw new Error();
       } else {
         const sale = offlineConfirmedSaleSchema.parse(operation.payload);
+        if (history.configuration) validateHistoricalSaleSnapshot(history.configuration,sale);
         if (sale.actorUserId !== operation.actorId || sale.organizationId !== operation.organizationId || sale.deviceId !== operation.deviceId ||
           sale.cashSessionId !== operation.sessionId || sale.branchId !== claims.branchId || sale.configurationVersion !== operation.configVersion ||
           sale.occurredAt !== operation.occurredAt || sale.quote.currency !== history.currency || sale.audit.actorUserId !== operation.actorId ||

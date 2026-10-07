@@ -10,6 +10,7 @@ import { IdempotencyKeyReusedError, IdempotencyReplayForbiddenError,
 import { requireIdempotencyKey } from '../../core/validation/idempotency-key.js';
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
 import type { TenantTransactionContext } from '../../database/tenant-transaction.js';
+import { InventoryIncidentService } from './inventory-incident.service.js';
 import { InventoryAdjustmentService } from './inventory-adjustment.service.js';
 import { ConcurrentInventoryModificationError } from './inventory-transaction-retry.js';
 import { InventoryTransferService } from './inventory-transfer.service.js';
@@ -35,7 +36,14 @@ export class InventoryController {
   constructor(private readonly adjustments: InventoryAdjustmentService,
     private readonly thresholds: StockThresholdService,
     private readonly transfers: InventoryTransferService,
-    private readonly reads: InventoryReadService) {}
+    private readonly reads: InventoryReadService,private readonly incidents:InventoryIncidentService) {}
+
+  @Post('incidents/:id/resolve')
+  async resolveIncident(@Req() request:InventoryRequest,@Param('id',ParseUUIDPipe) id:string,
+    @Body(new ZodValidationPipe(z.strictObject({note:z.string().trim().min(1).max(2000)}))) body:{note:string}) {
+    const key=requireIdempotencyKey(request.headers);
+    try {return await this.incidents.resolve(this.context(request),id,body.note,key);} catch(error) {this.handleError(error);}
+  }
 
   @Get('adjustments')
   async listAdjustments(@Req() request: InventoryRequest,

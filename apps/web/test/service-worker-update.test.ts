@@ -13,8 +13,8 @@ afterEach(async () => { await Dexie.delete(name); });
 async function install() {
   let work: Promise<unknown> | undefined;
   const addAll = vi.fn(async () => {});
-  runInNewContext(readFileSync(resolve('public/sw.js'), 'utf8'), {
-    indexedDB, TextDecoder, Uint8Array, Error, Promise, URL,
+  runInNewContext(readFileSync(resolve('public/offline-delivery-worker-v1.js'),'utf8')+'\n'+readFileSync(resolve('public/sw.js'), 'utf8').replace("importScripts('/offline-delivery-worker-v1.js');",''), {
+    indexedDB, TextEncoder, TextDecoder, Uint8Array, Error, Promise, URL,
     self: { addEventListener: (kind: string, handler: (event: { waitUntil: (promise: Promise<unknown>) => void }) => void) => {
       if (kind === 'install') handler({ waitUntil: (promise) => { work = promise; } });
     } },

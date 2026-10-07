@@ -2,6 +2,8 @@ import { offlineBootstrapPayloadSchema, offlineGrantClaimsSchema, signedOfflineD
   type OfflineBootstrapPayload, type OfflineGrantClaims } from '@uconext/shared';
 import { z } from 'zod';
 
+import { assertOfflineCreation } from './offline-configuration-barrier';
+import { assertOfflineIdentity } from './offline-revocation';
 import { base64, bytes, encode, unbase64 } from './offline-crypto';
 import { OfflineDatabase } from './offline-database';
 import { OfflineKeys } from './offline-keys';
@@ -48,20 +50,25 @@ export class OfflineAuthorization {
     private readonly now: () => number = Date.now) {}
 
   async install(userId: string, bootstrap: z.infer<typeof signedOfflineDocumentSchema>, grant: string): Promise<void> {
+    await assertOfflineIdentity(this.db,userId);
     const stored = storedSchema.parse({ bootstrap, grant });
     const dek = this.keys.dekFor(userId);
     const context = await this.verify(userId, stored);
     this.assertCurrent(context);
     const encrypted = await this.cipher.encrypt(dek, this.recordContext(userId), encode(stored));
-    await this.db.transaction('rw', this.db.records, async () => {
+    await this.db.transaction('rw', [this.db.records,this.db.device_keys,this.db.meta], async () => {
       if (this.keys.dekFor(userId) !== dek) throw new Error('Offline identity changed.');
       this.assertCurrent(context);
       await this.db.putEncrypted(userId, 'authorization', 'current', encrypted);
+      const device=await this.db.device_keys.get('device');
+      if (!device) throw new Error('Registered device key required.');
+      await this.db.device_keys.put({...device,exposures:[...(device.exposures ?? []).filter(row=>row.id!==context.claims.grantId),{id:context.claims.grantId,epoch:Number(context.claims.epoch)}],ackKeys:{...device.ackKeys,[this.trustedKeyId]:this.trustedSigner}});
       if (this.keys.dekFor(userId) !== dek) throw new Error('Offline identity changed.');
     });
   }
 
   async read(userId: string): Promise<OfflineAuthorizationContext> {
+    await assertOfflineIdentity(this.db,userId);
     const dek = this.keys.dekFor(userId);
     const encrypted = await this.db.getEncrypted(userId, 'authorization', 'current');
     if (!encrypted) throw new Error('Offline bootstrap and grant required.');
@@ -69,11 +76,13 @@ export class OfflineAuthorization {
       await this.cipher.decrypt(dek, this.recordContext(userId), encrypted))));
     const context = await this.verify(userId, stored);
     if (this.keys.dekFor(userId) !== dek) throw new Error('Offline identity changed.');
+    await assertOfflineIdentity(this.db,userId);
     return { ...context, authorizationBytes: encrypted,
       knownExpired: Boolean(await this.db.getEncrypted(userId, 'expired-grant', context.claims.grantId)) };
   }
 
   async require(userId: string): Promise<OfflineAuthorizationContext> {
+    await assertOfflineCreation(this.db);
     const context = await this.read(userId);
     if (!context.knownExpired && this.now() >= context.claims.exp * 1000) {
       const dek = this.keys.dekFor(userId);
@@ -89,6 +98,8 @@ export class OfflineAuthorization {
   }
 
   async assertUsable(userId: string, context: OfflineAuthorizationContext): Promise<void> {
+    await assertOfflineIdentity(this.db,userId);
+    await assertOfflineCreation(this.db);
     this.assertCurrent(context);
     if (await this.db.getEncrypted(userId, 'expired-grant', context.claims.grantId)) {
       throw new Error('La credencial offline venció. Sincronizá online.');

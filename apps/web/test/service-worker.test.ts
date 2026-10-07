@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 
-const source = readFileSync(resolve('public/sw.js'), 'utf8');
+const source = readFileSync(resolve('public/offline-delivery-worker-v1.js'),'utf8')+'\n'+readFileSync(resolve('public/sw.js'), 'utf8').replace("importScripts('/offline-delivery-worker-v1.js');",'');
 
 describe('T185A service worker', () => {
   it('only precaches versioned public shell assets and never caches private API responses', async () => {
@@ -18,7 +18,7 @@ describe('T185A service worker', () => {
         skipWaiting: vi.fn(), clients: { claim: vi.fn() } },
       caches: { open: async () => ({ addAll, put: cachePut, match: async () => undefined }),
         keys: async () => [] },
-      fetch: network, URL, Response, Promise,
+      TextEncoder, TextDecoder, Uint8Array, fetch: network, URL, Response, Promise,
       indexedDB: { databases: async () => [] },
     });
     let install: Promise<unknown> | undefined;

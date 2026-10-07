@@ -1,5 +1,6 @@
 import { argon2id } from 'hash-wasm';
 
+import { assertOfflineIdentity } from './offline-revocation';
 import { OfflineDatabase } from './offline-database';
 
 const PIN_LIMIT = 5;
@@ -19,6 +20,7 @@ export class OfflineKeys {
   constructor(private readonly db: OfflineDatabase, private readonly now: () => number = Date.now) {}
 
   async create(userId: string, pin: string): Promise<string> {
+    await assertOfflineIdentity(this.db,userId);
     if (pin.length < 8) throw new Error('El PIN debe tener al menos 8 caracteres.');
     if (await this.db.key_envelopes.get(userId)) throw new Error('Esta identidad ya tiene claves offline.');
     let device = await this.db.device_keys.get('device');
@@ -47,6 +49,7 @@ export class OfflineKeys {
 
   async unlock(userId: string, pin: string): Promise<void> {
     this.lock();
+    await assertOfflineIdentity(this.db,userId);
     const state = await this.db.pin_attempts.get(userId);
     if (state?.locked) throw new Error('PIN bloqueado. Reautenticación online requerida.');
     if (state && state.retryAfter > this.now()) throw new Error('Debés esperar antes de volver a intentar.');
@@ -61,6 +64,7 @@ export class OfflineKeys {
       const dek = await crypto.subtle.unwrapKey('raw', pinWrapped, kek, 'AES-KW',
         { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
       await this.db.pin_attempts.delete(userId);
+      await assertOfflineIdentity(this.db,userId);
       this.unlocked = { userId, dek };
     } catch {
       const failures = (state?.failures ?? 0) + 1;

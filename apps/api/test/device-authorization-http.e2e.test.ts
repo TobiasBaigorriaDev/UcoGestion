@@ -1,4 +1,4 @@
-import { createHash, generateKeyPairSync, randomBytes, randomUUID, sign, verify } from 'node:crypto';
+import { createCipheriv, createHash, createPublicKey, publicEncrypt, generateKeyPairSync, randomBytes, randomUUID, sign, verify } from 'node:crypto';
 
 import { offlineGrantProofPayload } from '@uconext/shared';
 import type { INestApplication } from '@nestjs/common';
@@ -9,6 +9,8 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { AppModule } from '../src/app.module.js';
+import { canonicalEnvelopeJson } from '../src/modules/offline-sync/historical-envelope-validator.js';
+import { verifyOfflineAck } from '../src/modules/offline-sync/offline-ack.js';
 import { deliveryProofPayload } from '../src/modules/offline-sync/offline-delivery.service.js';
 import { configureApi } from '../src/configure-api.js';
 import { runMigrations } from '../src/database/migrate.js';
@@ -166,7 +168,7 @@ describe('T185 POS device HTTP authorization', () => {
       ciphertextHash:createHash('sha256').update(ciphertext).digest('base64'),signature:randomBytes(64).toString('base64')})];
     const proof = sign('sha256', Buffer.from(deliveryProofPayload(challenge, envelopes)),
       { key: keyPair.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64');
-    // Business ingestion is composed in T201. No definitive ACK is fabricated here.
+    // Unauthenticated envelope ciphertext has no business effects or definitive ACK.
     await post('push', { certificate, challenge, envelopes, proof }).expect(503);
     const replay = await post('push', { certificate, challenge, envelopes, proof }).expect(403);
     const forged = await post('push', { certificate: 'v1.invalid', challenge, envelopes, proof }).expect(403);
@@ -200,6 +202,86 @@ describe('T185 POS device HTTP authorization', () => {
     const statuses:number[]=[];
     for (let attempt=0;attempt<21;attempt+=1) statuses.push((await post('challenge',{certificate})).status);
     expect(statuses).toContain(403);
+  });
+
+  it('T201B denies ordinary reads/writes and discordant tenant headers to a delivery certificate', async () => {
+    const device = (await pool.query('SELECT id, public_key_thumbprint FROM devices WHERE organization_id=$1 LIMIT 1', [organizationId])).rows[0];
+    const certificate = new DeviceCertificate(secret).issue({ organizationId, deviceId: device.id, thumbprint: device.public_key_thumbprint });
+    for (const path of ['/catalog/items', `/sales/${randomUUID()}/receipt`, `/sales/${randomUUID()}`, '/offline/status', '/reports/sales', '/sales/checkout-context']) {
+      const response = await request(app.getHttpServer()).get(`/api/v1${path}`)
+        .set('Authorization', `Bearer ${certificate}`).set('X-Organization-Id', organizationId);
+      expect([401,404]).toContain(response.status);
+    }
+    for (const path of ['/sales', '/cash-sessions/open', '/catalog/items', '/offline/bootstrap', '/inventory/adjustments']) {
+      const response = await request(app.getHttpServer()).post(`/api/v1${path}`)
+        .set('Origin','http://localhost:3000').set('Authorization', `Bearer ${certificate}`)
+        .set('X-Organization-Id', foreignOrganizationId).send({certificate});
+      expect([401,403,404]).toContain(response.status);
+    }
+    await request(app.getHttpServer()).post('/api/v1/offline/delivery/challenge')
+      .set('Origin','http://localhost:3000').set('X-Organization-Id',foreignOrganizationId).send({certificate}).expect(403);
+  });
+
+
+  it('T208A exposes idempotent D01 barriers and requires every signed grant checkpoint before completion',async()=>{
+    const login=await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin','http://localhost:3000').send({email,password:'correct-password'}).expect(204);
+    const cookie=(login.headers['set-cookie'] as string[] | undefined)?.[0]?.split(';')[0] ?? '';
+    const csrf=await request(app.getHttpServer()).get('/api/v1/auth/csrf').set('Cookie',cookie).expect(200);
+    const post=(path:string,body:object,key:string)=>request(app.getHttpServer()).post(`/api/v1/offline/configuration-barriers${path}`)
+      .set('Origin','http://localhost:3000').set('Cookie',cookie).set('X-Organization-Id',organizationId).set('X-CSRF-Token',csrf.body.csrfToken as string).set('Idempotency-Key',key).send(body);
+    const barrier=(await post('',{},'barrier-http-begin').expect(201)).body;
+    expect((await post('',{},'barrier-http-begin').expect(201)).body).toEqual(barrier);
+    await post(`/${barrier.id}/complete`,{},'barrier-http-incomplete').expect(409);
+    const device=(await pool.query("SELECT id FROM devices WHERE organization_id=$1 AND status='ACTIVE' LIMIT 1",[organizationId])).rows[0]?.id as string;
+    const grants=await request(app.getHttpServer()).get(`/api/v1/offline/configuration-barriers/${barrier.id}/grants?deviceId=${device}`)
+      .set('Cookie',cookie).set('X-Organization-Id',organizationId).expect(200);
+    for (const grant of grants.body) {
+      const payload=JSON.stringify({organizationId,barrierId:barrier.id,grantId:grant.id,epoch:barrier.epoch,sequence:0,headHash:'0'.repeat(64),creationFrozen:true});
+      const input={grantId:grant.id,sequence:0,headHash:'0'.repeat(64),signature:sign('sha256',Buffer.from(payload),{key:keyPair.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64')};
+      const path=`/${barrier.id}/checkpoints`,key=`checkpoint-${grant.id}`;
+      await post(path,input,key).expect(201);await post(path,input,key).expect(201);
+    }
+    await post(`/${barrier.id}/complete`,{},'barrier-http-complete').expect(201);
+    await post(`/${barrier.id}/complete`,{},'barrier-http-complete').expect(201);
+    expect((await pool.query('SELECT count(*)::integer AS n FROM configuration_checkpoints WHERE barrier_id=$1',[barrier.id])).rows[0]?.n).toBe(grants.body.length);
+  });
+  it('T201/T202A composes real delivery into RLS ingestion and returns only stable signed ACKs after revocation',async()=>{
+    const login=await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin','http://localhost:3000').send({email,password:'correct-password'}).expect(204);
+    const cookie=(login.headers['set-cookie'] as string[] | undefined)?.[0]?.split(';')[0] ?? '';
+    const csrf=await request(app.getHttpServer()).get('/api/v1/auth/csrf').set('Cookie',cookie).expect(200);
+    const device=(await pool.query("SELECT id,authorized_by_user_id FROM devices WHERE organization_id=$1 AND status='ACTIVE' LIMIT 1",[organizationId])).rows[0];
+    const register=randomUUID();await pool.query("INSERT INTO cash_registers (id,organization_id,branch_id,name) VALUES ($1,$2,$3,'Delivery')",[register,organizationId,branchId]);
+    const online=(path:string,body:object,key:string)=>request(app.getHttpServer()).post(`/api/v1/offline/${path}`)
+      .set('Origin','http://localhost:3000').set('Cookie',cookie).set('X-Organization-Id',organizationId).set('X-CSRF-Token',csrf.body.csrfToken as string).set('Idempotency-Key',key).send(body);
+    const bootstrap=(await online('bootstrap',{deviceId:device.id,branchId},'real-delivery-bootstrap').expect(201)).body;
+    const config=JSON.parse(bootstrap.payload as string);
+    const grantInput={grantId:config.grantId as string,bootstrapHash:createHash('sha256').update(bootstrap.payload as string).digest('hex'),deviceSequence:'0',headHash:null};
+    const grantProof=sign('sha256',Buffer.from(offlineGrantProofPayload(grantInput)),{key:keyPair.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64');
+    const grant=(await online('authorize',{...grantInput,proof:grantProof},'real-delivery-grant').expect(201)).body.grant as string;
+    const certificate=new DeviceCertificate(secret).issue({organizationId,deviceId:device.id,thumbprint:new DeviceCertificate(secret).thumbprint(keyPair.publicKey.export({type:'spki',format:'pem'}).toString())});
+    const id=randomUUID(),session=randomUUID(),occurredAt=new Date().toISOString();
+    const operation={id,actorId:device.authorized_by_user_id,organizationId,deviceId:device.id,sessionId:session,sequence:'1',sessionSequence:'1',previousHash:null,kind:'cash-session-open',grant,configVersion:config.configurationVersion,occurredAt,receivedAt:null,
+      payload:{id:session,actorUserId:device.authorized_by_user_id,branchId,cashRegisterId:register,openingCash:'0.00',currency:'ARS',openedAt:occurredAt,status:'OPEN'}};
+    const routing={version:1,keyId:'test-ingestion',operationId:id,certificate};
+    const payloadHash=createHash('sha256').update(canonicalEnvelopeJson(operation)).digest('base64');
+    const operationSignature=sign('sha256',Buffer.from(payloadHash,'base64'),{key:keyPair.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64');
+    const cek=randomBytes(32),iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',cek,iv);cipher.setAAD(Buffer.from(canonicalEnvelopeJson(routing)));
+    const ciphertext=Buffer.concat([cipher.update(canonicalEnvelopeJson({routing,operation,payloadHash,signature:operationSignature})),cipher.final(),cipher.getAuthTag()]);
+    const rsa=createPublicKey(JSON.parse(process.env.OFFLINE_INGESTION_KEYS ?? '{}').keys['test-ingestion']);
+    const unsigned={...routing,iv:iv.toString('base64'),wrappedCek:publicEncrypt({key:rsa,oaepHash:'sha256'},cek).toString('base64'),ciphertext:ciphertext.toString('base64'),ciphertextHash:createHash('sha256').update(ciphertext).digest('base64')};
+    const envelope=canonicalEnvelopeJson({...unsigned,signature:sign('sha256',Buffer.from(canonicalEnvelopeJson(unsigned)),{key:keyPair.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64')});
+    await pool.query("UPDATE devices SET status='REVOKED' WHERE id=$1",[device.id]);
+    await pool.query("UPDATE memberships SET status='REVOKED',revoked_at=now() WHERE organization_id=$1",[organizationId]);
+    const deliver=async()=>{
+      const nonce=await request(app.getHttpServer()).post('/api/v1/offline/delivery/challenge').set('Origin','http://localhost:3000').send({certificate}).expect(200);
+      const challenge=nonce.body.challenge as string,envelopes=[envelope];
+      const proof=sign('sha256',Buffer.from(deliveryProofPayload(challenge,envelopes)),{key:keyPair.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64');
+      return (await request(app.getHttpServer()).post('/api/v1/offline/delivery/push').set('Origin','http://localhost:3000').send({certificate,challenge,envelopes,proof}).expect(200)).body;
+    };
+    const first=await deliver();expect(Object.keys(first)).toEqual(['acks']);expect(first.acks).toHaveLength(1);
+    expect(verifyOfflineAck(first.acks[0],signer.publicKey,'test-trusted',{operationId:id,envelopeHash:createHash('sha256').update(envelope).digest('hex')}).status).toBe('ACKED');
+    expect(await deliver()).toEqual(first);
+    expect((await pool.query('SELECT count(*)::integer AS n FROM cash_sessions WHERE id=$1',[session])).rows[0]?.n).toBe(1);
   });
 
 });

@@ -3,15 +3,15 @@ import { Body, Controller, ForbiddenException, HttpCode, Post, Req, ServiceUnava
 import { CsrfExempt, PublicRoute } from '../auth/index.js';
 import { DeliveryRejectedError, OfflineDeliveryService } from './offline-delivery.service.js';
 
-interface Request { readonly socket: { readonly remoteAddress?: string } }
+interface Request { readonly headers: Record<string, string | string[] | undefined>; readonly socket: { readonly remoteAddress?: string } }
 
 @Controller('offline/delivery')
 export class OfflineDeliveryController {
   constructor(private readonly service: OfflineDeliveryService) {}
   @Post('challenge') @HttpCode(200) @CsrfExempt() @PublicRoute()
-  challenge(@Body() body: unknown, @Req() request: Request) { return this.execute(() => this.service.challenge(body,request.socket.remoteAddress ?? 'unknown')); }
+  challenge(@Body() body: unknown, @Req() request: Request) { return this.execute(() => this.service.challenge(body,request.socket.remoteAddress ?? 'unknown', request.headers['x-organization-id'])); }
   @Post('push') @HttpCode(200) @CsrfExempt() @PublicRoute()
-  push(@Body() body: unknown, @Req() request: Request) { return this.execute(() => this.service.push(body,request.socket.remoteAddress ?? 'unknown')); }
+  push(@Body() body: unknown, @Req() request: Request) { return this.execute(() => this.service.push(body,request.socket.remoteAddress ?? 'unknown', request.headers['x-organization-id'])); }
   private async execute<T>(operation: () => Promise<T>) {
     try { return await operation(); }
     catch (error) {

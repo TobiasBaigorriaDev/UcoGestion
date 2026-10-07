@@ -23,3 +23,17 @@ export function loadOfflineKeys(environment: NodeJS.ProcessEnv = process.env) {
     return { signingKey, signer, ingestion: new RsaSyncEnvelopeDecryptor(inventory, signingKey, keyId) };
   } catch { throw new OfflineKeysUnavailableError(); }
 }
+
+/** Rotation retains historical ACK signing keys for still-exposed grants. */
+export function loadOfflineAckKey(keyId:string, environment:NodeJS.ProcessEnv=process.env) {
+  const current=loadOfflineKeys(environment);
+  if (keyId===current.signer.keyId) return current.signingKey;
+  try {
+    const inventory=z.record(z.string(),z.string()).parse(JSON.parse(environment.OFFLINE_ACK_SIGNING_KEYS ?? '{}'));
+    const pem=inventory[keyId];
+    if (!pem) throw new Error();
+    const key=createPrivateKey(pem);
+    if (key.asymmetricKeyType!=='ec' || key.asymmetricKeyDetails?.namedCurve!=='prime256v1') throw new Error();
+    return key;
+  } catch { throw new OfflineKeysUnavailableError('Historical ACK key unavailable.'); }
+}

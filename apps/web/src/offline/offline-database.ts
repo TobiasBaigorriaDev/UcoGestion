@@ -1,3 +1,4 @@
+import type { RevocationCheckpoint } from '@uconext/shared';
 import Dexie, { type EntityTable, type Table } from 'dexie';
 
 interface EncryptedRecord {
@@ -7,7 +8,8 @@ interface EncryptedRecord {
   readonly ciphertext: Uint8Array;
 }
 
-interface DeliveryEnvelope {
+export interface DeliveryEnvelope {
+  readonly ack?:string;
   readonly id: string;
   readonly envelope: Uint8Array;
 }
@@ -20,6 +22,12 @@ export interface KeyEnvelope {
 }
 
 export interface DeviceKeys {
+  readonly freeze?: {readonly id:string;readonly epoch:number};
+  readonly exposures?: readonly {readonly id:string;readonly epoch:number}[];
+  readonly revoked?: boolean;
+  readonly revokedUsers?: readonly string[];
+  readonly knowledge?: readonly RevocationCheckpoint[];
+  readonly ackKeys?: Readonly<Record<string,CryptoKey>>;
   readonly id: 'device';
   readonly signingKey: CryptoKey;
   readonly publicKey: CryptoKey;
@@ -34,6 +42,7 @@ export interface PinAttempt {
 }
 
 export interface DeviceChain {
+  readonly deviceRevoked?:boolean;
   readonly key: 'device-chain';
   readonly owner: string;
   readonly fence: string;
@@ -97,6 +106,6 @@ export class OfflineDatabase extends Dexie {
 
   async deliveryBytes(): Promise<DeliveryEnvelope[]> {
     const rows = await this.delivery_queue.toArray();
-    return rows.map(({ id, envelope }) => ({ id, envelope: envelope.slice() }));
+    return rows.map(({ id, envelope,ack }) => ({ id, envelope: envelope.slice(),...(ack ? {ack}: {}) }));
   }
 }

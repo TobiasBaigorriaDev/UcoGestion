@@ -1,3 +1,4 @@
+importScripts('/offline-delivery-worker-v1.js');
 /* UcoNext public shell only. Private data remains in encrypted IndexedDB. */
 const CACHE_NAME = 'uconext-shell-v1';
 const SHELL = ['/offline-shell-v1.html', '/offline-icon-v1.svg'];
@@ -68,3 +69,6 @@ self.addEventListener('fetch', (event) => {
     }));
   }
 });
+
+self.addEventListener('sync', event => { if (event.tag === 'uco:opaque-delivery') event.waitUntil(deliverWorkerQueues()); });
+self.addEventListener('message', event => { if (event.data?.type === 'uco:deliver') event.waitUntil(deliverWorkerQueues().catch(() => {})); });
