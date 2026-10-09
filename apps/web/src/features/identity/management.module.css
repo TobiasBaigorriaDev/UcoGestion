@@ -20,5 +20,8 @@
 .memberTitle { display: flex; gap: 1rem; align-items: baseline; flex-wrap: wrap; }
 .memberTitle span { color: var(--color-text-secondary); }
 .actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.opaqueProgress { margin-top: 1.5rem; }
+.branchBlockers a { display: flex; align-items: center; min-height: 44px; width: fit-content; color: var(--color-primary); text-decoration: underline; text-underline-offset: .2em; padding-block: .5rem; }
+.branchBlockers a:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 .actions button:not(:first-child), .row > button { color: var(--color-primary); background: transparent; }
 @media (prefers-reduced-motion: no-preference) { .page button { transition: background-color .16s ease-out; } .page button:not(:disabled):hover { background: #15803D; color: white; } }

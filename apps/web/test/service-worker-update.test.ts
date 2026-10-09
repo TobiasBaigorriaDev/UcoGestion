@@ -39,7 +39,7 @@ it('T191A blocks worker installation until the existing database is migrated', a
 
 it('T191A allows a migrated database with pending envelopes using historical keys', async () => {
   const db = new Dexie(name);
-  db.version(3).stores({ delivery_queue: 'id' });
+  db.version(4).stores({ delivery_queue: 'id' });
   await db.open();
   await db.table('delivery_queue').add({ id: 'pending', envelope: new TextEncoder().encode('{"version":1,"keyId":"old-key"}') });
   db.close();

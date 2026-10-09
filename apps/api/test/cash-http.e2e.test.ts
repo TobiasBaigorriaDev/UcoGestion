@@ -74,7 +74,41 @@ describe('cash HTTP', () => {
     const withdrawal = await post('/api/v1/cash-sessions/manual-withdrawals', 'cash-http-out')
       .send({ ...manual, amount: '1.00', reason: 'Retiro' }).expect(201);
     expect(withdrawal.body).toMatchObject({ expectedCash: '6.00' });
+    const workspace = await request(app.getHttpServer()).get(`/api/v1/cash-sessions?branchId=${branchId}`)
+      .set('Cookie',cookie).set('X-Organization-Id',organizationId).expect(200);
+    expect(workspace.body).toMatchObject({ sessions:[{id:opened.body.id,status:'OPEN',expectedCash:'6.00',deviceId}],
+      devices:[{id:deviceId,status:'ACTIVE'}] });
+    expect(JSON.stringify(workspace.body)).not.toContain('password');
+    const checkpoint=await request(app.getHttpServer()).get(`/api/v1/cash-sessions/${opened.body.id}/checkpoint`)
+      .set('Cookie',cookie).set('X-Organization-Id',organizationId).expect(200);
+    expect(checkpoint.body).toEqual({sequence:'0',headHash:'0'.repeat(64),sessionSequence:'0'});
+    await request(app.getHttpServer()).get(`/api/v1/cash-sessions/${randomUUID()}/checkpoint`)
+      .set('Cookie',cookie).set('X-Organization-Id',organizationId).expect(403);
+    await request(app.getHttpServer()).get(`/api/v1/cash-sessions?branchId=${randomUUID()}`)
+      .set('Cookie',cookie).set('X-Organization-Id',organizationId).expect(403);
+    const employee=await createGlobalUser(pool,{email:'cash-http-employee@example.com',password:'correct-password'});
+    await pool.query("INSERT INTO memberships(id,organization_id,user_id,role) VALUES($1,$2,$3,'EMPLOYEE')",
+      [randomUUID(),organizationId,employee.id]);
+    const employeeLogin=await request(app.getHttpServer()).post('/api/v1/auth/login')
+      .set('Origin','http://localhost:3000').send({email:'cash-http-employee@example.com',password:'correct-password'}).expect(204);
+    const employeeSetCookie:unknown=employeeLogin.headers['set-cookie'];
+    const employeeCookie=Array.isArray(employeeSetCookie) && typeof employeeSetCookie[0]==='string'
+      ? employeeSetCookie[0].split(';')[0] ?? '' : '';
+    await request(app.getHttpServer()).get(`/api/v1/cash-sessions?branchId=${branchId}`)
+      .set('Cookie',employeeCookie).set('X-Organization-Id',organizationId).expect(403);
+    await request(app.getHttpServer()).get(`/api/v1/cash-sessions/${opened.body.id}/checkpoint`)
+      .set('Cookie',employeeCookie).set('X-Organization-Id',organizationId).expect(403);
     expect((await pool.query('SELECT expected_cash FROM cash_sessions WHERE id = $1', [opened.body.id]))
       .rows[0]?.expected_cash).toBe('6.00');
+    const invalidCheckpoint = { checkpoint: { version: 1, organizationId, deviceId, actorUserId: randomUUID(),
+      sessionId: opened.body.id, sequence: '0', sessionSequence: '0', headHash: '0'.repeat(64), creationFrozen: true, pending: 0 },
+      signature: Buffer.alloc(64).toString('base64') };
+    const rejectedClose = await post('/api/v1/cash-sessions/begin-close', 'cash-http-checkpoint')
+      .send(invalidCheckpoint).expect(409);
+    expect(rejectedClose.headers['content-type']).toContain('application/problem+json');
+    expect(rejectedClose.body).toMatchObject({ code: 'CASH_CHECKPOINT_INVALID' });
+    await request(app.getHttpServer()).post('/api/v1/cash-sessions/begin-close').send(invalidCheckpoint).expect(401);
+    await post('/api/v1/cash-sessions/exceptional-close','exceptional-unconfirmed')
+      .send({cashSessionId:opened.body.id,confirm:false,reason:'Dispositivo perdido'}).expect(400);
   });
 });

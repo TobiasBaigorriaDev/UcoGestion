@@ -27,7 +27,9 @@ export class AppController {
 
   @Get('health/ready')
   async getReadiness() {
-    if (!(await this.databaseReadiness.isReady())) {
+    const ready = await this.databaseReadiness.isReady();
+    this.metrics.recordDatabaseReadiness(ready);
+    if (!ready) {
       throw new ServiceUnavailableException('PostgreSQL is not ready');
     }
 
@@ -40,6 +42,7 @@ export class AppController {
   @Get('metrics')
   @Header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
   async getMetrics(): Promise<string> {
+    this.metrics.recordDatabaseReadiness(await this.databaseReadiness.isReady());
     return this.metrics.render();
   }
 }

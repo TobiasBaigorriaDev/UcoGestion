@@ -7,6 +7,7 @@ import { handleObjectFileCleanup } from './core/objects/object-file-cleanup.hand
 import { OutboxDispatcher, OutboxWorker } from './core/outbox/outbox-worker.js';
 import { createJsonLogger } from './core/observability/logger.js';
 import { startOtlpTracing } from './core/observability/tracing.js';
+import { startWorkerHealth } from './core/observability/worker-health.js';
 import { TenantTransaction } from './database/tenant-transaction.js';
 import { ReportExportService } from './modules/reports/report-export.service.js';
 import { ReportsService } from './modules/reports/reports.service.js';
@@ -42,6 +43,7 @@ async function main(): Promise<void> {
       ? exports.markDeadLetter(claim.organizationId, claim.jobId, client)
       : Promise.resolve() });
   let running = true;
+  const health = startWorkerHealth(Number(process.env.WORKER_HEALTH_PORT ?? 3001));
   process.once('SIGTERM', () => { running = false; });
   process.once('SIGINT', () => { running = false; });
   try {
@@ -52,9 +54,11 @@ async function main(): Promise<void> {
         logger.info({ job_id: claim.jobId, job_type: claim.jobType,
           organization_id: claim.organizationId, status: result.status }, 'report artifact job processed');
       }
+      health.recordCycle();
       if (claims.length === 0) await delay(2000);
     }
   } finally {
+    await health.close();
     await dispatchPool.end();
     await tenantPool.end();
     await stopTracing();

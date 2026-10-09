@@ -3,6 +3,7 @@ import Dexie from 'dexie';
 import { afterEach, describe, expect, it } from 'vitest';
 import { OfflineRevocation } from '../src/offline/offline-revocation';
 import { OfflineDatabase } from '../src/offline/offline-database';
+import { OfflineKeys } from '../src/offline/offline-keys';
 import { actor,org,device } from './offline-authorization.fixture';
 import { posFixture,register } from './offline-pos.fixture';
 afterEach(()=>Dexie.delete(OfflineDatabase.nameFor(org,device)));
@@ -11,7 +12,11 @@ describe('T205/T206 irreversible local revocation',()=>{
     it(`blocks reading/unlock/creation and preserves opaque delivery for ${target ?? 'device'}`,async()=>{
       const setup=await posFixture();await setup.pos.open(actor,{cashRegisterId:register,openingCash:'0.00'});
       const before=await setup.db.deliveryBytes();
+      const otherView = new OfflineKeys(setup.db);
+      await otherView.unlock(actor, 'offline-pin');
       await new OfflineRevocation(setup.db,setup.keys).learn(target);
+      expect(otherView.canCreate()).toBe(false);
+      expect(() => otherView.dekFor(actor)).toThrow();
       await expect(setup.pos.catalog(actor)).rejects.toThrow();
       await expect(setup.keys.unlock(actor,'offline-pin')).rejects.toThrow();
       await expect(setup.pos.open(actor,{cashRegisterId:register,openingCash:'0.00'})).rejects.toThrow();

@@ -303,39 +303,52 @@ Evidencia T200–T201A y T213: [implementación, gates y límites de etapa](offl
 
 Evidencia de los tres grupos T201B–T212: [implementación, pruebas y límites](offline-pos-block-04-06-evidence.md).
 
-- [ ] T214A: Congelar localmente nuevas operaciones y drenar la cola antes de solicitar cierre, conservando reintentos idempotentes ya sellados [RF-155, RF-156, RF-234]
-- [ ] T214B: Implementar begin-close: validar firma/checkpoint completo ya aplicado, versión y actor/dispositivo, persistir OPEN→CLOSING y close_attempt_id bajo lock [RF-157, RF-275, RF-276] (Depende de T214A)
-- [ ] T214C: Implementar final-sync que verifique cadena, secuencia, ACKs y ausencia de pending/failed/retry antes de recalcular expected_cash y aceptar contado [RF-155, RF-156, RF-234]
-- [ ] T214D: Confirmar close con permisos, locks y close_attempt_id vigente; revalidar esperado, insertar snapshot/transición y revisión si diferencia no cero atómicamente. Probar cierre obsoleto tras aborto [RF-93, RF-94, RF-95, RF-98, RF-131, RF-132, RF-140, RF-199, RF-230, RF-231, RF-253, RF-283] (Depende de T214B–T214C)
-- [ ] T214E: Abortar idempotentemente CLOSING→OPEN desde dispositivo asociado con permisos de sesión; invalidar close_attempt_id y auditar, sin desbloquear finales [RF-131, RF-133, RF-157] (Depende de T214B–T214D)
-- [ ] T214F: Revisar diferencia idempotente y auditadamente sin alterar importes/cierre/movimientos; impedir autorrevisión con otro revisor, permitir SELF_REVIEW justificado solo sin alternativa y dirigir toda corrección real a T122/T123 [RF-131, RF-140, RF-200, RF-201, RF-202, RF-203, RF-204]
-- [ ] T214: Conciliar CONFLICTED con OWNER/ADMIN y scope, congelación/checkpoint/versiones bajo lock, contado/diferencia/motivo y transición atómica a CLOSED_CONFLICT_RESOLVED, sin fusionar ni compensar [RF-124, RF-125, RF-126, RF-131, RF-132, RF-140, RF-158, RF-290] (Depende de T213 y T214A–T214F)
-- [ ] T215: Probar cierre contra venta/sync concurrentes, caída después de begin-close, respuesta perdida, aborto, conflicto y rechazo de envelopes posteriores al checkpoint [RF-131, RF-155, RF-156, RF-157, RF-158, RF-234, RF-275]
-- [ ] T216: Preparar política de cierre excepcional desde OPEN/CLOSING/CONFLICTED solo para OWNER/ADMIN dentro de scope, con confirmación explícita y motivo [RF-235, RF-236]
-- [ ] T216A: Preparar snapshot inmutable de cierre excepcional, completeness UNKNOWN, late-data marker y bloqueo D01 de moneda sin liberar exposiciones [RF-235, RF-237, RF-238, RF-304, RF-305] (Depende de T216)
-- [ ] T217: Exponer cierre excepcional integrando política/snapshot, locks, auditoría e idempotencia; liberar la caja como final sin inventar operaciones ni liberar D01 [RF-131, RF-132, RF-140, RF-235, RF-236, RF-237, RF-238, RF-239, RF-304, RF-305] (Depende de T216–T216A)
-- [ ] T218: Incorporar late data legítima en una transacción idempotente y auditada preservando snapshot/estado final excepcional, recalcular derivados conocidos, marcar LATE_RECOVERED_OPERATIONS y exigir revisión OWNER/ADMIN; verificar bloqueo permanente de moneda y versiones retenidas tras reaparición [RF-304, RF-305, RF-307, RF-131, RF-132, RF-140, RF-240, RF-241, RF-291] (Depende de T209 y T217)
-- [ ] T218A: Implementar UI de apertura y movimientos manuales de caja con permisos, dispositivo y estados persistentes [RF-91, RF-93, RF-94, RF-95, RF-96, RF-133, RF-152, RF-153, RF-154, RF-230, RF-231] (Depende de T116–T123 y T088–T092)
-- [ ] T218B: Implementar UI de cierre normal, congelación, sync final, contado, aborto y revisión de diferencia [RF-98, RF-133, RF-152, RF-153, RF-154, RF-155, RF-156, RF-157, RF-199, RF-200, RF-201, RF-202, RF-203, RF-204, RF-234] (Depende de T214A–T215 y T218A)
-- [ ] T218C: Implementar UI de conciliación CONFLICTED, cierre excepcional y late data con confirmaciones y estados accesibles [RF-125, RF-133, RF-152, RF-153, RF-154, RF-158, RF-235, RF-236, RF-240, RF-241, RF-290, RF-291] (Depende de T214, T216–T218 y T218A)
-- [ ] T219: Implementar logout/cambio de usuario: destruir material de desbloqueo en memoria, impedir lectura/creación y continuar entrega opaca automática sin revelar identidad, tenant ni contenido [RF-128, RF-173, RF-174, RF-175, RF-177, RF-311, RF-312, RF-314]
-- [ ] T220: Al ACK definitivo firmado, eliminar/inutilizar payload y sobre atómicamente; ante SECURITY_REJECTED conservar solo evidencia mínima y ante fallo recuperable preservar bytes [RF-176, RF-177, RF-314, RF-315, RF-316] (Depende de T202A y T219)
-- [ ] T220A: Implementar UI de autorización/PIN, vigencia, última sync y cola detallada solo para la identidad activa [RF-114, RF-117, RF-119, RF-120, RF-123, RF-133, RF-152, RF-153, RF-154, RF-168, RF-173, RF-174, RF-175, RF-274] (Depende de T185–T220 y T088–T092)
-- [ ] T220B: Implementar progreso genérico de entrega opaca entre identidades y conflictos/rechazos sin exponer actor, tenant, recursos ni contenido ajenos [RF-128, RF-129, RF-133, RF-152, RF-153, RF-154, RF-173, RF-174, RF-312, RF-314, RF-316] (Depende de T201A–T220A)
-- [ ] T221: Exponer desactivación por OWNER con chequeo atómico de sesiones y pendientes/conflictos, incluida incertidumbre relevante; conservar historia y exposiciones sin usar desactivación para liberar D01 [RF-28, RF-29, RF-131, RF-132, RF-304, RF-306] (Depende de T063, T116 y T185–T220)
-- [ ] T221A: Completar UI de administración de sucursal con bloqueo y explicación accionable de sesiones, pendientes o conflictos que impiden desactivarla [RF-28, RF-29, RF-133, RF-152, RF-153, RF-154] (Depende de T092B y T221)
+- [x] T214A: Congelar localmente nuevas operaciones y drenar la cola antes de solicitar cierre, conservando reintentos idempotentes ya sellados [RF-155, RF-156, RF-234]
+- [x] T214B: Implementar begin-close: validar firma/checkpoint completo ya aplicado, versión y actor/dispositivo, persistir OPEN→CLOSING y close_attempt_id bajo lock [RF-157, RF-275, RF-276] (Depende de T214A)
+- [x] T214C: Implementar final-sync que verifique cadena, secuencia, ACKs y ausencia de pending/failed/retry antes de recalcular expected_cash y aceptar contado [RF-155, RF-156, RF-234]
+- [x] T214D: Confirmar close con permisos, locks y close_attempt_id vigente; revalidar esperado, insertar snapshot/transición y revisión si diferencia no cero atómicamente. Probar cierre obsoleto tras aborto [RF-93, RF-94, RF-95, RF-98, RF-131, RF-132, RF-140, RF-199, RF-230, RF-231, RF-253, RF-283] (Depende de T214B–T214C)
+- [x] T214E: Abortar idempotentemente CLOSING→OPEN desde dispositivo asociado con permisos de sesión; invalidar close_attempt_id y auditar, sin desbloquear finales [RF-131, RF-133, RF-157] (Depende de T214B–T214D)
+- [x] T214F: Revisar diferencia idempotente y auditadamente sin alterar importes/cierre/movimientos; impedir autorrevisión con otro revisor, permitir SELF_REVIEW justificado solo sin alternativa y dirigir toda corrección real a T122/T123 [RF-131, RF-140, RF-200, RF-201, RF-202, RF-203, RF-204]
+- [x] T214: Conciliar CONFLICTED con OWNER/ADMIN y scope, congelación/checkpoint/versiones bajo lock, contado/diferencia/motivo y transición atómica a CLOSED_CONFLICT_RESOLVED, sin fusionar ni compensar [RF-124, RF-125, RF-126, RF-131, RF-132, RF-140, RF-158, RF-290] (Depende de T213 y T214A–T214F)
+- [x] T215: Probar cierre contra venta/sync concurrentes, caída después de begin-close, respuesta perdida, aborto, conflicto y rechazo de envelopes posteriores al checkpoint [RF-131, RF-155, RF-156, RF-157, RF-158, RF-234, RF-275]
+- [x] T216: Preparar política de cierre excepcional desde OPEN/CLOSING/CONFLICTED solo para OWNER/ADMIN dentro de scope, con confirmación explícita y motivo [RF-235, RF-236]
+- [x] T216A: Preparar snapshot inmutable de cierre excepcional, completeness UNKNOWN, late-data marker y bloqueo D01 de moneda sin liberar exposiciones [RF-235, RF-237, RF-238, RF-304, RF-305] (Depende de T216)
+
+Evidencia de los grupos T214A–T216A: [primer grupo](offline-pos-block-07-evidence.md) y [segundo grupo](offline-pos-block-08-evidence.md).
+
+- [x] T217: Exponer cierre excepcional integrando política/snapshot, locks, auditoría e idempotencia; liberar la caja como final sin inventar operaciones ni liberar D01 [RF-131, RF-132, RF-140, RF-235, RF-236, RF-237, RF-238, RF-239, RF-304, RF-305] (Depende de T216–T216A)
+- [x] T218: Incorporar late data legítima en una transacción idempotente y auditada preservando snapshot/estado final excepcional, recalcular derivados conocidos, marcar LATE_RECOVERED_OPERATIONS y exigir revisión OWNER/ADMIN; verificar bloqueo permanente de moneda y versiones retenidas tras reaparición [RF-304, RF-305, RF-307, RF-131, RF-132, RF-140, RF-240, RF-241, RF-291] (Depende de T209 y T217)
+- [x] T218A: Implementar UI de apertura y movimientos manuales de caja con permisos, dispositivo y estados persistentes [RF-91, RF-93, RF-94, RF-95, RF-96, RF-133, RF-152, RF-153, RF-154, RF-230, RF-231] (Depende de T116–T123 y T088–T092)
+- [x] T218B: Implementar UI de cierre normal, congelación, sync final, contado, aborto y revisión de diferencia [RF-98, RF-133, RF-152, RF-153, RF-154, RF-155, RF-156, RF-157, RF-199, RF-200, RF-201, RF-202, RF-203, RF-204, RF-234] (Depende de T214A–T215 y T218A)
+- [x] T218C: Implementar UI de conciliación CONFLICTED, cierre excepcional y late data con confirmaciones y estados accesibles [RF-125, RF-133, RF-152, RF-153, RF-154, RF-158, RF-235, RF-236, RF-240, RF-241, RF-290, RF-291] (Depende de T214, T216–T218 y T218A)
+
+Evidencia del tercer grupo T217–T218C: [implementación y verificación](offline-pos-block-09-evidence.md). Completados los tres grupos de cinco tareas solicitados; T219 queda fuera del bloque.
+
+- [x] T219: Implementar logout/cambio de usuario: destruir material de desbloqueo en memoria, impedir lectura/creación y continuar entrega opaca automática sin revelar identidad, tenant ni contenido [RF-128, RF-173, RF-174, RF-175, RF-177, RF-311, RF-312, RF-314]
+- [x] T220: Al ACK definitivo firmado, eliminar/inutilizar payload y sobre atómicamente; ante SECURITY_REJECTED conservar solo evidencia mínima y ante fallo recuperable preservar bytes [RF-176, RF-177, RF-314, RF-315, RF-316] (Depende de T202A y T219)
+- [x] T220A: Implementar UI de autorización/PIN, vigencia, última sync y cola detallada solo para la identidad activa [RF-114, RF-117, RF-119, RF-120, RF-123, RF-133, RF-152, RF-153, RF-154, RF-168, RF-173, RF-174, RF-175, RF-274] (Depende de T185–T220 y T088–T092)
+- [x] T220B: Implementar progreso genérico de entrega opaca entre identidades y conflictos/rechazos sin exponer actor, tenant, recursos ni contenido ajenos [RF-128, RF-129, RF-133, RF-152, RF-153, RF-154, RF-173, RF-174, RF-312, RF-314, RF-316] (Depende de T201A–T220A)
+- [x] T221: Exponer desactivación por OWNER con chequeo atómico de sesiones y pendientes/conflictos, incluida incertidumbre relevante; conservar historia y exposiciones sin usar desactivación para liberar D01 [RF-28, RF-29, RF-131, RF-132, RF-304, RF-306] (Depende de T063, T116 y T185–T220)
+- [x] T221A: Completar UI de administración de sucursal con bloqueo y explicación accionable de sesiones, pendientes o conflictos que impiden desactivarla [RF-28, RF-29, RF-133, RF-152, RF-153, RF-154] (Depende de T092B y T221)
+
+Evidencia de T219–T221A: [identidad, ACK, UI offline y desactivación](offline-pos-block-10-evidence.md).
 
 ## 9. Hardening y entrega operativa
 
 - [ ] T224: Verificar instalación standalone, iconos 192/512 y degradación online segura del capability gate en la matriz soportada [RF-116, RF-152, RF-289] (Depende de T185A–T185B)
-- [ ] T225: Verificar por Playwright/axe los flujos UI críticos mobile/desktop por teclado, foco, labels, contraste y errores [RF-152, RF-153, RF-154] (Depende de T092A–T095H, T114A–T114C, T152A–T152D, T173A–T173C, T184A–T184C, T218A–T220B y T221A)
-- [ ] T226: Verificar tablas como cards móviles y equivalentes textuales accesibles de gráficos [RF-142, RF-152, RF-154] (Depende de T114A, T184A y T184C)
+- [x] T225: Verificar por Playwright/axe los flujos UI críticos mobile/desktop por teclado, foco, labels, contraste y errores [RF-152, RF-153, RF-154] (Depende de T092A–T095H, T114A–T114C, T152A–T152D, T173A–T173C, T184A–T184C, T218A–T220B y T221A)
+- [x] T226: Verificar tablas como cards móviles y equivalentes textuales accesibles de gráficos [RF-142, RF-152, RF-154] (Depende de T114A, T184A y T184C)
 - [ ] T227: Ejecutar Playwright en Chromium/WebKit/Firefox y verificar además Chrome/Edge branded, Firefox y Safari reales en versiones objetivo, registrando navegador, OS y resultado [RF-152, RF-289] (Depende de T224–T226)
-- [ ] T228: Probar pérdida/retorno de red, logout, cambio de identidad, revocación, reload, cierre de pestaña, sync parcial y pérdida de ACK sin perder ni exponer sobres [RF-120, RF-175, RF-274, RF-279, RF-311, RF-312, RF-314, RF-315]
-- [ ] T229: Validar nombre, content type/disposition, tamaño y aislamiento sin ejecución activa de recibos y exportaciones generados; no agregar uploads al MVP [RF-83, RF-147, RF-151]
-- [ ] T230: Configurar alertas por readiness, error rate, DB, dead-letter, sync y conflictos [RF-135, RF-136, RF-137]
-- [ ] T231: Implementar backup diario cifrado, independiente del primario, con checksum y retención de 35 días como fija el plan [RF-138]
-- [ ] T232: Automatizar restore mensual aislado con migraciones, claves de ingestión/ACK referenciadas, ledger checks y smoke tests [RF-139, RF-315]
-- [ ] T233: Documentar y probar runbook de recuperación con RPO 24 h, RTO 8 h y recuperación de claves necesarias para sobres pendientes [RF-139, RF-315]
-- [ ] T235: Construir imágenes reproducibles web/api/worker, ejecutar migración única previa al rollout y smoke de rutas, readiness, worker y archivos [RF-135, RF-138, RF-139]
+- [x] T228: Probar pérdida/retorno de red, logout, cambio de identidad, revocación, reload, cierre de pestaña, sync parcial y pérdida de ACK sin perder ni exponer sobres [RF-120, RF-175, RF-274, RF-279, RF-311, RF-312, RF-314, RF-315]
+- [x] T229: Validar nombre, content type/disposition, tamaño y aislamiento sin ejecución activa de recibos y exportaciones generados; no agregar uploads al MVP [RF-83, RF-147, RF-151]
+
+Evidencia de T224–T229: [UI, PWA, offline y archivos generados](ui-pwa-verification-evidence.md). T224/T227 conservan estado pendiente por cobertura incompleta de navegadores y versiones de RF-289.
+
+- [x] T230: Configurar alertas por readiness, error rate, DB, dead-letter, sync y conflictos [RF-135, RF-136, RF-137]
+- [x] T231: Implementar backup diario cifrado, independiente del primario, con checksum y retención de 35 días como fija el plan [RF-138]
+- [x] T232: Automatizar restore mensual aislado con migraciones, claves de ingestión/ACK referenciadas, ledger checks y smoke tests [RF-139, RF-315]
+- [x] T233: Documentar y probar runbook de recuperación con RPO 24 h, RTO 8 h y recuperación de claves necesarias para sobres pendientes [RF-139, RF-315]
+- [x] T235: Construir imágenes reproducibles web/api/worker, ejecutar migración única previa al rollout y smoke de rutas, readiness, worker y archivos [RF-135, RF-138, RF-139]
+
+Evidencia y límites de provisión: [operational-delivery-evidence.md](operational-delivery-evidence.md).
 - [ ] T236: Ejecutar puerta final y sdd-check con evidencia individual RF → implementación → prueba. Este gate verifica calidad, seguridad y compatibilidad, pero no sustituye tareas de implementación [RF-132, RF-151, RF-289] (Depende de todas las tareas anteriores)

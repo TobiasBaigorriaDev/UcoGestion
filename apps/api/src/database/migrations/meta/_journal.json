@@ -99,6 +99,14 @@
     {"idx": 94, "version": "7", "when": 94, "tag": "0094_offline_revocation_checkpoints", "breakpoints": true},
     {"idx": 95, "version": "7", "when": 95, "tag": "0095_offline_sales_incidents", "breakpoints": true},
     {"idx": 96, "version": "7", "when": 96, "tag": "0096_inventory_incident_corrections", "breakpoints": true},
-    {"idx": 97, "version": "7", "when": 97, "tag": "0097_inventory_incident_resolution", "breakpoints": true}
+    {"idx": 97, "version": "7", "when": 97, "tag": "0097_inventory_incident_resolution", "breakpoints": true},
+    {"idx": 98, "version": "7", "when": 98, "tag": "0098_cash_close_attempts", "breakpoints": true},
+    {"idx": 99, "version": "7", "when": 99, "tag": "0099_cash_final_sync", "breakpoints": true},
+    {"idx": 100, "version": "7", "when": 100, "tag": "0100_cash_difference_reviews", "breakpoints": true},
+    {"idx": 101, "version": "7", "when": 101, "tag": "0101_cash_difference_review_events", "breakpoints": true},
+    {"idx": 102, "version": "7", "when": 102, "tag": "0102_cash_exceptional_closures", "breakpoints": true},
+    {"idx": 103, "version": "7", "when": 103, "tag": "0103_cash_late_recoveries", "breakpoints": true},
+    {"idx": 104, "version": "7", "when": 104, "tag": "0104_cash_late_reviews", "breakpoints": true},
+    {"idx": 105, "version": "7", "when": 105, "tag": "0105_branch_deactivation", "breakpoints": true}
   ]
 }

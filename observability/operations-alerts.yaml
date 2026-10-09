@@ -1,0 +1,44 @@
+groups:
+  - name: operations
+    interval: 1m
+    rules:
+      - alert: ReadinessUnavailable
+        expr: probe_success{job="api-readiness"} == 0 or up{job="api"} == 0
+        for: 3m
+        labels: { severity: critical }
+        annotations: { summary: "Readiness falla durante tres evaluaciones; revisar dependencias y rollout." }
+      - alert: DatabaseUnavailable
+        expr: uconext_database_ready == 0
+        for: 3m
+        labels: { severity: critical }
+        annotations: { summary: "PostgreSQL inaccesible tras reintentos; iniciar runbook de recuperación." }
+      - alert: HttpErrorRate
+        expr: sum(increase(uconext_http_requests_total{status_code=~"5.."}[5m])) / sum(increase(uconext_http_requests_total[5m])) > 0.05 and sum(increase(uconext_http_requests_total[5m])) >= 20
+        for: 5m
+        labels: { severity: critical }
+        annotations: { summary: "Más de 5% de errores HTTP con tráfico suficiente." }
+      - alert: DeadLetterJobs
+        expr: uconext_outbox_dead_letters > 0
+        for: 1m
+        labels: { severity: warning }
+        annotations: { summary: "Jobs agotaron reintentos; investigar antes de reencolar idempotentemente." }
+      - alert: SyncFailures
+        expr: sum(increase(uconext_sync_operations_total{result="RETRY"}[10m])) / sum(increase(uconext_sync_operations_total[10m])) > 0.05 and sum(increase(uconext_sync_operations_total[10m])) >= 20
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Sync falla persistentemente; preservar sobres y claves históricas." }
+      - alert: SyncPendingTooOld
+        expr: uconext_sync_pending_age_seconds > 3600
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Operaciones server-side pendientes por más de una hora." }
+      - alert: UnreviewedConflicts
+        expr: uconext_unreviewed_conflicts > 0
+        for: 30m
+        labels: { severity: warning }
+        annotations: { summary: "Conflictos sin revisar durante 30 minutos; requieren OWNER/ADMIN." }
+      - alert: OperationalMonitorStale
+        expr: time() - uconext_operations_snapshot_timestamp_seconds > 180 or absent(uconext_operations_snapshot_timestamp_seconds)
+        for: 3m
+        labels: { severity: critical }
+        annotations: { summary: "Monitor incompleto o sin contexto autorizado; no interpretar ausencia como cero." }

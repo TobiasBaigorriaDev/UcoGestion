@@ -11,6 +11,7 @@
 .button:active:not(:disabled) { transform: translateY(1px); }
 .button:disabled { opacity: .6; cursor: wait; }
 .button:focus-visible, .field input:focus-visible, .field select:focus-visible, .link:focus-visible { outline: 3px solid #166534; outline-offset: 3px; }
+.field input[type="date"]:focus-within { outline: 3px solid #166534; outline-offset: 3px; }
 .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: .75rem; }
 .metric, .section { padding: 1.15rem; border-radius: 1rem; background: rgba(255,255,255,.82); box-shadow: 0 8px 28px rgba(15,23,42,.05); }
 .metric dt { color: #475569; font-size: .9rem; }

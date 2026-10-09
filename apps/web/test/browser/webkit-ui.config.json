@@ -1,0 +1,6 @@
+{
+  "browser": {
+    "browserName": "webkit",
+    "contextOptions": { "serviceWorkers": "block" }
+  }
+}

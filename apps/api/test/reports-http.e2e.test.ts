@@ -114,12 +114,18 @@ describe('report HTTP datasets', () => {
     const csv = await get(`/api/v1/reports/expenses/csv?branchId=${branchId}`, owner)
       .expect(200);
     expect(csv.headers['content-type']).toContain('text/csv');
+    expect(csv.headers['content-disposition']).toBe('attachment; filename="expenses.csv"');
+    expect(csv.headers['x-content-type-options']).toBe('nosniff');
+    expect(csv.headers['cache-control']).toBe('no-store');
+    expect(Buffer.byteLength(csv.text)).toBeGreaterThan(100);
     expect(csv.text).toContain("'=2+2");
     expect(csv.text).toContain(expenseId);
     expect(csv.text).toContain('Fila-101');
     expect(csv.text).not.toContain('NO_EXPORTAR');
     const employee = await cookie(employeeEmail);
     await get('/api/v1/reports/expenses/csv', employee).expect(403);
+    await get('/api/v1/reports/expenses/csv', '').expect(401);
+    await get('/api/v1/reports/%22%0D%0AInjected/csv', owner).expect(400);
   });
 
   it('queues a filtered PDF export with CSRF and idempotency and exposes its status', async () => {

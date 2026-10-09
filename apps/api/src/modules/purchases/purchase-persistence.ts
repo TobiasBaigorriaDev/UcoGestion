@@ -52,7 +52,7 @@ export class PurchasePersistence {
     }
     const branch = await client.query<{ currency: string }>(`SELECT o.base_currency AS currency
       FROM branches b JOIN organizations o ON o.id = b.organization_id
-      WHERE b.organization_id = $1 AND b.id = $2 AND b.status = 'ACTIVE'`,
+      WHERE b.organization_id = $1 AND b.id = $2 AND b.status = 'ACTIVE' FOR SHARE OF b`,
     [context.organizationId, input.branchId]);
     const currency = branch.rows[0]?.currency;
     if (!currency) throw new PurchasePersistenceError('PURCHASE_BRANCH_NOT_AVAILABLE', 'La sucursal no está disponible.');

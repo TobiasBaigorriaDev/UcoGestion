@@ -1,0 +1,16 @@
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+.git
+.impeccable
+**/.env*
+**/*.pem
+**/*.key
+**/*.dump
+**/*.enc
+**/*custody*.json
+restore-evidence.json
+**/test-results
+**/playwright-report

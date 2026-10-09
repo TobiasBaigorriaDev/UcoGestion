@@ -18,7 +18,8 @@ export interface DeliveryResult {
   readonly operationId: string; readonly ack:string; readonly envelopeHash: string; readonly status:'ACKED'|'SECURITY_REJECTED';
 }
 export class HistoricalDeliveryIngestion implements HistoricalDeliveryIngestionPort {
-  constructor(private readonly transactions:TenantTransaction, private readonly validator:HistoricalEnvelopeValidator, private readonly ackKey:(keyId:string)=>KeyObject) {}
+  constructor(private readonly transactions:TenantTransaction, private readonly validator:HistoricalEnvelopeValidator, private readonly ackKey:(keyId:string)=>KeyObject,
+    private readonly recordResult?: (result:'ACKED'|'SECURITY_REJECTED'|'RETRY')=>void) {}
   private signAck(result:Omit<DeliveryResult,'ack'>,history:{signingKeyId:string;signingPublicKey:string}):string {
     const ack=signOfflineAck(result,this.ackKey(history.signingKeyId),history.signingKeyId);
     verifyOfflineAck(ack,createPublicKey(history.signingPublicKey),history.signingKeyId,result);
@@ -26,7 +27,13 @@ export class HistoricalDeliveryIngestion implements HistoricalDeliveryIngestionP
   }
   async deliver(certificate:DeviceCertificateClaims,envelopes:readonly string[]) {
     const acks:string[]=[];
-    for (const envelope of envelopes) { const result=await this.ingest(certificate,envelope); if (result) acks.push(result.ack); }
+    for (const envelope of envelopes) {
+      try {
+        const result=await this.ingest(certificate,envelope);
+        this.recordResult?.(result?.status ?? 'RETRY');
+        if (result) acks.push(result.ack);
+      } catch (error) { this.recordResult?.('RETRY'); throw error; }
+    }
     return {acks};
   }
   async ingest(certificate:DeviceCertificateClaims,exactEnvelope:string):Promise<DeliveryResult|undefined> {

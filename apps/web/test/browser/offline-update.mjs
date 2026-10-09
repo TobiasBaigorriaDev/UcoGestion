@@ -22,7 +22,7 @@ async (page) => {
   await page.reload();
   await page.waitForFunction(() => Boolean(window.migration));
   const migrated = await page.evaluate(() => window.migration.snapshot());
-  check(migrated.version === 3, 'Forward migration missing');
+  check(migrated.version === 4, 'Forward migration missing');
   check(JSON.stringify(migrated.records) === JSON.stringify(original.records), 'Encrypted records changed');
   check(JSON.stringify(migrated.pending) === JSON.stringify(original.pending), 'Pending bytes changed');
   const incompatible = await page.evaluate(() => window.migration.seed(99));

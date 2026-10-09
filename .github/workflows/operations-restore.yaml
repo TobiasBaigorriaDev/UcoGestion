@@ -1,0 +1,42 @@
+name: Monthly isolated restore
+on:
+  schedule:
+    - cron: '0 5 1 * *'
+  workflow_dispatch:
+concurrency:
+  group: isolated-restore
+  cancel-in-progress: false
+permissions: { contents: read }
+jobs:
+  restore:
+    runs-on: [self-hosted, operations-restore-isolated]
+    environment: operations-restore
+    timeout-minutes: 480
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24.15.0' }
+      - uses: pnpm/action-setup@v4
+        with: { version: '11.19.0' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run build --filter=@uconext/api...
+      - name: Restore latest committed backup into disposable PostgreSQL and run smoke
+        shell: pwsh
+        run: ./infra/restore/monthly-restore.ps1
+        env:
+          PRIMARY_DATABASE_IDENTITY_URL: ${{ vars.PRIMARY_DATABASE_IDENTITY_URL }}
+          PRIMARY_ACCOUNT_ID: ${{ vars.PRIMARY_ACCOUNT_ID }}
+          BACKUP_ACCOUNT_ID: ${{ vars.BACKUP_ACCOUNT_ID }}
+          BACKUP_ENDPOINT: ${{ vars.BACKUP_ENDPOINT }}
+          BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
+          BACKUP_REGION: ${{ vars.BACKUP_REGION }}
+          BACKUP_ACCESS_KEY_ID: ${{ secrets.BACKUP_READ_ACCESS_KEY_ID }}
+          BACKUP_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_READ_SECRET_ACCESS_KEY }}
+          BACKUP_KEY_REFERENCE: ${{ vars.BACKUP_KEY_REFERENCE }}
+          BACKUP_KEY_FILE: ${{ vars.BACKUP_KEY_FILE }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: restore-evidence
+          path: restore-evidence.json
+          retention-days: 90

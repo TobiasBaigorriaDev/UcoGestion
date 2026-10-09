@@ -3,7 +3,8 @@ import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 
 import { AppController } from './app.controller.js';
-import { MetricsService } from './core/observability/metrics.service.js';
+import { ObservabilityModule } from './core/observability/observability.module.js';
+import { OperationalMonitor } from './core/observability/operational-monitor.js';
 import { DatabaseReadinessService } from './database-readiness.service.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
@@ -26,6 +27,7 @@ import { UsersModule } from './modules/users/users.module.js';
 
 @Module({
   imports: [
+    ObservabilityModule,
     AuthModule,
     AuditModule,
     BranchesModule,
@@ -45,6 +47,6 @@ import { UsersModule } from './modules/users/users.module.js';
     UsersModule,
   ],
   controllers: [AppController],
-  providers: [DatabaseReadinessService, MetricsService, InventoryLedgerMonitor],
+  providers: [DatabaseReadinessService, InventoryLedgerMonitor, OperationalMonitor],
 })
 export class AppModule {}

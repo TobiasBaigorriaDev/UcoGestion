@@ -18,7 +18,7 @@ async function verifyOfflineCompatibility() {
       request.onblocked = () => reject(new Error('OFFLINE_UPDATE_INCOMPATIBLE'));
       request.onsuccess = () => {
         const db = request.result;
-        if (db.version !== 30 || !db.objectStoreNames.contains('delivery_queue')) {
+        if (db.version !== 40 || !db.objectStoreNames.contains('delivery_queue')) {
           db.close();
           reject(new Error('OFFLINE_UPDATE_INCOMPATIBLE'));
           return;

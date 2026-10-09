@@ -6,7 +6,8 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { AppShell } from '../../components/app-shell';
 import { ApiProblemError } from '../../lib/api/client';
 import { ErrorSummary } from '../../components/error-summary';
-import { loadMemberships, selectOrganization } from './auth-flow';
+import { loadMemberships, selectOrganization, logout } from './auth-flow';
+import styles from './management.module.css';
 import { useIdentityContext } from './identity-context';
 import { loadOrganizationSettings, OrganizationSettings } from './organization-settings';
 import { RemoteProvider } from './remote-provider';
@@ -19,6 +20,7 @@ import { CatalogItemManagement, loadManagedItems } from '../catalog/catalog-item
 import { CustomerManagement, loadCustomers } from '../customers/customer-management';
 import { SupplierManagement, loadSuppliers } from '../suppliers/supplier-management';
 import { CashRegisterManagement, loadCashRegisters } from '../cash/cash-register-management';
+import { CashWorkspace } from '../cash/cash-workspace';
 import { PaymentMethodsManagement, loadPaymentMethods } from '../organizations/payment-methods-management';
 import { InventoryStock } from '../inventory/inventory-stock';
 import { loadStocks } from '../inventory/inventory-api';
@@ -33,6 +35,7 @@ import { DashboardWorkspace } from '../insights/dashboard-workspace';
 import { AuditWorkspace } from '../insights/audit-workspace';
 import { ReportsWorkspace } from '../insights/reports-workspace';
 import { OnlineOnlyBoundary } from '../../offline/online-only-boundary';
+import { OfflineWorkspace } from '../offline/offline-workspace';
 
 type WorkspacePage =
   | 'home'
@@ -46,6 +49,7 @@ type WorkspacePage =
   | 'customers'
   | 'suppliers'
   | 'cash-registers'
+  | 'cash-sessions'
   | 'payment-methods'
   | 'inventory'
   | 'inventory-adjustments'
@@ -55,10 +59,29 @@ type WorkspacePage =
   | 'purchases'
   | 'expenses'
   | 'audit'
-  | 'reports';
+  | 'reports'
+  | 'offline';
 
 export function Workspace({ page = 'home' }: { page?: WorkspacePage }) {
-  return <OnlineOnlyBoundary><RemoteProvider><WorkspaceContent page={page} /></RemoteProvider></OnlineOnlyBoundary>;
+  const [retired, setRetired] = useState(() => typeof window !== 'undefined' && !!localStorage.getItem('uco:logout-pending'));
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (localStorage.getItem('uco:logout-pending')) setRetired(true);
+    const retire = () => setRetired(true);
+    const storage = (event: StorageEvent) => { if (event.key === 'uco:identity-retired' || event.key === 'uco:logout-pending') retire(); };
+    window.addEventListener('uco:identity-retired', retire); window.addEventListener('storage', storage);
+    return () => { window.removeEventListener('uco:identity-retired', retire); window.removeEventListener('storage', storage); };
+  }, []);
+  async function exit() {
+    setRetired(true); setBusy(true); setFailed(false);
+    try { await logout(); window.location.assign('/login'); } catch { setFailed(true); } finally { setBusy(false); }
+  }
+  if (retired) return <section className={styles.page}><h1>Acceso local cerrado</h1><p>Las entregas pendientes continúan sin mostrar información privada.</p>
+    {failed || localStorage.getItem('uco:logout-pending') ? <p role="alert">Falta confirmar el cierre de sesión con el servidor. Recuperá la conexión y reintentá.</p> : null}
+    <button type="button" disabled={busy} onClick={() => void exit()}>Confirmar cierre de sesión</button><a href="/login">Iniciar sesión</a></section>;
+  const content = <RemoteProvider><WorkspaceContent page={page} /></RemoteProvider>;
+  return <><div className={styles.page}><button type="button" onClick={() => void exit()}>Cerrar sesión</button></div>{page === 'offline' ? content : <OnlineOnlyBoundary>{content}</OnlineOnlyBoundary>}</>;
 }
 
 function WorkspaceContent({ page }: { page: WorkspacePage }) {
@@ -155,6 +178,8 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
       { href: '/workspace/customers', label: 'Clientes' },
       { href: '/workspace/suppliers', label: 'Proveedores' },
       { href: '/workspace/cash-registers', label: 'Cajas' },
+      { href: '/workspace/cash-sessions', label: 'Sesiones de caja' },
+      { href: '/workspace/offline', label: 'POS sin conexión' },
       ...(current?.role === 'OWNER' || current?.role === 'ADMIN'
         ? [
             { href: '/workspace/users', label: 'Usuarios' },
@@ -168,8 +193,10 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
     currentPath={page === 'home' ? '/workspace' : page === 'catalog-categories' || page === 'catalog-items' ? '/workspace/catalog' : page === 'inventory-adjustments' ? '/workspace/inventory/adjustments' : page === 'inventory-transfers' ? '/workspace/inventory/transfers' : `/workspace/${page}`}>
       {switchError ? <ErrorSummary error={switchError} /> : null}
       {branches.error ? <><ErrorSummary error={branches.error instanceof ApiProblemError ? branches.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar las sucursales.' })} /><button type="button" onClick={() => void branches.refetch()}>Reintentar sucursales</button></> : null}
-      {page === 'reports' && current ? settings.error
-        ? <><ErrorSummary error={settings.error instanceof ApiProblemError ? settings.error : new ApiProblemError({ status: 0, code: 'SETTINGS_LOAD_FAILED', message: 'No pudimos cargar la zona horaria de la organización.' })} /><button type="button" onClick={() => void settings.refetch()}>Reintentar</button></>
+      {page === 'offline' ? !activeBranchId || !current ? <p>Seleccioná una sucursal para preparar el POS offline.</p>
+        : <OfflineWorkspace key={`${activeId}:${activeBranchId}`} organizationId={activeId} branchId={activeBranchId} role={current.role} />
+      : page === 'reports' && current ? settings.error
+        ? <><h1>Reportes</h1><ErrorSummary error={settings.error instanceof ApiProblemError ? settings.error : new ApiProblemError({ status: 0, code: 'SETTINGS_LOAD_FAILED', message: 'No pudimos cargar la zona horaria de la organización.' })} /><button type="button" onClick={() => void settings.refetch()}>Reintentar</button></>
         : settings.data ? <ReportsWorkspace key={activeId} organizationId={activeId}
           role={current.role} timezone={settings.data.timezone} branches={branches.data?.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => ({ id: branch.id, name: branch.name })) ?? []} />
         : <p role="status">Cargando zona horaria…</p>
@@ -259,6 +286,9 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
       : page === 'suppliers' ? suppliers.error
         ? <><ErrorSummary error={suppliers.error instanceof ApiProblemError ? suppliers.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar los proveedores.' })} /><button type="button" onClick={() => void suppliers.refetch()}>Reintentar</button></>
         : suppliers.data && current ? <SupplierManagement organizationId={activeId} role={current.role} suppliers={suppliers.data} onReload={() => void suppliers.refetch()} /> : <p role="status">Cargando proveedores…</p>
+      : page === 'cash-sessions' ? activeBranchId && current
+        ? <CashWorkspace key={`${activeId}:${activeBranchId}`} organizationId={activeId ?? ''} branchId={activeBranchId} role={current.role}/>
+        : <p>Seleccioná una sucursal para operar sus sesiones.</p>
       : page === 'cash-registers' ? !activeBranchId ? <p>Seleccioná una sucursal para ver sus cajas.</p>
         : cashRegisters.error
           ? <><ErrorSummary error={cashRegisters.error instanceof ApiProblemError ? cashRegisters.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar las cajas.' })} /><button type="button" onClick={() => void cashRegisters.refetch()}>Reintentar</button></>

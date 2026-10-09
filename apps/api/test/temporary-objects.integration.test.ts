@@ -67,6 +67,8 @@ describe('temporary object files', () => {
     const file = await service.create(context(), { body: new Uint8Array([1, 2, 3]),
       fileName: 'sales.pdf', contentType: 'application/pdf' });
     expect(uploaded.get(file.storageKey)).toEqual(new Uint8Array([1, 2, 3]));
+    expect((await ownerPool.query('SELECT file_name,content_type,size_bytes FROM object_files WHERE id = $1',
+      [file.id])).rows[0]).toMatchObject({file_name:'sales.pdf',content_type:'application/pdf',size_bytes:'3'});
     expect((await ownerPool.query(`SELECT job_type,available_at FROM outbox_jobs
       WHERE job_key = $1`, [`object-file-cleanup:${file.id}`])).rows[0]?.job_type)
       .toBe('OBJECT_FILE_CLEANUP');
@@ -92,6 +94,17 @@ describe('temporary object files', () => {
     const before = putCalls;
     await expect(service.create(context(otherActorId), { body: new Uint8Array([1]),
       fileName: 'unauthorized.pdf', contentType: 'application/pdf' })).rejects.toThrow();
+    expect(putCalls).toBe(before);
+  });
+
+  it('rejects unsafe names and empty files before uploading', async () => {
+    const before = putCalls;
+    for (const fileName of ['../sales.pdf', 'sales"\r\nInjected.pdf', 'x'.repeat(129), '']) {
+      await expect(service.create(context(), {body:new Uint8Array([1]),fileName,
+        contentType:'application/pdf'})).rejects.toThrow('Invalid temporary file');
+    }
+    await expect(service.create(context(), {body:new Uint8Array(),fileName:'sales.pdf',
+      contentType:'application/pdf'})).rejects.toThrow('Invalid temporary file');
     expect(putCalls).toBe(before);
   });
 

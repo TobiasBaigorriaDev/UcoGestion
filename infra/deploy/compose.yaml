@@ -1,0 +1,22 @@
+services:
+  migrate:
+    image: ${API_IMAGE:?Set an immutable API image digest}
+    profiles: [migration]
+    command: [node, dist/operations/migrate-cli.js]
+    environment:
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set separate migration credentials}
+    restart: 'no'
+  api:
+    image: ${API_IMAGE:?Set an immutable API image digest}
+    env_file: ${RUNTIME_ENV_FILE:?Set protected runtime environment file}
+    restart: unless-stopped
+    ports: ['127.0.0.1:4000:3000']
+  worker:
+    image: ${WORKER_IMAGE:?Set an immutable worker image digest}
+    env_file: ${RUNTIME_ENV_FILE:?Set protected runtime environment file}
+    restart: unless-stopped
+  web:
+    image: ${WEB_IMAGE:?Set an immutable web image digest}
+    env_file: ${RUNTIME_ENV_FILE:?Set protected runtime environment file}
+    restart: unless-stopped
+    ports: ['127.0.0.1:3000:3000']

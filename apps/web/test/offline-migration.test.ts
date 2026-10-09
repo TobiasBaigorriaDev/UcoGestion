@@ -32,7 +32,8 @@ it('T191A migrates forward preserving records, envelopes, historical key IDs and
   const db = new OfflineDatabase(org, device);
   try {
     await db.open();
-    expect(db.verno).toBe(3);
+    expect(db.verno).toBe(4);
+    expect(await db.delivery_receipts.count()).toBe(0);
     expect(Array.from((await db.getEncrypted('alice', 'sale', 'pending')) ?? [])).toEqual(Array.from(original.ciphertext));
     expect(Array.from((await db.deliveryBytes())[0]?.envelope ?? [])).toEqual(Array.from(original.envelope));
     expect((await db.meta.get('device-chain'))?.sequence).toBe('7');

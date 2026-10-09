@@ -4,9 +4,12 @@ import { useEffect } from 'react';
 
 import { deliverAllOpaqueDatabases,startOpaqueDelivery } from '../src/offline/opaque-delivery';
 import { prepareOfflineUpdate } from '../src/offline/prepare-offline-update';
+import { observeIdentityRetirement } from '../src/offline/offline-identity';
+import { OpaqueProgress } from '../src/features/offline/opaque-progress';
 
 export function OfflineProvider() {
   useEffect(() => {
+    const stopIdentity = observeIdentityRetirement();
     const stop=startOpaqueDelivery(deliverAllOpaqueDatabases);
     const requestDelivery=(event:MessageEvent)=>{if (event.data?.type==='uco:delivery-request') window.dispatchEvent(new Event('uco:delivery-request'));};
     navigator.serviceWorker?.addEventListener('message',requestDelivery);
@@ -17,7 +20,7 @@ export function OfflineProvider() {
         window.dispatchEvent(new CustomEvent('uco:offline-update-blocked'));
       });
     }
-    return ()=>{stop();navigator.serviceWorker?.removeEventListener('message',requestDelivery);};
+    return ()=>{stopIdentity();stop();navigator.serviceWorker?.removeEventListener('message',requestDelivery);};
   }, []);
-  return null;
+  return <OpaqueProgress />;
 }

@@ -36,6 +36,9 @@ export interface PreparedCashOpening extends CashOpeningInput {
 /** Internal preparation only. The HTTP opening command is introduced by T121A. */
 export class CashOpeningPreparation {
   async prepare(client: PoolClient, context: TenantTransactionContext, input: CashOpeningInput): Promise<PreparedCashOpening> {
+    await client.query('SELECT id FROM organizations WHERE id=$1 FOR UPDATE', [context.organizationId]);
+    const branch = await client.query("SELECT id FROM branches WHERE organization_id=$1 AND id=$2 AND status='ACTIVE' FOR SHARE", [context.organizationId,input.branchId]);
+    if (!branch.rowCount) throw new CashOpeningError('CASH_OPENING_REGISTER_NOT_AVAILABLE', 'La sucursal no está disponible.');
     const openingCash = validateNonNegativeMoney(input.openingCash);
     if (openingCash === undefined) {
       throw new CashOpeningError('CASH_OPENING_AMOUNT_INVALID', 'El efectivo inicial debe ser no negativo y tener dos decimales.');

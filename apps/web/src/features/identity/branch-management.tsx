@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiClient, ApiProblemError } from '../../lib/api/client';
 import styles from './management.module.css';
+import { BranchDeactivation, loadBranchBlockers, deactivateBranch } from './branch-deactivation';
 
 const branchSchema = z.object({ id: z.string(), name: z.string(), status: z.enum(['ACTIVE', 'INACTIVE']), version: z.number().int() });
 const dataSchema = z.object({ actorRole: z.enum(['OWNER', 'ADMIN', 'CASHIER', 'EMPLOYEE']), branches: z.array(branchSchema) });
@@ -28,8 +29,9 @@ export async function createBranch(organizationId: string, name: string) {
   return result;
 }
 
-export function BranchManagement({ organizationId, data, onCreate = createBranch, onReload }: {
+export function BranchManagement({ organizationId, data, onCreate = createBranch, onReload, onBlockers = loadBranchBlockers, onDeactivate = deactivateBranch }: {
   organizationId: string; data: BranchManagementData; onCreate?: typeof createBranch; onReload: () => void;
+  onBlockers?: typeof loadBranchBlockers; onDeactivate?: typeof deactivateBranch;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiProblemError | null>(null);
@@ -54,7 +56,9 @@ export function BranchManagement({ organizationId, data, onCreate = createBranch
       <button type="submit" disabled={busy}>{busy ? 'Creando…' : 'Crear sucursal'}</button>
     </form> : null}
     <section className={styles.panel} aria-labelledby="branch-list-heading"><h2 id="branch-list-heading">Sucursales disponibles</h2>
-      {data.branches.length === 0 ? <p>No hay sucursales disponibles para tu usuario.</p> : <ul className={styles.rows}>{data.branches.map((branch) => <li className={styles.row} key={branch.id}><strong>{branch.name}</strong><span>{branch.status === 'ACTIVE' ? 'Activa' : 'Inactiva'}</span></li>)}</ul>}
+      {data.branches.length === 0 ? <p>No hay sucursales disponibles para tu usuario.</p> : <ul className={styles.rows}>{data.branches.map((branch) => <li className={styles.row} key={branch.id}><strong>{branch.name}</strong><span>{branch.status === 'ACTIVE' ? 'Activa' : 'Inactiva'}</span>
+        {data.actorRole === 'OWNER' && branch.status === 'ACTIVE' ? <BranchDeactivation key={`${branch.id}:${branch.version}`} organizationId={organizationId} branch={branch} onBlockers={onBlockers} onDeactivate={onDeactivate} onReload={onReload} /> : null}
+      </li>)}</ul>}
     </section>
   </section>;
 }

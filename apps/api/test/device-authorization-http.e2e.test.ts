@@ -96,6 +96,26 @@ describe('T185 POS device HTTP authorization', () => {
       .rows[0]?.total).toBe(1);
   });
 
+  it('T221 exposes blocker preview and deactivation with session, CSRF, version and idempotency', async () => {
+    const branch = randomUUID();
+    await pool.query('INSERT INTO branches (id,organization_id,name) VALUES ($1,$2,$3)', [branch,organizationId,'HTTP deactivation']);
+    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin','http://localhost:3000').send({email,password:'correct-password'}).expect(204);
+    const cookie = (login.headers['set-cookie'] as string[] | undefined)?.[0]?.split(';')[0] ?? '';
+    const csrf = await request(app.getHttpServer()).get('/api/v1/auth/csrf').set('Cookie',cookie).expect(200);
+    const preview = await request(app.getHttpServer()).get(`/api/v1/branches/${branch}/deactivation-blockers`).set('Cookie',cookie).set('X-Organization-Id',organizationId).expect(200);
+    expect(preview.body).toEqual({sessions:'0',pending:'0',conflicts:'0',uncertainty:'0'});
+    await request(app.getHttpServer()).get(`/api/v1/branches/${foreignBranchId}/deactivation-blockers`).set('Cookie',cookie).set('X-Organization-Id',organizationId).expect(404);
+    await request(app.getHttpServer()).post(`/api/v1/branches/${branch}/deactivate`).set('Cookie',cookie).set('Origin','http://localhost:3000').set('X-Organization-Id',organizationId).send({}).expect(403);
+    const post = () => request(app.getHttpServer()).post(`/api/v1/branches/${branch}/deactivate`).set('Cookie',cookie).set('Origin','http://localhost:3000').set('X-Organization-Id',organizationId).set('X-CSRF-Token',csrf.body.csrfToken as string);
+    await post().set('Idempotency-Key','branch-http').send({}).expect(428);
+    const missingKey = await post().set('If-Match','"1"').send({}).expect(428);
+    expect(missingKey.body.code).toBe('IDEMPOTENCY_KEY_REQUIRED');
+    const first = await post().set('If-Match','"1"').set('Idempotency-Key','branch-http').send({}).expect(201);
+    const retry = await post().set('If-Match','"1"').set('Idempotency-Key','branch-http').send({}).expect(201);
+    expect(first.body).toEqual(retry.body); expect(first.body).toMatchObject({status:'INACTIVE',version:2});
+    await post().set('If-Match','"2"').set('Idempotency-Key','branch-http').send({}).expect(409);
+  });
+
   it('T186 exposes a signed bootstrap only through session, CSRF and authorized device scope', async () => {
     const login = await request(app.getHttpServer()).post('/api/v1/auth/login')
       .set('Origin', 'http://localhost:3000').send({ email, password: 'correct-password' }).expect(204);

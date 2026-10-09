@@ -1,0 +1,43 @@
+name: Daily encrypted backup
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+concurrency:
+  group: production-backup
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  backup:
+    # Dedicated runner with PostgreSQL 16 client and restricted network/secret access.
+    runs-on: [self-hosted, operations-backup]
+    environment: operations-backup
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24.15.0' }
+      - uses: pnpm/action-setup@v4
+        with: { version: '11.19.0' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run build --filter=@uconext/api...
+      - name: Dump, encrypt, checksum and commit to independent account
+        shell: pwsh
+        run: ./infra/backup/backup.ps1
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          PRIMARY_ACCOUNT_ID: ${{ vars.PRIMARY_ACCOUNT_ID }}
+          BACKUP_ACCOUNT_ID: ${{ vars.BACKUP_ACCOUNT_ID }}
+          BACKUP_ENDPOINT: ${{ vars.BACKUP_ENDPOINT }}
+          BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
+          BACKUP_REGION: ${{ vars.BACKUP_REGION }}
+          BACKUP_ACCESS_KEY_ID: ${{ secrets.BACKUP_ACCESS_KEY_ID }}
+          BACKUP_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_SECRET_ACCESS_KEY }}
+          BACKUP_KEY_REFERENCE: ${{ vars.BACKUP_KEY_REFERENCE }}
+          BACKUP_KEY_FILE: ${{ vars.BACKUP_KEY_FILE }}
+          OFFLINE_SIGNING_PRIVATE_KEY: ${{ secrets.OFFLINE_SIGNING_PRIVATE_KEY }}
+          OFFLINE_SIGNING_KEY_ID: ${{ vars.OFFLINE_SIGNING_KEY_ID }}
+          OFFLINE_INGESTION_KEYS: ${{ secrets.OFFLINE_INGESTION_KEYS }}
+          OFFLINE_ACK_SIGNING_KEYS: ${{ secrets.OFFLINE_ACK_SIGNING_KEYS }}
+          DEVICE_CERTIFICATE_KEY: ${{ secrets.DEVICE_CERTIFICATE_KEY }}

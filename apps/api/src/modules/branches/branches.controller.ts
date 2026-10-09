@@ -14,6 +14,7 @@ import type { TenantTransactionContext } from '../../database/tenant-transaction
 import { BranchManagementError, BranchManagementService } from './branch-management.service.js';
 import { BranchReadService } from './branch-read.service.js';
 import { CashRegisterManagementError, CashRegisterManagementService } from './cash-register-management.service.js';
+import { BranchDeactivationError, BranchDeactivationService } from './branch-deactivation.service.js';
 
 const createSchema = z.strictObject({ name: z.string().trim().min(1).max(255) });
 interface BranchRequest { readonly headers: Record<string, string | string[] | undefined>; identity?: { readonly organizationId: string; readonly userId: string } }
@@ -24,10 +25,37 @@ export class BranchesController {
     private readonly reader: BranchReadService,
     private readonly management: BranchManagementService,
     private readonly cashRegisters: CashRegisterManagementService,
+    private readonly deactivation: BranchDeactivationService,
   ) {}
 
   @Get()
   read(@Req() request: BranchRequest): Promise<unknown> { return this.reader.read(this.context(request)); }
+
+  @Get(':branchId/deactivation-blockers')
+  async blockers(@Req() request: BranchRequest, @Param('branchId', ParseUUIDPipe) branchId: string) {
+    try { return await this.deactivation.blockers(this.context(request), branchId); }
+    catch (error) { this.handleDeactivationError(error); }
+  }
+
+  @Post(':branchId/deactivate')
+  async deactivate(@Req() request: BranchRequest, @Param('branchId', ParseUUIDPipe) branchId: string,
+    @IfMatchVersion() version: number, @Body(new ZodValidationPipe(z.strictObject({}))) body: Record<string, never>) {
+    void body;
+    try { return await this.deactivation.deactivate(this.context(request), branchId, version, requireIdempotencyKey(request.headers)); }
+    catch (error) { this.handleDeactivationError(error); }
+  }
+
+  private handleDeactivationError(error: unknown): never {
+    if (error instanceof BranchDeactivationError) {
+      const response = { code: error.code, title: 'Desactivación de sucursal rechazada', detail: error.message };
+      if (error.code.endsWith('_FORBIDDEN')) throw new ForbiddenException(response);
+      if (error.code === 'BRANCH_NOT_AVAILABLE') throw new NotFoundException(response);
+      throw new ConflictException(response);
+    }
+    if (error instanceof IdempotencyKeyReusedError || error instanceof IdempotencyReplayPendingError) throw new ConflictException({ code: error instanceof IdempotencyKeyReusedError ? 'IDEMPOTENCY_KEY_REUSED' : 'IDEMPOTENCY_REPLAY_PENDING', title: 'Reintento no disponible', detail: error.message });
+    if (error instanceof IdempotencyReplayForbiddenError) throw new ForbiddenException({ code: 'IDEMPOTENCY_REPLAY_FORBIDDEN', title: 'Acceso denegado', detail: 'No podés recuperar esta operación.' });
+    throw error;
+  }
 
   @Post()
   async create(@Req() request: BranchRequest, @Body(new ZodValidationPipe(createSchema)) body: z.infer<typeof createSchema>) {

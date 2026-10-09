@@ -15,6 +15,13 @@ import { DeviceCertificate } from '../src/modules/offline-sync/device-certificat
 import { HistoricalEnvelopeValidator, canonicalEnvelopeJson } from '../src/modules/offline-sync/historical-envelope-validator.js';
 import { recordRevocationCheckpoint, revocationCheckpointPayload, readRevocationKnowledge } from '../src/modules/offline-sync/revocation-checkpoint.js';
 import { HistoricalDeliveryIngestion } from '../src/modules/offline-sync/historical-delivery-ingestion.js';
+import { CashCloseService } from '../src/modules/cash/cash-close.service.js';
+import { OfflineSaleImporter } from '../src/modules/sales/index.js';
+import { ExceptionalClosePreparation } from '../src/modules/cash/exceptional-close-preparation.js';
+import { UnrecoverableDeviceService } from '../src/modules/offline-sync/unrecoverable-device.service.js';
+import { ExceptionalCashCloseService } from '../src/modules/cash/exceptional-cash-close.service.js';
+import { LateCashReviewService } from '../src/modules/cash/late-cash-review.service.js';
+import { CashWorkspaceService } from '../src/modules/cash/cash-workspace.service.js';
 
 const ec = generateKeyPairSync('ec', { namedCurve:'prime256v1' });
 const rsa = generateKeyPairSync('rsa', { modulusLength:3072 });
@@ -28,8 +35,8 @@ const custody=new RsaSyncEnvelopeDecryptor({activeKeyId:'rsa',keys:{rsa:rsa.priv
 const signer={keyId:'trusted',publicKeyPem:publicKey,sign:(value:string)=>sign('sha256',Buffer.from(value),ec.privateKey).toString('base64')};
 const context=()=>({organizationId:org,userId:actor,requestId:randomUUID()});
 const sha=(value:string|Buffer)=>createHash('sha256').update(value).digest('base64');
-function seal(operation: Record<string,unknown>) {
-  const routing={version:1,keyId:'rsa',operationId:operation.id,certificate};
+function seal(operation: Record<string,unknown>,transportCertificate=certificate) {
+  const routing={version:1,keyId:'rsa',operationId:operation.id,certificate:transportCertificate};
   const payloadHash=sha(canonicalEnvelopeJson(operation));
   const signature=sign('sha256',Buffer.from(payloadHash,'base64'),{key:ec.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64');
   const cek=randomBytes(32), iv=randomBytes(12), cipher=createCipheriv('aes-256-gcm',cek,iv);
@@ -156,6 +163,34 @@ describe('historical delivery transactions',()=>{
     expect((await pool.query('SELECT id FROM sync_operations WHERE id=$1',[id])).rowCount).toBe(0);
     expect((await pool.query('SELECT operation_id FROM offline_delivery_results WHERE operation_id=$1',[id])).rowCount).toBe(0);
   });
+  it('T215 serializes a legitimate new envelope against begin-close without partial effects',async()=>{
+    await pool.query("UPDATE memberships SET status='ACTIVE',revoked_at=NULL WHERE organization_id=$1",[org]);
+    const checkpoint={version:1 as const,organizationId:org,deviceId:device,actorUserId:actor,sessionId:String(operation.sessionId),
+      sequence:String(operation.sequence),headHash:createHash('sha256').update(canonicalEnvelopeJson(operation)).digest('hex'),
+      sessionSequence:String(operation.sessionSequence),creationFrozen:true as const,pending:0 as const};
+    const proof=sign('sha256',Buffer.from(JSON.stringify(checkpoint)),{key:ec.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64');
+    const id=randomUUID(),occurredAt=new Date().toISOString(),prior=operation.payload as Record<string,unknown>;
+    const sequence=(BigInt(String(operation.sequence))+1n).toString();
+    const next={...operation,id,sequence,sessionSequence:sequence,previousHash:sha(canonicalEnvelopeJson(operation)),occurredAt,
+      payload:{...prior,id,occurredAt,result:{...(prior.result as Record<string,unknown>),id,operationId:id}}};
+    const bytes=seal(next),service=new CashCloseService(transactions);
+    const race=await Promise.allSettled([service.begin(context(),{checkpoint,signature:proof},randomUUID()),ingestion.ingest(claims,bytes)]);
+    const close=race[0];
+    if (close?.status==='fulfilled') {
+      expect(race[1]?.status).toBe('rejected');
+      expect((await pool.query('SELECT id FROM sync_operations WHERE id=$1',[id])).rowCount).toBe(0);
+      await service.abort(context(),{cashSessionId:checkpoint.sessionId,deviceId:device,closeAttemptId:close.value.closeAttemptId},randomUUID());
+    } else {
+      expect(close?.status).toBe('rejected');
+      if (close?.status==='rejected') expect(close.reason).toMatchObject({code:'CASH_CHECKPOINT_INVALID'});
+      expect(race[1]?.status).toBe('fulfilled');
+    }
+    expect((await ingestion.ingest(claims,bytes))?.status).toBe('ACKED');
+    expect((await pool.query('SELECT count(*)::integer AS n FROM sales WHERE id=$1',[id])).rows[0]?.n).toBe(1);
+    operation=next;exact=bytes;
+    await pool.query("UPDATE memberships SET status='REVOKED',revoked_at=now() WHERE organization_id=$1",[org]);
+  });
+
   it('T204 authenticates durable revocation knowledge, rejects rollback and reconstructs cutoffs under RLS',async()=>{
     const checkpoint={organizationId:org,deviceId:device,actorUserId:actor,sequence:String(operation.sequence),headHash:createHash('sha256').update(canonicalEnvelopeJson(operation)).digest('hex')};
     const signature=sign('sha256',Buffer.from(revocationCheckpointPayload(checkpoint)),{key:ec.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64');
@@ -183,7 +218,9 @@ describe('historical delivery transactions',()=>{
   it('T211 links positive corrections and moves a non-negative incident to pending review',async()=>{
     await pool.query("UPDATE memberships SET status='ACTIVE',revoked_at=NULL WHERE organization_id=$1",[org]);
     await pool.query("UPDATE catalog_items SET status='ACTIVE' WHERE id=$1",[item]);
-    const input={branchId:branch,itemId:item,direction:'INCREASE' as const,quantity:'2',reason:'CORRECCION'};
+    const negative=(await pool.query<{quantity:string}>('SELECT quantity::text FROM branch_stocks WHERE item_id=$1',[item])).rows[0]?.quantity;
+    if (!negative?.startsWith('-')) throw new Error('Expected negative stock before correction');
+    const input={branchId:branch,itemId:item,direction:'INCREASE' as const,quantity:negative.slice(1),reason:'CORRECCION'};
     const negativeIncident=(await pool.query('SELECT id FROM inventory_incidents')).rows[0]?.id as string;
     await expect(new InventoryIncidentService(transactions).resolve(context(),negativeIncident,'Todavía negativo','negative')).rejects.toThrow('INCIDENT_NOT_REVIEWABLE');
     const adjustment=new InventoryAdjustmentService(transactions);
@@ -218,4 +255,115 @@ describe('historical delivery transactions',()=>{
     expect(await service.resolve({...context(),userId:admin},own,'Corregido y revisado','admin-own')).toMatchObject({status:'RESOLVED'});
   });
 
+  it('T214B-C verifies applied device and session chains before closing an imported session', async () => {
+    const checkpoint = { version: 1 as const, organizationId: org, deviceId: device, actorUserId: actor,
+      sessionId: String(operation.sessionId), sequence: String(operation.sequence),
+      headHash: createHash('sha256').update(canonicalEnvelopeJson(operation)).digest('hex'),
+      sessionSequence: String(operation.sessionSequence), creationFrozen: true as const, pending: 0 as const };
+    const signed = (value: typeof checkpoint) => ({ checkpoint: value,
+      signature: sign('sha256', Buffer.from(JSON.stringify(value)), { key: ec.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64') });
+    const service = new CashCloseService(transactions);
+    await expect(service.begin(context(), signed({ ...checkpoint, headHash: '0'.repeat(64) }), randomUUID())).rejects.toThrow('CASH_CHECKPOINT_INVALID');
+    await expect(service.begin(context(), signed({ ...checkpoint, sequence: (BigInt(checkpoint.sequence)+1n).toString() }), randomUUID())).rejects.toThrow('CASH_CHECKPOINT_INVALID');
+    await expect(service.begin(context(), signed({ ...checkpoint, sessionSequence: '0' }), randomUUID())).rejects.toThrow('CASH_CHECKPOINT_INVALID');
+    const result = await service.begin(context(), signed(checkpoint), randomUUID());
+    const final = await service.finalSync(context(), { cashSessionId: checkpoint.sessionId, deviceId: device, closeAttemptId: result.closeAttemptId }, randomUUID());
+    expect(final.expectedCash).toBe((await pool.query('SELECT expected_cash FROM cash_sessions WHERE id=$1', [checkpoint.sessionId])).rows[0]?.expected_cash);
+    expect((await ingestion.ingest(claims, exact))?.status).toBe('ACKED');
+    const newId=randomUUID();
+    await expect(transactions.runWithOptionalAudit(context(),async client=>({result:await new OfflineSaleImporter().apply(client,context(),
+      {...operation.payload as Record<string,unknown>,id:newId},newId)}))).rejects.toThrow('OFFLINE_SALE_SESSION_INVALID');
+    expect((await pool.query('SELECT id FROM sales WHERE id=$1',[newId])).rowCount).toBe(0);
+    const exposures=(await pool.query('SELECT count(*)::integer AS n FROM offline_configuration_exposures WHERE organization_id=$1 AND cleared_at IS NULL',[org])).rows[0]?.n;
+    expect((await new UnrecoverableDeviceService(transactions).declare(context(),device)).permanentlyLocked).toBe(true);
+    const preparation=new ExceptionalClosePreparation();
+    const snapshot=await transactions.runWithOptionalAudit(context(),async client=>{
+      const prepared=await preparation.prepare(client,context(),{cashSessionId:checkpoint.sessionId,confirm:true,reason:'Dispositivo irrecuperable',countedCash:'90.00'});
+      return {result:await preparation.snapshot(client,context(),prepared)};
+    });
+    expect(snapshot).toMatchObject({operationalDataCompleteness:'UNKNOWN',currencyPermanentlyLocked:true,countedCash:'90.00'});
+    expect(snapshot.operationsReceived).toHaveLength(Number(operation.sequence));
+    expect((await pool.query('SELECT count(*)::integer AS n FROM offline_configuration_exposures WHERE organization_id=$1 AND cleared_at IS NULL',[org])).rows[0]?.n).toBe(exposures);
+  });
+  it('T218 imports presealed late sales atomically without rewriting exceptional closure or releasing D01',async()=>{
+    const lateOrg=randomUUID(),lateActor=randomUUID(),lateBranch=randomUUID(),lateDevice=randomUUID(),lateRegister=randomUUID(),lateItem=randomUUID(),sessionId=randomUUID();
+    const lateContext=()=>({organizationId:lateOrg,userId:lateActor,requestId:randomUUID()});
+    await pool.query("INSERT INTO users (id,email_normalized,password_hash,password_hash_version) VALUES ($1,'late@example.com','$argon2id$v=19$test',1)",[lateActor]);
+    await pool.query("INSERT INTO organizations (id,base_currency,timezone) VALUES ($1,'ARS','UTC')",[lateOrg]);
+    await pool.query("INSERT INTO memberships (id,organization_id,user_id,role) VALUES ($1,$2,$3,'OWNER')",[randomUUID(),lateOrg,lateActor]);
+    await pool.query("INSERT INTO branches (id,organization_id,name) VALUES ($1,$2,'Late')",[lateBranch,lateOrg]);
+    await pool.query("INSERT INTO cash_registers (id,organization_id,branch_id,name) VALUES ($1,$2,$3,'Late')",[lateRegister,lateOrg,lateBranch]);
+    await pool.query("INSERT INTO devices (id,organization_id,branch_id,authorized_by_user_id,authorized_at,status,public_key,public_key_thumbprint) VALUES ($1,$2,$3,$4,now(),'ACTIVE',$5,$6)",
+      [lateDevice,lateOrg,lateBranch,lateActor,publicKey,certificates.thumbprint(publicKey)]);
+    await pool.query("INSERT INTO catalog_items (id,organization_id,name,type,base_unit,track_inventory,price,price_version) VALUES ($1,$2,'Late product','PRODUCT','UNIT',true,10,1)",[lateItem,lateOrg]);
+    const bootstrap=await new OfflineBootstrapService(transactions,signer,custody).issue(lateContext(),{deviceId:lateDevice,branchId:lateBranch},'late-bootstrap');
+    const config=JSON.parse(bootstrap.payload);
+    const grantProof={grantId:config.grantId as string,bootstrapHash:createHash('sha256').update(bootstrap.payload).digest('hex'),deviceSequence:'0',headHash:null};
+    const grant=(await new OfflineGrantService(transactions,ec.privateKey,'trusted').issue(lateContext(),{...grantProof,
+      proof:sign('sha256',Buffer.from(offlineGrantProofPayload(grantProof)),{key:ec.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64')},'late-grant')).grant;
+    const lateCertificate=certificates.issue({organizationId:lateOrg,deviceId:lateDevice,thumbprint:certificates.thumbprint(publicKey)}),lateClaims=certificates.open(lateCertificate);
+    const occurredAt=new Date().toISOString();
+    const opening={id:randomUUID(),actorId:lateActor,organizationId:lateOrg,deviceId:lateDevice,sessionId,sequence:'1',sessionSequence:'1',previousHash:null,
+      kind:'cash-session-open',grant,configVersion:config.configurationVersion,occurredAt,receivedAt:null,
+      payload:{id:sessionId,actorUserId:lateActor,branchId:lateBranch,cashRegisterId:lateRegister,openingCash:'10.00',currency:'ARS',openedAt:occurredAt,status:'OPEN'}};
+    expect((await ingestion.ingest(lateClaims,seal(opening,lateCertificate)))?.status).toBe('ACKED');
+    const id=randomUUID(),sale={...opening,id,kind:'sale-confirm',sequence:'2',sessionSequence:'2',previousHash:sha(canonicalEnvelopeJson(opening)),
+      payload:{id,localReference:'LATE-2',reference:null,status:'CONFIRMED',requestHash:sha('late-request'),actorUserId:lateActor,deviceId:lateDevice,
+        organizationId:lateOrg,branchId:lateBranch,cashSessionId:sessionId,customerId:null,customerKind:'CONSUMER_FINAL',configurationVersion:config.configurationVersion,
+        occurredAt,receivedAt:null,quote:{currency:'ARS',lines:[{itemId:lateItem,itemName:'Late product',sku:null,barcode:null,type:'PRODUCT',baseUnit:'UNIT',
+          trackInventory:true,quantity:'2',unitPrice:'10.00',priceVersion:1,lineTotal:'20.00'}],subtotal:'20.00',discount:'0.00',total:'20.00',discountEvidence:null},
+        payments:[{method:'CASH',appliedAmount:'20.00',receivedAmount:'20.00',changeAmount:'0.00'}],audit:{action:'sale.confirmed.offline',actorUserId:lateActor,grantId:config.grantId},
+        receipt:{label:'Comprobante no fiscal',branchName:'Late'},result:{id,operationId:id,localReference:'LATE-2',total:'20.00',change:'0.00'}}};
+    const pending=seal(sale,lateCertificate);
+    const nextId=randomUUID(),nextSale={...sale,id:nextId,sequence:'3',sessionSequence:'3',previousHash:sha(canonicalEnvelopeJson(sale)),
+      payload:{...sale.payload,id:nextId,localReference:'LATE-3',result:{...sale.payload.result,id:nextId,operationId:nextId,localReference:'LATE-3'}}};
+    const nextPending=seal(nextSale,lateCertificate);
+    expect((await new UnrecoverableDeviceService(transactions).declare(lateContext(),lateDevice)).permanentlyLocked).toBe(true);
+    await new ExceptionalCashCloseService(transactions).close(lateContext(),{cashSessionId:sessionId,confirm:true,reason:'Dispositivo perdido'},'late-exception');
+    const original=(await pool.query('SELECT snapshot FROM cash_exceptional_closures WHERE cash_session_id=$1',[sessionId])).rows[0]?.snapshot;
+    const failing=new HistoricalDeliveryIngestion(transactions,new HistoricalEnvelopeValidator(certificates,custody),()=>{throw new Error('ACK unavailable');});
+    await expect(failing.ingest(lateClaims,pending)).rejects.toThrow('ACK unavailable');
+    expect((await pool.query('SELECT id FROM sales WHERE id=$1',[id])).rowCount).toBe(0);
+    const results=await Promise.all([ingestion.ingest(lateClaims,pending),ingestion.ingest(lateClaims,pending)]);
+    expect(results[0]?.status).toBe('ACKED');expect(results[1]).toEqual(results[0]);
+    expect((await pool.query('SELECT snapshot FROM cash_exceptional_closures WHERE cash_session_id=$1',[sessionId])).rows[0]?.snapshot).toEqual(original);
+    expect((await pool.query('SELECT status,completeness,expected_cash FROM cash_sessions WHERE id=$1',[sessionId])).rows[0])
+      .toMatchObject({status:'CLOSED_WITH_UNRECOVERED_DEVICE',completeness:'UNKNOWN',expected_cash:'30.00'});
+    expect((await pool.query('SELECT marker FROM cash_late_recoveries WHERE organization_id=$1 AND operation_id=$2',[lateOrg,id])).rows)
+      .toEqual([{marker:'LATE_RECOVERED_OPERATIONS'}]);
+    expect((await pool.query('SELECT currency_permanently_locked_at FROM organizations WHERE id=$1',[lateOrg])).rows[0]?.currency_permanently_locked_at).toBeInstanceOf(Date);
+    expect((await pool.query('SELECT 1 FROM offline_configuration_exposures WHERE organization_id=$1 AND cleared_at IS NULL',[lateOrg])).rowCount).toBeGreaterThan(0);
+    expect((await pool.query('SELECT 1 FROM configuration_versions WHERE organization_id=$1 AND version=$2',[lateOrg,config.configurationVersion])).rowCount).toBe(1);
+    const review=new LateCashReviewService(transactions);
+    const workspace=new CashWorkspaceService(transactions);
+    await expect(workspace.read(context(),lateBranch,{view:'FINAL',sessionId})).rejects.toThrow();
+    expect((await workspace.read(lateContext(),lateBranch,{view:'FINAL'})).sessions.find(row=>row.id===sessionId))
+      .toMatchObject({deviceStatus:'UNRECOVERABLE',completeness:'UNKNOWN',exceptionalClosure:{expectedCashKnown:'10.00',countedCash:null,
+        differenceObserved:null,lastContactAt:null,reason:'Dispositivo perdido'},
+        lateData:{marker:'LATE_RECOVERED_OPERATIONS',throughOperationId:id,status:'PENDING_REVIEW',count:'1'}});
+    await pool.query("INSERT INTO memberships (id,organization_id,user_id,role) VALUES ($1,$2,$3,'CASHIER')",[randomUUID(),lateOrg,actor]);
+    await expect(review.review({...lateContext(),userId:actor},sessionId,id,'Revisado',randomUUID())).rejects.toThrow();
+    await expect(review.review(context(),sessionId,id,'Revisado',randomUUID())).rejects.toThrow();
+    const reviewKey=randomUUID();
+    const reviewed=await review.review(lateContext(),sessionId,id,'Operaciones recuperadas verificadas',reviewKey);
+    expect(reviewed).toMatchObject({cashSessionId:sessionId,status:'REVIEWED',throughOperationId:id});
+    expect(await review.review(lateContext(),sessionId,id,'Operaciones recuperadas verificadas',reviewKey)).toEqual(reviewed);
+    expect((await workspace.read(lateContext(),lateBranch,{view:'FINAL'})).sessions.find(row=>row.id===sessionId))
+      .toMatchObject({lateData:{throughOperationId:id,status:'REVIEWED'},exceptionalClosure:{expectedCashKnown:'10.00'}});
+    expect((await pool.query('SELECT snapshot FROM cash_exceptional_closures WHERE cash_session_id=$1',[sessionId])).rows[0]?.snapshot).toEqual(original);
+    expect((await pool.query('SELECT completeness,status FROM cash_sessions WHERE id=$1',[sessionId])).rows[0])
+      .toMatchObject({status:'CLOSED_WITH_UNRECOVERED_DEVICE',completeness:'UNKNOWN'});
+    expect((await ingestion.ingest(lateClaims,nextPending))?.status).toBe('ACKED');
+    expect((await workspace.read(lateContext(),lateBranch,{view:'FINAL'})).sessions.find(row=>row.id===sessionId))
+      .toMatchObject({expectedCash:'50.00',completeness:'UNKNOWN',lateData:{throughOperationId:nextId,status:'PENDING_REVIEW',count:'2'}});
+    await expect(review.review(lateContext(),sessionId,id,'Formulario antiguo',randomUUID())).rejects.toThrow('CASH_CLOSE_STATE_INVALID');
+    expect(await review.review(lateContext(),sessionId,nextId,'Segunda recuperación revisada',randomUUID())).toMatchObject({throughOperationId:nextId,status:'REVIEWED'});
+    expect((await pool.query('SELECT snapshot FROM cash_exceptional_closures WHERE cash_session_id=$1',[sessionId])).rows[0]?.snapshot).toEqual(original);
+    expect((await pool.query('SELECT count(*)::integer AS n FROM cash_late_recoveries WHERE cash_session_id=$1',[sessionId])).rows[0]?.n).toBe(2);
+    expect((await pool.query('SELECT status,completeness,expected_cash FROM cash_sessions WHERE id=$1',[sessionId])).rows[0])
+      .toMatchObject({status:'CLOSED_WITH_UNRECOVERED_DEVICE',completeness:'UNKNOWN',expected_cash:'50.00'});
+    await expect(pool.query(`INSERT INTO cash_movements (id,organization_id,branch_id,cash_session_id,actor_user_id,device_id,delta,currency_code,source_type,source_id,effect_kind)
+      VALUES ($1,$2,$3,$4,$5,$6,'1.00','ARS','MANUAL',$1,'IN')`,[randomUUID(),lateOrg,lateBranch,sessionId,lateActor,lateDevice]))
+      .rejects.toThrow('does not accept movements');
+  });
 });

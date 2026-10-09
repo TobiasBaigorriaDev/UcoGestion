@@ -2,6 +2,7 @@ import { Injectable, Module, type OnModuleDestroy } from '@nestjs/common';
 import { Pool } from 'pg';
 
 import { TenantTransaction } from '../../database/tenant-transaction.js';
+import { MetricsService } from '../../core/observability/metrics.service.js';
 import { DeviceAuthorizationService } from '../cash/device-authorization.service.js';
 import { ConfigurationBarrierController } from './configuration-barrier.controller.js';
 import { DeviceAuthorizationController } from './device-authorization.controller.js';
@@ -23,7 +24,7 @@ class OfflineDatabase implements OnModuleDestroy {
   controllers: [ConfigurationBarrierController,DeviceAuthorizationController, OfflineBootstrapController, OfflineDeliveryController],
   providers: [OfflineDatabase, { provide: TenantTransaction,
     useFactory: (database: OfflineDatabase) => new TenantTransaction(database.pool), inject: [OfflineDatabase] },
-  { provide: OfflineDeliveryService, useFactory: (database: OfflineDatabase) => new OfflineDeliveryService(database.pool, () => {
+  { provide: OfflineDeliveryService, useFactory: (database: OfflineDatabase, metrics: MetricsService) => new OfflineDeliveryService(database.pool, () => {
     const keys = loadOfflineKeys();
     const secret = process.env.DEVICE_CERTIFICATE_KEY ?? '';
     if (!/^[A-Za-z0-9_-]{43}$/.test(secret)) throw new Error('Device certificate custody unavailable.');
@@ -35,8 +36,8 @@ class OfflineDatabase implements OnModuleDestroy {
     if (!/^[A-Za-z0-9_-]{43}$/.test(secret)) throw new Error('Device certificate custody unavailable.');
     return new HistoricalDeliveryIngestion(new TenantTransaction(database.pool),
       new HistoricalEnvelopeValidator(new DeviceCertificate(Buffer.from(secret,'base64url')),loadOfflineKeys().ingestion),
-      loadOfflineAckKey).deliver(certificate,envelopes);
-  } }), inject: [OfflineDatabase] },
+      loadOfflineAckKey, result => metrics.recordSyncResult(result)).deliver(certificate,envelopes);
+  } }), inject: [OfflineDatabase, MetricsService] },
   { provide: DeviceAuthorizationService,
     useFactory: (database: OfflineDatabase) => new DeviceAuthorizationService(new TenantTransaction(database.pool)),
     inject: [OfflineDatabase] }],

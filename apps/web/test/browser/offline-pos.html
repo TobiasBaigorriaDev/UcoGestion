@@ -2,6 +2,7 @@
 <html lang="es"><meta charset="utf-8"><title>Verificación de apertura POS offline</title>
 <body><p id="status">Cargando módulos</p><script type="module">
 import { OfflineConfigurationBarrier } from '../../src/offline/offline-configuration-barrier.ts';
+import { OfflineCloseBarrier } from '../../src/offline/offline-close.ts';
 import { OfflineRevocation } from '../../src/offline/offline-revocation.ts';
 import { OfflineDatabase } from '../../src/offline/offline-database.ts';
 import { OfflineKeys } from '../../src/offline/offline-keys.ts';
@@ -80,6 +81,7 @@ window.posHarness = {
   },
   async resume() { await db.open(); await keys.unlock(actor, 'offline-pin'); await connect(); },
   freeze: id=>new OfflineConfigurationBarrier(db,currentAuthorization).freeze({id,epoch:1}),
+  freezeClose: id=>new OfflineCloseBarrier(db).prepare(id),
   checkpoints: ()=>new OfflineConfigurationBarrier(db,currentAuthorization).checkpoints(),
   revoke: target=>new OfflineRevocation(db,keys).learn(target),
   open: () => pos.open(actor, { cashRegisterId: register, openingCash: '10.00' }),

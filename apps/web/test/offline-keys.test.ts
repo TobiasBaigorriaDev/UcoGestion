@@ -57,8 +57,15 @@ describe('T189 offline keys', () => {
     keys.lock();
     await expect(keys.unlock(user, 'wrong-pin')).rejects.toThrow();
     expect((await db.pin_attempts.get(user))?.failures).toBe(1);
-    await expect(keys.unlock(user, 'correct-pin')).rejects.toThrow(/esperar/i);
+    // Before the fifth failure, retries are allowed; backoff begins at five.
     for (let attempt = 2; attempt <= 5; attempt++) {
+      now += 60_000;
+      await expect(keys.unlock(user, 'wrong-pin')).rejects.toThrow();
+    }
+    expect((await db.pin_attempts.get(user))?.locked).toBe(false);
+    await expect(keys.unlock(user, 'correct-pin')).rejects.toThrow(/esperar/i);
+    db.close(); await db.open();
+    for (let attempt = 6; attempt <= 10; attempt++) {
       now += 60_000;
       await expect(keys.unlock(user, 'wrong-pin')).rejects.toThrow();
     }
@@ -67,5 +74,5 @@ describe('T189 offline keys', () => {
     expect((await db.pin_attempts.get(user))?.locked).toBe(true);
     expect(await db.key_envelopes.get(user)).toBeDefined();
     db.close();
-  });
+  }, 20_000);
 });

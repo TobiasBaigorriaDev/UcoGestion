@@ -74,7 +74,7 @@ export class InventoryTransferService {
       actorUserId: context.userId, authorizationClass: 'STOCK_TRANSFER',
       branchId: input.originBranchId, key: idempotencyKey, organizationId: context.organizationId,
       payload: canonical, scope: compensatesTransferId ? 'inventory.transfer.compensation' : 'inventory.transfer',
-    }, async (client) => { await this.validateInTransaction(client, context, canonical); }, async (client) => {
+    }, async (client) => { await this.validateInTransaction(client, context, canonical, true); }, async (client) => {
       if (compensatesTransferId) {
         const linked = await client.query(
           `SELECT 1 FROM stock_transfer_compensations
@@ -123,7 +123,7 @@ export class InventoryTransferService {
   }
 
   private async validateInTransaction(client: PoolClient, context: TenantTransactionContext,
-    input: InventoryTransferInput): Promise<ValidatedTransfer> {
+    input: InventoryTransferInput, lockBranches = false): Promise<ValidatedTransfer> {
     if (input.originBranchId === input.destinationBranchId || input.lines.length === 0) {
       throw new RangeError('La transferencia requiere dos sucursales distintas y al menos un producto.');
     }
@@ -140,7 +140,7 @@ export class InventoryTransferService {
       `SELECT b.id FROM branches b JOIN effective_membership_branch_scope s
          ON s.organization_id = b.organization_id AND s.branch_id = b.id
        WHERE b.organization_id = $1 AND b.id = ANY($2::uuid[]) AND b.status = 'ACTIVE'
-         AND s.membership_id = $3`,
+         AND s.membership_id = $3 ORDER BY b.id ${lockBranches ? 'FOR SHARE OF b' : ''}`,
       [context.organizationId, [input.originBranchId, input.destinationBranchId], actor.id]);
     if (branches.rowCount !== 2) throw new Error('Sucursales no autorizadas.');
     const items = await client.query<{ id: string; base_unit: 'UNIT' | 'FRACTIONAL' }>(

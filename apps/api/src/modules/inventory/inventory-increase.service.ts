@@ -50,7 +50,7 @@ export class InventoryIncreaseService {
           AND ($3 = 'OWNER' OR EXISTS (
             SELECT 1 FROM membership_branches mb JOIN memberships m
               ON m.organization_id = mb.organization_id AND m.id = mb.membership_id
-            WHERE m.organization_id = $1 AND m.user_id = $4 AND mb.branch_id = b.id))`,
+            WHERE m.organization_id = $1 AND m.user_id = $4 AND mb.branch_id = b.id)) FOR SHARE OF b`,
         [context.organizationId, input.branchId, result.rows[0]?.role, context.userId]);
       if (branch.rowCount !== 1) throw new Error('Sucursal no autorizada.');
     };

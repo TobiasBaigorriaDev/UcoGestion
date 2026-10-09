@@ -80,10 +80,14 @@ export class OfflineSealer {
         replace: row.replace ?? false, userId: snapshot.userId, kind: row.kind, id: row.id,
         ciphertext: await this.cipher.encrypt(dek, { ...identity, kind: row.kind, id: row.id }, encode(row.value)),
       })));
-      await this.db.transaction('rw', [this.db.records, this.db.delivery_queue, this.db.meta,this.db.device_keys], async () => {
+      await this.db.transaction('rw', [this.db.records, this.db.delivery_queue, this.db.delivery_receipts, this.db.meta,this.db.device_keys,this.db.key_envelopes], async () => {
         await this.leases.assert(lease);
-        await assertOfflineIdentity(this.db,snapshot.userId);
+        await assertOfflineIdentity(this.db,snapshot.userId,true);
+        if (await this.db.delivery_receipts.get(id)) throw new Error('OFFLINE_OPERATION_FINAL');
         await assertOfflineCreation(this.db);
+        if ((await this.db.device_keys.get('device'))?.closingSessions?.includes(snapshot.sessionId)) {
+          throw new Error('OFFLINE_SESSION_CLOSING');
+        }
         if (commit.sessionOpening && lease.cashSessionOpen) throw new Error('Este dispositivo ya tiene una sesión abierta.');
         await commit.assertCanCommit?.();
         await commit.assertBeforeCommit?.();
@@ -96,7 +100,7 @@ export class OfflineSealer {
           else await this.db.records.add(row);
         }
         await this.leases.assert(lease);
-        await this.db.meta.put({ ...lease, ...(commit.sessionOpening ? { cashSessionOpen: true } : {}),
+        await this.db.meta.put({ ...lease, ...(commit.sessionOpening ? { cashSessionOpen: true,cashSessionId:snapshot.sessionId } : {}),
           sequence, headHash: operationHash, expiresAt: 0 });
         // Logout/identity changes during pending IndexedDB requests abort the entire transaction.
         if (this.keys.dekFor(snapshot.userId) !== dek) throw new Error('Offline identity changed during sealing.');

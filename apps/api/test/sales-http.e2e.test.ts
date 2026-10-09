@@ -197,6 +197,18 @@ describe('T145 sales HTTP confirmation', () => {
     const pdf = await request(app.getHttpServer()).get(`/api/v1/sales/${sale.clientOperationId}/receipt.pdf`)
       .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
     expect(pdf.headers['content-type']).toContain('application/pdf');
+    expect(pdf.headers['content-disposition']).toBe(`attachment; filename="comprobante-${sale.clientOperationId}.pdf"`);
+    expect(pdf.headers['x-content-type-options']).toBe('nosniff');
+    expect(Number(pdf.headers['content-length'])).toBe(pdf.body.length);
+    expect(pdf.body.length).toBeGreaterThan(100);
+    expect(printable.headers['x-content-type-options']).toBe('nosniff');
+    expect(printable.text).not.toMatch(/<(?:script|iframe|object|embed)\b/i);
+    for (const suffix of ['/receipt/print', '/receipt.pdf']) {
+      await request(app.getHttpServer()).get(`/api/v1/sales/${sale.clientOperationId}${suffix}`)
+        .set('Cookie', cookie).set('X-Organization-Id', otherOrganizationId).expect(404);
+      await request(app.getHttpServer()).get(`/api/v1/sales/${sale.clientOperationId}${suffix}`)
+        .set('X-Organization-Id', organizationId).expect(401);
+    }
     expect(pdf.body.subarray(0, 5).toString()).toBe('%PDF-');
     expect((await pool.query('SELECT count(*)::integer AS count FROM sales')).rows[0]?.count).toBe(2);
     await pool.query("UPDATE branch_stocks SET quantity = '1' WHERE organization_id = $1 AND branch_id = $2 AND item_id = $3",

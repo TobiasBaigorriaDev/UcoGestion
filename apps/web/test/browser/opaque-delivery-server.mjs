@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { createHash,generateKeyPairSync,randomUUID,sign } from 'node:crypto';
 const signer=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
-let failNext=false,forgeNext=false;
+let failNext=false,forgeNext=false,dropNext=false,partialNext=false;
 const batches=[];
 export function opaqueDeliveryTestServer(server) {
   server.middlewares.use(async(request,response,next)=>{
@@ -11,7 +11,7 @@ export function opaqueDeliveryTestServer(server) {
     if (path==='/test-delivery/key') {response.end(JSON.stringify({publicKey:signer.publicKey.export({type:'spki',format:'der'}).toString('base64')}));return;}
     let text='';for await (const chunk of request) text+=chunk;
     const body=text ? JSON.parse(text):{};
-    if (path==='/test-delivery/control') {failNext=Boolean(body.failNext);forgeNext=Boolean(body.forgeNext);response.end(JSON.stringify({batches}));return;}
+    if (path==='/test-delivery/control') {failNext=Boolean(body.failNext);forgeNext=Boolean(body.forgeNext);dropNext=Boolean(body.dropNext);partialNext=Boolean(body.partialNext);response.end(JSON.stringify({batches}));return;}
     if (path.endsWith('/challenge')) {response.end(JSON.stringify({challenge:randomUUID()}));return;}
     batches.push(body.envelopes);
     const acks=body.envelopes.map(envelope=>{
@@ -21,7 +21,10 @@ export function opaqueDeliveryTestServer(server) {
       return `${header}.${claims}.${signature}`;
     });
     if (failNext) {failNext=false;response.statusCode=503;response.end('{}');return;}
+    // A browser may transparently retry a socket failure. Keep that retry uncertain too.
+    if (dropNext) {dropNext=false;failNext=true;response.destroy();return;}
     if (forgeNext) {forgeNext=false;acks[0]=`${acks[0]}x`;}
+    if (partialNext) {partialNext=false;failNext=true;response.end(JSON.stringify({acks:acks.slice(0,1)}));return;}
     response.end(JSON.stringify({acks}));
   });
 }

@@ -9,6 +9,7 @@ import { ApiClient, ApiProblemError } from '../../lib/api/client';
 import { ErrorSummary } from '../../components/error-summary';
 import styles from './identity.module.css';
 import { useIdentityContext } from './identity-context';
+import { retireAllOfflineIdentities } from '../../offline/offline-identity';
 
 export type Membership = Readonly<{
   organizationId: string;
@@ -37,7 +38,23 @@ export async function loadMemberships(): Promise<Membership[]> {
 }
 
 export async function login(email: string, password: string): Promise<void> {
+  await retireAllOfflineIdentities();
   await client.request('/auth/login', { method: 'POST', body: { email, password } });
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem('uco:logout-pending');
+    window.sessionStorage.setItem('uco:password-reauthenticated', 'true');
+  }
+}
+
+export async function logout(): Promise<void> {
+  if (typeof window !== 'undefined') window.localStorage.setItem('uco:logout-pending', 'true');
+  if (typeof window !== 'undefined') window.sessionStorage.removeItem('uco:password-reauthenticated');
+  await retireAllOfflineIdentities();
+  useIdentityContext.getState().setActiveOrganizationId(null);
+  const csrf = await client.request('/auth/csrf', { method: 'GET', parse: value => z.object({ csrfToken: z.string().min(1) }).parse(value).csrfToken });
+  if (!csrf) throw new Error('CSRF unavailable');
+  await client.request('/auth/logout', { method: 'POST', body: {}, csrfToken: csrf });
+  if (typeof window !== 'undefined') window.localStorage.removeItem('uco:logout-pending');
 }
 
 export async function selectOrganization(id: string): Promise<void> {

@@ -1,4 +1,4 @@
-import { generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
+import { generateKeyPairSync, randomBytes, randomUUID, sign } from 'node:crypto';
 
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { Pool } from 'pg';
@@ -11,6 +11,12 @@ import { DeviceCertificate } from '../src/modules/offline-sync/device-certificat
 import { CashOpeningPreparation } from '../src/modules/cash/cash-opening-preparation.js';
 import { CashSessionDevicePolicy } from '../src/modules/cash/cash-session-device.policy.js';
 import { CashOperationsService } from '../src/modules/cash/cash-operations.service.js';
+import { CashCloseService } from '../src/modules/cash/cash-close.service.js';
+import { CashDifferenceReviewService } from '../src/modules/cash/cash-difference-review.service.js';
+import { ExceptionalClosePreparation } from '../src/modules/cash/exceptional-close-preparation.js';
+import { UnrecoverableDeviceService } from '../src/modules/offline-sync/unrecoverable-device.service.js';
+import { ExceptionalCashCloseService } from '../src/modules/cash/exceptional-cash-close.service.js';
+import { CashWorkspaceService } from '../src/modules/cash/cash-workspace.service.js';
 
 describe('cash foundation', () => {
   let container: StartedPostgreSqlContainer;
@@ -446,6 +452,214 @@ describe('cash foundation', () => {
       .toMatchObject({ cashSessionId: session.id, expectedCash: '13.65' });
     await expect(service.calculateExpectedCash(context(adminId), session.id, randomUUID()))
       .rejects.toMatchObject({ code: 'CASH_SESSION_DEVICE_CONFLICT' });
+  });
+
+  it('T214B begins close with a signed complete checkpoint, rejects forgery and replays once', async () => {
+    const signer = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+    const device = await devices.authorizePos(context(ownerId), branchId,
+      signer.publicKey.export({ format: 'pem', type: 'spki' }).toString(), randomUUID(), new DeviceCertificate(randomBytes(32)));
+    const registerId = randomUUID();
+    await admin.query('INSERT INTO cash_registers (id, organization_id, branch_id, name) VALUES ($1,$2,$3,$4)',
+      [registerId, organizationId, branchId, 'Close protocol']);
+    const cash = new CashOperationsService(new TenantTransaction(runtime));
+    const session = await cash.open(context(ownerId), { branchId, cashRegisterId: registerId, deviceId: device.id, openingCash: '8.25' }, randomUUID());
+    const checkpoint = { version: 1 as const, organizationId, deviceId: device.id, actorUserId: ownerId,
+      sessionId: session.id, sequence: '0', headHash: '0'.repeat(64), sessionSequence: '0', creationFrozen: true as const, pending: 0 as const };
+    const signature = sign('sha256', Buffer.from(JSON.stringify(checkpoint)), { key: signer.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64');
+    const service = new CashCloseService(new TenantTransaction(runtime));
+    const input = { checkpoint, signature };
+    await expect(service.begin(context(ownerId), { ...input, signature: Buffer.alloc(64).toString('base64') }, randomUUID()))
+      .rejects.toThrow('CASH_CHECKPOINT_INVALID');
+    await expect(service.begin(context(employeeId), input, randomUUID())).rejects.toThrow();
+    await expect(service.begin({ ...context(ownerId), organizationId: foreignOrganizationId }, input, randomUUID())).rejects.toThrow();
+    const key = randomUUID();
+    const result = await service.begin(context(ownerId), input, key);
+    expect(result).toMatchObject({ cashSessionId: session.id, status: 'CLOSING' });
+    expect(await service.begin(context(ownerId), input, key)).toEqual(result);
+    const closingWorkspace=await new CashWorkspaceService(new TenantTransaction(runtime)).read(context(ownerId),branchId);
+    expect(closingWorkspace.sessions.find(row=>row.id===session.id)).toMatchObject({closeAttemptId:result.closeAttemptId,
+      chain:{sequence:'0',headHash:'0'.repeat(64),sessionSequence:'0'},finalSync:null});
+    await expect(cash.deposit(context(ownerId), { cashSessionId: session.id, deviceId: device.id, amount: '1.00', reason: 'Late' }, randomUUID()))
+      .rejects.toMatchObject({ code: 'CASH_SESSION_NOT_OPEN' });
+    expect((await admin.query('SELECT count(*)::integer AS count FROM cash_close_attempts WHERE cash_session_id=$1', [session.id])).rows[0]?.count).toBe(1);
+    const syncKey = randomUUID();
+    const final = await service.finalSync(context(ownerId), { cashSessionId: session.id, deviceId: device.id, closeAttemptId: result.closeAttemptId }, syncKey);
+    expect(final).toMatchObject({ cashSessionId: session.id, closeAttemptId: result.closeAttemptId, expectedCash: '8.25', ready: true });
+    expect(await service.finalSync(context(ownerId), { cashSessionId: session.id, deviceId: device.id, closeAttemptId: result.closeAttemptId }, syncKey)).toEqual(final);
+    expect((await new CashWorkspaceService(new TenantTransaction(runtime)).read(context(ownerId),branchId)).sessions.find(row=>row.id===session.id))
+      .toMatchObject({finalSync:{ready:true,expectedCash:'8.25'}});
+    await expect(service.finalSync(context(ownerId), { cashSessionId: session.id, deviceId: device.id, closeAttemptId: randomUUID() }, randomUUID()))
+      .rejects.toThrow('CASH_CLOSE_STATE_INVALID');
+    const closeInput = { cashSessionId: session.id, deviceId: device.id, closeAttemptId: result.closeAttemptId,
+      expectedCash: final.expectedCash, countedCash: '9.25', reason: 'Sobrante contado' };
+    await expect(service.close(context(ownerId), { ...closeInput, countedCash: '-1.00' }, randomUUID())).rejects.toThrow();
+    await expect(service.close(context(ownerId), { ...closeInput, reason: '' }, randomUUID())).rejects.toThrow();
+    const closeKey = randomUUID();
+    await admin.query(`CREATE FUNCTION reject_close_audit_test() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF NEW.action='cash.session.closed' THEN RAISE EXCEPTION 'audit unavailable'; END IF; RETURN NEW; END; $$;
+      CREATE TRIGGER reject_close_audit_test BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION reject_close_audit_test()`);
+    try {
+      await expect(service.close(context(ownerId), closeInput, closeKey)).rejects.toThrow('audit unavailable');
+      expect((await admin.query('SELECT status FROM cash_sessions WHERE id=$1', [session.id])).rows[0]?.status).toBe('CLOSING');
+      expect((await admin.query('SELECT count(*)::integer AS count FROM cash_session_closures WHERE cash_session_id=$1', [session.id])).rows[0]?.count).toBe(0);
+    } finally {
+      await admin.query('DROP TRIGGER reject_close_audit_test ON audit_events; DROP FUNCTION reject_close_audit_test()');
+    }
+    const closed = await service.close(context(ownerId), closeInput, closeKey);
+    expect(closed).toMatchObject({ status: 'CLOSED', expectedCash: '8.25', countedCash: '9.25', difference: '1.00' });
+    expect(await service.close(context(ownerId), closeInput, closeKey)).toEqual(closed);
+    const pendingDifference=(await new CashWorkspaceService(new TenantTransaction(runtime)).read(context(ownerId),branchId,{view:'PENDING_REVIEW'}))
+      .sessions.find(row=>row.id===session.id);
+    expect(pendingDifference).toMatchObject({status:'CLOSED',closure:{expectedCash:'8.25',countedCash:'9.25',difference:'1.00'},
+      differenceReview:{status:'PENDING_REVIEW',selfReview:true,canReview:false}});
+    expect((await admin.query('SELECT count(*)::integer AS count FROM cash_difference_reviews WHERE cash_session_id=$1', [session.id])).rows[0]?.count).toBe(1);
+    await expect(admin.query('UPDATE cash_session_closures SET counted_cash=counted_cash+1 WHERE cash_session_id=$1', [session.id])).rejects.toThrow('immutable');
+    const reviewId = (await admin.query<{ id: string }>('SELECT id FROM cash_difference_reviews WHERE cash_session_id=$1', [session.id])).rows[0]?.id;
+    if (!reviewId) throw new Error('Missing difference review');
+    const reviews = new CashDifferenceReviewService(new TenantTransaction(runtime));
+    await expect(reviews.review(context(ownerId), reviewId, 'Revisado por mí', randomUUID())).rejects.toThrow('CASH_SELF_REVIEW_FORBIDDEN');
+    await expect(reviews.review(context(employeeId), reviewId, '', randomUUID())).rejects.toThrow();
+    await expect(reviews.review({ ...context(ownerId), organizationId: foreignOrganizationId }, reviewId, '', randomUUID())).rejects.toThrow();
+    const reviewKey = randomUUID();
+    const reviewed = await reviews.review(context(adminId), reviewId, 'Revisado', reviewKey);
+    expect(reviewed).toMatchObject({ id: reviewId, status: 'REVIEWED', mode: 'REVIEW', reviewerUserId: adminId });
+    expect(await reviews.review(context(adminId), reviewId, 'Revisado', reviewKey)).toEqual(reviewed);
+    expect((await admin.query('SELECT expected_cash,counted_cash,difference FROM cash_session_closures WHERE cash_session_id=$1', [session.id])).rows[0])
+      .toMatchObject({ expected_cash: '8.25', counted_cash: '9.25', difference: '1.00' });
+    await expect(service.abort(context(ownerId), { cashSessionId: session.id, deviceId: device.id, closeAttemptId: result.closeAttemptId }, randomUUID()))
+      .rejects.toThrow('CASH_CLOSE_STATE_INVALID');
+    const next = await cash.open(context(ownerId), { branchId, cashRegisterId: registerId, deviceId: device.id, openingCash: '0.00' }, randomUUID());
+    const nextCheckpoint = { ...checkpoint, sessionId: next.id };
+    const nextInput = { checkpoint: nextCheckpoint,
+      signature: sign('sha256', Buffer.from(JSON.stringify(nextCheckpoint)), { key: signer.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64') };
+    const attempt = await service.begin(context(ownerId), nextInput, randomUUID());
+    const oldInput = { cashSessionId: next.id, deviceId: device.id, closeAttemptId: attempt.closeAttemptId };
+    await service.finalSync(context(ownerId), oldInput, randomUUID());
+    const abortKey = randomUUID();
+    expect(await service.abort(context(ownerId), oldInput, abortKey)).toMatchObject({ status: 'OPEN' });
+    expect(await service.abort(context(ownerId), oldInput, abortKey)).toMatchObject({ status: 'OPEN' });
+    expect((await new CashWorkspaceService(new TenantTransaction(runtime)).read(context(ownerId),branchId)).sessions.find(row=>row.id===next.id))
+      .toMatchObject({status:'OPEN',closeAttemptId:null,finalSync:null,lastAbortedAttemptId:attempt.closeAttemptId});
+    const renewed = await service.begin(context(ownerId), nextInput, randomUUID());
+    expect(renewed.closeAttemptId).not.toBe(attempt.closeAttemptId);
+    await expect(service.close(context(ownerId), { ...oldInput, expectedCash: '0.00', countedCash: '0.00', reason: '' }, randomUUID()))
+      .rejects.toThrow('CASH_CLOSE_STATE_INVALID');
+    await service.finalSync(context(ownerId), { ...oldInput, closeAttemptId: renewed.closeAttemptId }, randomUUID());
+    await service.close(context(ownerId), { ...oldInput, closeAttemptId: renewed.closeAttemptId, expectedCash: '0.00', countedCash: '0.00', reason: '' }, randomUUID());
+    expect((await admin.query('SELECT count(*)::integer AS count FROM cash_difference_reviews WHERE cash_session_id=$1', [next.id])).rows[0]?.count).toBe(0);
+    const selfSession = await cash.open(context(ownerId), { branchId, cashRegisterId: registerId, deviceId: device.id, openingCash: '0.00' }, randomUUID());
+    const selfCheckpoint = { ...checkpoint, sessionId: selfSession.id };
+    const selfAttempt = await service.begin(context(ownerId), { checkpoint: selfCheckpoint,
+      signature: sign('sha256', Buffer.from(JSON.stringify(selfCheckpoint)), { key: signer.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64') }, randomUUID());
+    const selfInput = { cashSessionId: selfSession.id, deviceId: device.id, closeAttemptId: selfAttempt.closeAttemptId };
+    await service.finalSync(context(ownerId), selfInput, randomUUID());
+    await service.close(context(ownerId), { ...selfInput, expectedCash: '0.00', countedCash: '1.00', reason: 'Diferencia' }, randomUUID());
+    const selfReview = (await admin.query<{id:string}>('SELECT id FROM cash_difference_reviews WHERE cash_session_id=$1',[selfSession.id])).rows[0]?.id;
+    if (!selfReview) throw new Error('Missing self review');
+    await admin.query("UPDATE memberships SET status='REVOKED',revoked_at=now() WHERE organization_id=$1 AND user_id=$2",[organizationId,adminId]);
+    try {
+      await expect(reviews.review(context(ownerId),selfReview,'',randomUUID())).rejects.toThrow('justificación');
+      expect(await reviews.review(context(ownerId),selfReview,'No hay otro revisor activo con alcance',randomUUID()))
+        .toMatchObject({status:'REVIEWED',mode:'SELF_REVIEW'});
+    } finally {
+      await admin.query("UPDATE memberships SET status='ACTIVE',revoked_at=NULL WHERE organization_id=$1 AND user_id=$2",[organizationId,adminId]);
+    }
+    const blocker = await cash.open(context(ownerId), { branchId, cashRegisterId: registerId, deviceId: device.id, openingCash: '2.00' }, randomUUID());
+    const conflictedId = randomUUID();
+    await admin.query(`INSERT INTO cash_sessions (id,organization_id,branch_id,cash_register_id,owner_user_id,device_id,
+      origin,status,opening_cash,expected_cash,currency_code) VALUES ($1,$2,$3,$4,$5,$6,'OFFLINE','CONFLICTED','3.00','3.00','ARS')`,
+    [conflictedId,organizationId,branchId,registerId,ownerId,device.id]);
+    const conflictCheckpoint = { ...checkpoint,sessionId:conflictedId };
+    const conflictInput = { checkpoint:conflictCheckpoint,
+      signature:sign('sha256',Buffer.from(JSON.stringify(conflictCheckpoint)),{key:signer.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64'),
+      countedCash:'4.00',reason:'Operaciones conciliadas por separado' };
+    await expect(service.begin(context(ownerId),{checkpoint:conflictCheckpoint,signature:conflictInput.signature},randomUUID()))
+      .rejects.toMatchObject({code:'CASH_SESSION_NOT_OPEN'});
+    await expect(service.reconcile(context(cashierId),conflictInput,randomUUID())).rejects.toThrow();
+    await expect(service.reconcile(context(ownerId),{...conflictInput,reason:''},randomUUID())).rejects.toThrow();
+    const reconcileKey = randomUUID();
+    expect(await service.reconcile(context(ownerId),conflictInput,reconcileKey)).toMatchObject({cashSessionId:conflictedId,status:'CLOSED_CONFLICT_RESOLVED',difference:'1.00'});
+    expect(await service.reconcile(context(ownerId),conflictInput,reconcileKey)).toMatchObject({status:'CLOSED_CONFLICT_RESOLVED'});
+    expect((await admin.query('SELECT status,expected_cash FROM cash_sessions WHERE id=$1',[blocker.id])).rows[0])
+      .toMatchObject({status:'OPEN',expected_cash:'2.00'});
+    const raceCheckpoint={...checkpoint,sessionId:blocker.id};
+    const raceInput={checkpoint:raceCheckpoint,signature:sign('sha256',Buffer.from(JSON.stringify(raceCheckpoint)),
+      {key:signer.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64')};
+    const raceKey=randomUUID();
+    const race=await Promise.allSettled([
+      service.begin(context(ownerId),raceInput,raceKey),
+      cash.deposit(context(ownerId),{cashSessionId:blocker.id,deviceId:device.id,amount:'1.00',reason:'Concurrente'},randomUUID()),
+    ]);
+    const started=race[0];
+    if (started?.status!=='fulfilled') throw new Error('Begin-close lost the concurrency race');
+    // Recover after a simulated lost response/crash with the same immutable request.
+    expect(await service.begin(context(ownerId),raceInput,raceKey)).toEqual(started.value);
+    const consolidated=await service.finalSync(context(ownerId),{cashSessionId:blocker.id,deviceId:device.id,closeAttemptId:started.value.closeAttemptId},randomUUID());
+    expect(consolidated.expectedCash).toBe(race[1]?.status==='fulfilled' ? '3.00':'2.00');
+    if (race[1]?.status==='rejected') expect(race[1].reason).toMatchObject({code:'CASH_SESSION_NOT_OPEN'});
+    await new UnrecoverableDeviceService(new TenantTransaction(runtime)).declare(context(ownerId),device.id);
+    const preparation=new ExceptionalClosePreparation();
+    const prepare=(userId:string,confirm:boolean,reason:string)=>new TenantTransaction(runtime).runWithOptionalAudit(context(userId),async client=>({
+      result:await preparation.prepare(client,context(userId),{cashSessionId:blocker.id,confirm,reason}),
+    }));
+    await expect(prepare(ownerId,false,'Irrecuperable')).rejects.toThrow();
+    await expect(prepare(ownerId,true,'')).rejects.toThrow();
+    await expect(prepare(cashierId,true,'Irrecuperable')).rejects.toThrow();
+    expect(await prepare(adminId,true,'Dispositivo extraviado y sin posibilidad de recuperar pendientes'))
+      .toMatchObject({cashSessionId:blocker.id,status:'CLOSING',deviceId:device.id,branchId});
+    const snapshot=await new TenantTransaction(runtime).runWithOptionalAudit(context(ownerId),async client=>{
+      const prepared=await preparation.prepare(client,context(ownerId),{cashSessionId:blocker.id,confirm:true,reason:'Dispositivo perdido'});
+      return {result:await preparation.snapshot(client,context(ownerId),prepared)};
+    });
+    expect(snapshot).toMatchObject({version:1,deviceId:device.id,operationalDataCompleteness:'UNKNOWN',
+      expectedCashKnown:consolidated.expectedCash,countedCash:null,differenceObserved:null,lateData:'NONE',operationsReceived:[]});
+    expect((await admin.query('SELECT status,expected_cash FROM cash_sessions WHERE id=$1',[blocker.id])).rows[0])
+      .toMatchObject({status:'CLOSING',expected_cash:consolidated.expectedCash});
+    const exceptional=new ExceptionalCashCloseService(new TenantTransaction(runtime));
+    const exceptionalInput={cashSessionId:blocker.id,confirm:true as const,reason:'Dispositivo perdido'};
+    await expect(exceptional.close(context(cashierId),exceptionalInput,randomUUID())).rejects.toThrow();
+    await expect(exceptional.close({...context(ownerId),organizationId:foreignOrganizationId},exceptionalInput,randomUUID())).rejects.toThrow();
+    const exceptionalKey=randomUUID();
+    const exceptionalResult=await exceptional.close(context(adminId),exceptionalInput,exceptionalKey);
+    expect(exceptionalResult).toMatchObject({cashSessionId:blocker.id,status:'CLOSED_WITH_UNRECOVERED_DEVICE'});
+    expect(await exceptional.close(context(adminId),exceptionalInput,exceptionalKey)).toEqual(exceptionalResult);
+    expect((await admin.query('SELECT status,completeness,expected_cash FROM cash_sessions WHERE id=$1',[blocker.id])).rows[0])
+      .toMatchObject({status:'CLOSED_WITH_UNRECOVERED_DEVICE',completeness:'UNKNOWN',expected_cash:consolidated.expectedCash});
+    await expect(admin.query("UPDATE cash_exceptional_closures SET snapshot='{}' WHERE cash_session_id=$1",[blocker.id])).rejects.toThrow('immutable');
+    const replacement=await devices.authorizeOnline(context(ownerId),branchId);
+    expect(await cash.open(context(ownerId),{branchId,cashRegisterId:registerId,deviceId:replacement.id,openingCash:'0.00'},randomUUID()))
+      .toMatchObject({deviceId:replacement.id});
+  });
+
+  it('T218A reads an explicit cash projection under runtime RLS, branch scope and cashier ownership',async()=>{
+    const workspace=new CashWorkspaceService(new TenantTransaction(runtime));
+    const cash=new CashOperationsService(new TenantTransaction(runtime));
+    const registerId=randomUUID();
+    await admin.query("INSERT INTO cash_registers(id,organization_id,branch_id,name) VALUES($1,$2,$3,'UI scope')",
+      [registerId,organizationId,branchId]);
+    const device=await devices.authorizeOnline(context(ownerId),branchId);
+    const opened=await cash.open(context(cashierId),{branchId,cashRegisterId:registerId,deviceId:device.id,openingCash:'3.00'},randomUUID());
+    expect((await workspace.read(context(cashierId),branchId)).sessions.map(row=>row.id)).toContain(opened.id);
+    const cashierRows=await admin.query<{id:string}>('SELECT id FROM cash_sessions WHERE organization_id=$1 AND branch_id=$2 AND owner_user_id=$3 AND status IN (\'OPEN\',\'CLOSING\',\'CONFLICTED\')',
+      [organizationId,branchId,cashierId]);
+    expect(new Set((await workspace.read(context(cashierId),branchId)).sessions.map(row=>row.id)))
+      .toEqual(new Set(cashierRows.rows.map(row=>row.id)));
+    expect((await workspace.read(context(adminId),branchId)).sessions.map(row=>row.id)).toContain(opened.id);
+    expect((await workspace.read(context(cashierId),branchId,{sessionId:opened.id})).sessions.map(row=>row.id)).toEqual([opened.id]);
+    expect((await workspace.read(context(cashierId),branchId,{sessionId:randomUUID()})).sessions).toEqual([]);
+    const firstPage=await workspace.read(context(ownerId),branchId,{limit:1});
+    expect(firstPage.sessions).toHaveLength(1);
+    expect(firstPage.nextCursor).toBeTypeOf('string');
+    if(!firstPage.nextCursor)throw new Error('Expected next cursor');
+    const secondPage=await workspace.read(context(ownerId),branchId,{limit:1,cursor:firstPage.nextCursor});
+    expect(secondPage.sessions).toHaveLength(1);
+    expect(secondPage.sessions[0]?.id).not.toBe(firstPage.sessions[0]?.id);
+    expect(firstPage.sessions[0]).not.toHaveProperty('cursorTime');
+    await expect(workspace.read(context(adminId),otherBranchId)).rejects.toMatchObject({code:'CASH_SESSION_ACTOR_FORBIDDEN'});
+    await expect(workspace.read(context(employeeId),branchId)).rejects.toMatchObject({code:'CASH_SESSION_ACTOR_FORBIDDEN'});
+    await expect(workspace.read(context(ownerId),foreignBranchId)).rejects.toMatchObject({code:'CASH_SESSION_ACTOR_FORBIDDEN'});
+    await expect(workspace.read({...context(ownerId),organizationId:foreignOrganizationId},branchId))
+      .rejects.toMatchObject({code:'CASH_SESSION_ACTOR_FORBIDDEN'});
   });
 
   async function withRuntime<T>(userId: string, operation: (client: import('pg').PoolClient) => Promise<T>): Promise<T> {

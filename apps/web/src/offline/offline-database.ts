@@ -14,6 +14,12 @@ export interface DeliveryEnvelope {
   readonly envelope: Uint8Array;
 }
 
+export interface DeliveryReceipt {
+  readonly id: string;
+  readonly envelopeHash: string;
+  readonly status: 'ACKED' | 'SECURITY_REJECTED';
+}
+
 export interface KeyEnvelope {
   readonly userId: string;
   readonly wrappedDek: Uint8Array;
@@ -22,6 +28,14 @@ export interface KeyEnvelope {
 }
 
 export interface DeviceKeys {
+  readonly certificate?: string;
+  readonly registrationKey?: string;
+  readonly registrationActor?: string;
+  readonly retiredUsers?: readonly string[];
+  readonly closeCheckpoints?:readonly {readonly checkpoint:{readonly version:1;readonly organizationId:string;readonly deviceId:string;
+    readonly actorUserId:string;readonly sessionId:string;readonly sequence:string;readonly headHash:string;
+    readonly sessionSequence:string;readonly creationFrozen:true;readonly pending:0};readonly signature:string;readonly key:string}[];
+  readonly closingSessions?: readonly string[];
   readonly freeze?: {readonly id:string;readonly epoch:number};
   readonly exposures?: readonly {readonly id:string;readonly epoch:number}[];
   readonly revoked?: boolean;
@@ -50,11 +64,13 @@ export interface DeviceChain {
   readonly sequence: string;
   readonly headHash: string | null;
   readonly cashSessionOpen?: boolean;
+  readonly cashSessionId?:string;
 }
 
 export class OfflineDatabase extends Dexie {
   readonly records!: Table<EncryptedRecord, [string, string, string]>;
   readonly delivery_queue!: EntityTable<DeliveryEnvelope, 'id'>;
+  readonly delivery_receipts!: EntityTable<DeliveryReceipt, 'id'>;
   readonly key_envelopes!: EntityTable<KeyEnvelope, 'userId'>;
   readonly pin_attempts!: EntityTable<PinAttempt, 'userId'>;
   readonly device_keys!: EntityTable<DeviceKeys, 'id'>;
@@ -89,6 +105,7 @@ export class OfflineDatabase extends Dexie {
         if (row.version !== 1) throw new Error('OFFLINE_UPDATE_INCOMPATIBLE');
       }
     });
+    this.version(4).stores({ delivery_receipts: 'id' });
   }
 
   async putEncrypted(userId: string, kind: string, id: string, ciphertext: Uint8Array): Promise<void> {
@@ -101,7 +118,10 @@ export class OfflineDatabase extends Dexie {
   }
 
   async enqueueOpaque(id: string, envelope: Uint8Array): Promise<void> {
-    await this.delivery_queue.add({ id, envelope: envelope.slice() });
+    await this.transaction('rw', [this.delivery_queue, this.delivery_receipts], async () => {
+      if (await this.delivery_receipts.get(id)) throw new Error('OFFLINE_OPERATION_FINAL');
+      await this.delivery_queue.add({ id, envelope: envelope.slice() });
+    });
   }
 
   async deliveryBytes(): Promise<DeliveryEnvelope[]> {

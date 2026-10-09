@@ -1,0 +1,57 @@
+rule_files: [operations-alerts.yaml]
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'probe_success{job="api-readiness"}'
+        values: '0x10'
+      - series: 'up{job="api"}'
+        values: '1x10'
+      - series: 'uconext_database_ready'
+        values: '0x10'
+      - series: 'uconext_operations_snapshot_timestamp_seconds'
+        values: '0+60x10'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ReadinessUnavailable
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: ReadinessUnavailable
+        exp_alerts:
+          - exp_labels: { job: api-readiness, severity: critical }
+            exp_annotations: { summary: "Readiness falla durante tres evaluaciones; revisar dependencias y rollout." }
+      - eval_time: 2m
+        alertname: DatabaseUnavailable
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: DatabaseUnavailable
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations: { summary: "PostgreSQL inaccesible tras reintentos; iniciar runbook de recuperación." }
+  - interval: 1m
+    input_series:
+      - series: 'uconext_sync_operations_total{result="RETRY"}'
+        values: '0+1x30'
+      - series: 'uconext_sync_operations_total{result="ACKED"}'
+        values: '0+9x30'
+      - series: 'uconext_operations_snapshot_timestamp_seconds'
+        values: '0+60x30'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: SyncFailures
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: SyncFailures
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations: { summary: "Sync falla persistentemente; preservar sobres y claves históricas." }
+  - interval: 1m
+    input_series:
+      - series: 'uconext_http_requests_total{status_code="500",route="/api/v1/sales"}'
+        values: '0+1x15'
+      - series: 'uconext_operations_snapshot_timestamp_seconds'
+        values: '0+60x15'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: HttpErrorRate
+        exp_alerts: []

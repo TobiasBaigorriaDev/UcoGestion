@@ -11,7 +11,9 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test && node --test test/workspace.smoke.test.mjs",
-    "build": "turbo run build"
+    "build": "turbo run build",
+    "build:images": "node infra/deploy/build-images.mjs",
+    "test:operations": "pnpm --filter @uconext/api exec vitest run --config vitest.config.mts --maxWorkers=1 operations-alerts.test.ts operations-monitor.integration.test.ts backup.test.ts restore.test.ts recovery-targets.test.ts backup-restore.integration.test.ts delivery-images.test.ts delivery-migration.integration.test.ts delivery-runtime.integration.test.ts worker-health.test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",

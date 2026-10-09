@@ -1,6 +1,8 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
+  generateBuildId: async () => process.env.UCONEXT_BUILD_ID ?? 'local',
   agentRules: false,
   reactStrictMode: true,
   transpilePackages: ['@uconext/ui'],

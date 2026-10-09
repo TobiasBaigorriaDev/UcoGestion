@@ -6,6 +6,46 @@ import { OfflineDatabase } from '../src/offline/offline-database';
 import { base64 } from '../src/offline/offline-crypto';
 const org='11111111-1111-4111-8111-111111111111',device='22222222-2222-4222-8222-222222222222';
 afterEach(()=>Dexie.delete(OfflineDatabase.nameFor(org,device)));
+async function ackFixture(status: 'ACKED' | 'SECURITY_REJECTED') {
+  const db = new OfflineDatabase(org, device); await db.open();
+  const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
+  const wrappingKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  await db.device_keys.add({ id: 'device', signingKey: pair.privateKey, publicKey: pair.publicKey, wrappingKey, ackKeys: { trusted: pair.publicKey } });
+  const id = crypto.randomUUID(), envelope = new TextEncoder().encode('sealed immutable bytes');
+  await db.enqueueOpaque(id, envelope);
+  for (const kind of ['operation', 'sale', 'sale-draft']) await db.putEncrypted('alice', kind, id, new Uint8Array([1, 2]));
+  const envelopeHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', envelope)), v => v.toString(16).padStart(2, '0')).join('');
+  const url = (value: Uint8Array) => base64(value).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const header = url(new TextEncoder().encode(JSON.stringify({ alg: 'ES256', typ: 'uco-offline-ack+jwt', kid: 'trusted' })));
+  const body = url(new TextEncoder().encode(JSON.stringify({ version: 1, operationId: id, envelopeHash, status, keyId: 'trusted' })));
+  const signature = url(new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, pair.privateKey, new TextEncoder().encode(`${header}.${body}`))));
+  return { db, id, envelopeHash, jwt: `${header}.${body}.${signature}`, delivery: new OpaqueDelivery(db) };
+}
+
+for (const status of ['ACKED', 'SECURITY_REJECTED'] as const) {
+  it(`T220 atomically removes payload/transport and retains only minimum ${status} evidence`, async () => {
+    const setup = await ackFixture(status);
+    await setup.delivery.acceptAck(setup.jwt, await setup.db.deliveryBytes());
+    expect(await setup.db.records.count()).toBe(0);
+    expect(await setup.db.delivery_queue.count()).toBe(0);
+    expect(await setup.db.delivery_receipts.toArray()).toEqual([{ id: setup.id, status, envelopeHash: setup.envelopeHash }]);
+    setup.db.close();
+  });
+}
+
+it('T220 cleanup failure rolls back receipt, every payload and exact envelope', async () => {
+  const setup = await ackFixture('SECURITY_REJECTED');
+  const before = await setup.db.deliveryBytes();
+  const fail = () => { throw new Error('Receipt write failure'); };
+  setup.db.delivery_receipts.hook('creating', fail);
+  await expect(setup.delivery.acceptAck(setup.jwt, before)).rejects.toThrow('Receipt write failure');
+  expect(await setup.db.deliveryBytes()).toEqual(before);
+  expect(await setup.db.records.count()).toBe(3);
+  setup.db.delivery_receipts.hook('creating').unsubscribe(fail);
+  await setup.delivery.acceptAck(setup.jwt, before);
+  expect(await setup.db.delivery_receipts.count()).toBe(1);
+  setup.db.close();
+});
 describe('T202/T202A/T203 opaque delivery without an actor session',()=>{
   it('preserves exact bytes on uncertain response and verifies ACK before deleting atomically',async()=>{
     const db=new OfflineDatabase(org,device);await db.open();

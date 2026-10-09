@@ -56,7 +56,7 @@ jobs:
         run: pnpm run typecheck
 
       - name: Run automated test suite (including real PostgreSQL integration tests)
-        run: pnpm run test
+        run: pnpm run build:images && pnpm run test
 
       - name: Run build
         run: pnpm run build

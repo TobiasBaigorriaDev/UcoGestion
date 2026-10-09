@@ -10,6 +10,7 @@ describe('S3-compatible object storage', () => {
       'application/pdf', 300));
     expect(url.pathname).toBe('/exports/exports/tenant/file');
     expect(url.searchParams.get('X-Amz-Expires')).toBe('300');
+    expect(url.searchParams.get('response-content-type')).toBe('application/pdf');
     expect(url.searchParams.get('response-content-disposition'))
       .toBe('attachment; filename="sales.pdf"');
     await expect(storage.signedGetUrl('key', 'sales.pdf', 'application/pdf', 301))

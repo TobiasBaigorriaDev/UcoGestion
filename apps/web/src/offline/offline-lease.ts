@@ -11,6 +11,7 @@ export class OfflineLease {
       const lease: DeviceChain = { key: 'device-chain', owner, fence: (BigInt(current?.fence ?? '0') + 1n).toString(),
         ...(current?.deviceRevoked ? {deviceRevoked:true}: {}),
         ...(current?.cashSessionOpen ? { cashSessionOpen: true } : {}),
+        ...(current?.cashSessionId ? {cashSessionId:current.cashSessionId}:{}),
         expiresAt: this.now() + duration, sequence: current?.sequence ?? '0', headHash: current?.headHash ?? null };
       await this.db.meta.put(lease);
       return lease;
@@ -22,7 +23,7 @@ export class OfflineLease {
     const current = await this.db.meta.get('device-chain');
     if (!current || current.owner !== lease.owner || current.fence !== lease.fence || current.expiresAt <= this.now() ||
       current.sequence !== lease.sequence || current.headHash !== lease.headHash ||
-      current.cashSessionOpen !== lease.cashSessionOpen) throw new Error('Device sequence lease lost.');
+      current.cashSessionOpen !== lease.cashSessionOpen || current.cashSessionId!==lease.cashSessionId) throw new Error('Device sequence lease lost.');
   }
 
   async release(lease: DeviceChain): Promise<void> {

@@ -7,7 +7,7 @@ export class DatabaseReadinessService implements OnModuleDestroy {
 
   constructor() {
     const connectionString = process.env.DATABASE_URL;
-    this.pool = connectionString === undefined ? undefined : new Pool({ connectionString });
+    this.pool = connectionString === undefined ? undefined : new Pool({ connectionString, connectionTimeoutMillis: 3000, query_timeout: 3000 });
   }
 
   async isReady(): Promise<boolean> {

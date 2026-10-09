@@ -5,6 +5,7 @@ import { AuditEventWriter } from '../../core/audit/audit-event-writer.js';
 import { IdempotencyService,toJsonValue } from '../../core/idempotency/idempotency.service.js';
 import type { TenantTransactionContext } from '../../database/tenant-transaction.js';
 import { lockOfflineSaleStock,applyOfflineSaleStock } from '../inventory/index.js';
+import { recordLateCashRecovery } from '../cash/index.js';
 export class OfflineSaleImporter {
   async apply(client:PoolClient,context:TenantTransactionContext,input:unknown,operationId:string) {
     const sale=offlineConfirmedSaleSchema.parse(input);
@@ -13,7 +14,7 @@ export class OfflineSaleImporter {
       'SELECT owner_user_id,status,currency_code,branch_id,device_id,cash_register_id FROM cash_sessions WHERE organization_id=$1 AND id=$2 FOR UPDATE',
       [context.organizationId,sale.cashSessionId])).rows[0];
     if (!session || session.branch_id!==sale.branchId || session.device_id!==sale.deviceId || session.owner_user_id!==sale.actorUserId ||
-      session.currency_code!==sale.quote.currency || !['OPEN','CONFLICTED'].includes(session.status)) throw new Error('OFFLINE_SALE_SESSION_INVALID');
+      session.currency_code!==sale.quote.currency || !['OPEN','CONFLICTED','CLOSED_WITH_UNRECOVERED_DEVICE'].includes(session.status)) throw new Error('OFFLINE_SALE_SESSION_INVALID');
     const idempotency=new IdempotencyService(client);
     const acquired=await idempotency.acquire({organizationId:context.organizationId,actorUserId:context.userId,
       scope:'offline.sale.confirm',authorizationClass:'OFFLINE_SALE_CONFIRM',branchId:sale.branchId,key:operationId,payload:toJsonValue(sale)},async()=>{});
@@ -50,6 +51,8 @@ export class OfflineSaleImporter {
       branchId:sale.branchId,deviceId:sale.deviceId,entityType:'sale',entityId:sale.id,operationId,requestId:context.requestId,
       before:{},beforeAllowlist:[],after:{total:sale.quote.total,incidents:[...new Set(incidents)]},afterAllowlist:['total','incidents'],
       context:{configurationVersion:sale.configurationVersion},contextAllowlist:['configurationVersion']});
+    if (session.status==='CLOSED_WITH_UNRECOVERED_DEVICE') await recordLateCashRecovery(client,context,
+      {cashSessionId:sale.cashSessionId,saleId:sale.id,operationId,deviceId:sale.deviceId,branchId:sale.branchId});
     const result={id:sale.id,reference:sale.id,localReference:sale.localReference,incidents:[...new Set(incidents)]};
     await idempotency.complete(acquired.record.id,{statusCode:200,body:result});return result;
   }

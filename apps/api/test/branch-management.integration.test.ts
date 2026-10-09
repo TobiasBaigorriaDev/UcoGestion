@@ -11,6 +11,10 @@ import {
   BranchManagementService,
 } from '../src/modules/branches/branch-management.service.js';
 import { BranchReadService } from '../src/modules/branches/branch-read.service.js';
+import { BranchDeactivationService } from '../src/modules/branches/branch-deactivation.service.js';
+import { CashOperationsService } from '../src/modules/cash/cash-operations.service.js';
+import { CatalogItemCreationService } from '../src/modules/catalog/catalog-item-creation.service.js';
+import { InventoryIncreaseService } from '../src/modules/inventory/inventory-increase.service.js';
 import {
   BranchOperationError,
   BranchOperationPolicy,
@@ -27,6 +31,7 @@ describe('branch management', () => {
   let service: BranchManagementService;
   let reader: BranchReadService;
   const operationPolicy = new BranchOperationPolicy();
+  const context = () => ({ organizationId: organizationA, userId: ownerAUserId, requestId: 'branch-deactivation' });
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16-alpine').start();
@@ -122,6 +127,82 @@ describe('branch management', () => {
     ].sort((left, right) => left.organization_id.localeCompare(right.organization_id)));
   });
 
+  it('T221 deactivates only OWNER tenant branches, with atomic audit, version and idempotent replay', async () => {
+    const deactivation = new BranchDeactivationService(new TenantTransaction(runtimePool));
+    const branch = await service.create(context(), { name: `Deactivate ${randomUUID()}` });
+    const result = await deactivation.deactivate(context(), branch.id, 1, 'branch-deactivate');
+    expect(result).toMatchObject({ id: branch.id, status: 'INACTIVE', version: 2 });
+    expect(await deactivation.deactivate(context(), branch.id, 1, 'branch-deactivate')).toEqual(result);
+    await expect(deactivation.deactivate(context(), branch.id, 2, 'new-key-inactive')).rejects.toMatchObject({ code: 'BRANCH_VERSION_CONFLICT' });
+    await expect(deactivation.deactivate(context(), branch.id, 2, 'branch-deactivate')).rejects.toThrow();
+    await expect(deactivation.deactivate({ ...context(), organizationId: organizationB, userId: ownerBUserId }, branch.id, 2, 'foreign-deactivate')).rejects.toMatchObject({ code: 'BRANCH_NOT_AVAILABLE' });
+    const audits = await pool.query("SELECT count(*) FROM audit_events WHERE entity_id=$1 AND action='branch.deactivated'", [branch.id]);
+    expect(audits.rows[0]?.count).toBe('1');
+    await expect(requireOperationalBranch(organizationA, ownerAUserId, branch.id)).rejects.toMatchObject({ code: 'BRANCH_INACTIVE' });
+  });
+
+  it('T221 denies ADMIN, CASHIER and EMPLOYEE even with branch assignment', async () => {
+    const branch = await service.create(context(), { name: `Roles ${randomUUID()}` });
+    const deactivation = new BranchDeactivationService(new TenantTransaction(runtimePool));
+    for (const role of ['ADMIN', 'CASHIER', 'EMPLOYEE']) {
+      const user = randomUUID(), membership = randomUUID();
+      await pool.query('INSERT INTO users (id,email_normalized,password_hash,password_hash_version) VALUES ($1,$2,$3,1)', [user, `${user}@test.invalid`, '$argon2id$v=19$fixture']);
+      await pool.query('INSERT INTO memberships (id,organization_id,user_id,role) VALUES ($1,$2,$3,$4)', [membership, organizationA, user, role]);
+      await pool.query('INSERT INTO membership_branches (organization_id,membership_id,branch_id) VALUES ($1,$2,$3)', [organizationA,membership,branch.id]);
+      await expect(deactivation.deactivate({ ...context(), userId: user }, branch.id, 1, `deny-${role}`)).rejects.toMatchObject({ code: 'BRANCH_DEACTIVATION_FORBIDDEN' });
+    }
+    expect((await pool.query('SELECT status FROM branches WHERE id=$1', [branch.id])).rows[0]?.status).toBe('ACTIVE');
+  });
+
+  it('T221 retains uncertainty for expired/revoked grants and never clears exposure to permit deactivation', async () => {
+    const deactivation = new BranchDeactivationService(new TenantTransaction(runtimePool));
+    const branch = await service.create(context(), { name: `Uncertain ${randomUUID()}` });
+    const device = randomUUID(), grant = randomUUID(), exposure = randomUUID();
+    await pool.query("INSERT INTO devices (id,organization_id,branch_id,status,public_key,authorized_by_user_id,authorized_at) VALUES ($1,$2,$3,'UNRECOVERABLE','fixture-key',$4,now())", [device,organizationA,branch.id,ownerAUserId]);
+    const version = (await pool.query("INSERT INTO configuration_versions (id,organization_id,version,snapshot,canonical_payload,signature,signing_key_id,public_key_pem) VALUES ($1,$2,998,'{\"currency\":\"ARS\"}','{\"currency\":\"ARS\"}','fixture','fixture','fixture') RETURNING version", [randomUUID(),organizationA])).rows[0]?.version;
+    await pool.query("INSERT INTO offline_grants (id,organization_id,device_id,epoch,configuration_version,expires_at,revoked_at) VALUES ($1,$2,$3,1,$4,now()-interval '1 day',now())", [grant,organizationA,device,version]);
+    await pool.query("INSERT INTO sync_operations (id,organization_id,device_id,grant_id,epoch,sequence,prev_hash,operation_hash,status,occurred_at) VALUES ($1,$2,$3,$4,1,1,$5,$6,'PENDING',now()-interval '2 days')", [randomUUID(),organizationA,device,grant,'0'.repeat(64),'1'.repeat(64)]);
+    expect((await deactivation.blockers(context(), branch.id)).pending).toBe('1');
+    await expect(deactivation.deactivate(context(), branch.id, 1, 'pending-only')).rejects.toMatchObject({ code: 'BRANCH_DEACTIVATION_BLOCKED' });
+    await pool.query('INSERT INTO offline_configuration_exposures (id,organization_id,device_id,grant_id,epoch,configuration_version) VALUES ($1,$2,$3,$4,1,$5)', [exposure,organizationA,device,grant,version]);
+    await pool.query('INSERT INTO offline_exposure_resources (id,organization_id,exposure_id,branch_id) VALUES ($1,$2,$3,$4)', [randomUUID(),organizationA,exposure,branch.id]);
+    await expect(deactivation.deactivate(context(), branch.id, 1, 'branch-uncertain')).rejects.toMatchObject({ code: 'BRANCH_DEACTIVATION_BLOCKED' });
+    expect((await pool.query('SELECT status,version::integer AS version FROM branches WHERE id=$1', [branch.id])).rows[0]).toMatchObject({ status: 'ACTIVE', version: 1 });
+    expect((await pool.query('SELECT cleared_at FROM offline_configuration_exposures WHERE id=$1', [exposure])).rows[0]?.cleared_at).toBeNull();
+    const counts = await deactivation.blockers(context(), branch.id);
+    expect(counts.uncertainty).toBe('1');
+    const unrelated = await service.create(context(), { name: `Clear ${randomUUID()}` });
+    expect((await deactivation.deactivate(context(), unrelated.id, 1, 'clear-unrelated')).status).toBe('INACTIVE');
+  });
+
+  it('T221 audit failure rolls back branch status and idempotency; retry commits once', async () => {
+    const deactivation = new BranchDeactivationService(new TenantTransaction(runtimePool));
+    const branch = await service.create(context(), { name: `Audit failure ${randomUUID()}` });
+    await pool.query("CREATE FUNCTION reject_branch_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='branch.deactivated' THEN RAISE EXCEPTION 'audit failure'; END IF; RETURN NEW; END $$");
+    await pool.query('CREATE TRIGGER reject_branch_audit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION reject_branch_audit()');
+    try { await expect(deactivation.deactivate(context(), branch.id, 1, 'branch-audit-failure')).rejects.toThrow('audit failure'); }
+    finally { await pool.query('DROP TRIGGER reject_branch_audit ON audit_events'); await pool.query('DROP FUNCTION reject_branch_audit()'); }
+    expect((await pool.query('SELECT status,version::integer AS version FROM branches WHERE id=$1', [branch.id])).rows[0]).toMatchObject({ status: 'ACTIVE', version: 1 });
+    expect((await pool.query("SELECT count(*) FROM idempotency_records WHERE organization_id=$1 AND scope='branch.deactivate' AND key='branch-audit-failure'", [organizationA])).rows[0]?.count).toBe('0');
+    expect((await deactivation.deactivate(context(), branch.id, 1, 'branch-audit-failure')).status).toBe('INACTIVE');
+  });
+
+  it('T221 a real concurrent opening and branch deactivation cannot both commit', async () => {
+    const transactions = new TenantTransaction(runtimePool);
+    const deactivation = new BranchDeactivationService(transactions), cash = new CashOperationsService(transactions);
+    const branch = await service.create(context(), { name: `Race ${randomUUID()}` });
+    const register = randomUUID(), device = randomUUID();
+    await pool.query('INSERT INTO cash_registers (id,organization_id,branch_id,name) VALUES ($1,$2,$3,$4)', [register,organizationA,branch.id,'Race register']);
+    await pool.query("INSERT INTO devices (id,organization_id,branch_id,status,authorized_by_user_id,authorized_at) VALUES ($1,$2,$3,'ACTIVE',$4,now())", [device,organizationA,branch.id,ownerAUserId]);
+    const results = await Promise.allSettled([
+      deactivation.deactivate(context(), branch.id, 1, 'branch-race'),
+      cash.open(context(), { branchId: branch.id, cashRegisterId: register, deviceId: device, openingCash: '0.00' }, 'branch-race-open'),
+    ]);
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    const state = (await pool.query("SELECT b.status,(SELECT count(*) FROM cash_sessions s WHERE s.branch_id=b.id AND s.status='OPEN') AS open FROM branches b WHERE b.id=$1", [branch.id])).rows[0];
+    expect(state.status === 'INACTIVE' ? state.open === '0' : state.open === '1').toBe(true);
+  });
+
   it('allows new operations only on active branches without exposing a state-change command', async () => {
     const activeBranchId = randomUUID();
     const inactiveBranchId = randomUUID();
@@ -145,6 +226,35 @@ describe('branch management', () => {
       [randomUUID(), organizationA],
     )).rejects.toThrow();
     expect('setStatus' in service).toBe(false);
+  });
+
+  it('T221 blocks inventory conflicts and preserves their historical projection', async () => {
+    const tx = new TenantTransaction(runtimePool);
+    const branch = await service.create(context(), { name: `Incident ${randomUUID()}` });
+    const item = await new CatalogItemCreationService(tx).create(context(), { name: 'Incident item', type: 'PRODUCT', trackInventory: true });
+    const incident = randomUUID();
+    await pool.query("INSERT INTO inventory_incidents (id,organization_id,branch_id,item_id,status,max_shortfall) VALUES ($1,$2,$3,$4,'OPEN',1)", [incident,organizationA,branch.id,item.id]);
+    const deactivation = new BranchDeactivationService(tx);
+    expect((await deactivation.blockers(context(), branch.id)).conflicts).toBe('1');
+    await expect(deactivation.deactivate(context(), branch.id, 1, 'incident-blocked')).rejects.toMatchObject({ code: 'BRANCH_DEACTIVATION_BLOCKED' });
+    expect((await pool.query('SELECT status FROM inventory_incidents WHERE id=$1', [incident])).rows[0]?.status).toBe('OPEN');
+    expect((await pool.query('SELECT quantity FROM branch_stocks WHERE branch_id=$1 AND item_id=$2', [branch.id,item.id])).rows[0]?.quantity).toBe('0.000');
+  });
+
+  it('T221 prevents a new inventory write that waits behind committed deactivation', async () => {
+    const tx = new TenantTransaction(runtimePool);
+    const branch = await service.create(context(), { name: `Inventory race ${randomUUID()}` });
+    const item = await new CatalogItemCreationService(tx).create(context(), { name: 'Race item', type: 'PRODUCT', trackInventory: true });
+    const held = await pool.connect();
+    try {
+      await held.query('BEGIN');
+      await held.query("UPDATE branches SET status='INACTIVE',version=version+1 WHERE id=$1", [branch.id]);
+      const writing = new InventoryIncreaseService(tx).confirm(context(), { branchId: branch.id, itemId: item.id, quantity: '1.000', reason: 'Waiting write' }, 'waiting-inventory');
+      const rejected = expect(writing).rejects.toThrow('Sucursal no autorizada');
+      await held.query('COMMIT'); await rejected;
+      expect((await pool.query('SELECT quantity FROM branch_stocks WHERE branch_id=$1 AND item_id=$2', [branch.id,item.id])).rows[0]?.quantity).toBe('0.000');
+      expect((await pool.query('SELECT count(*) FROM inventory_movements WHERE branch_id=$1 AND item_id=$2', [branch.id,item.id])).rows[0]?.count).toBe('0');
+    } finally { await held.query('ROLLBACK'); held.release(); }
   });
 
   async function requireOperationalBranch(

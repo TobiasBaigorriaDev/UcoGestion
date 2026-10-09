@@ -70,11 +70,12 @@ export class OpaqueDelivery {
     if (!row || !key || claims.keyId!==metadata.kid || sig.length!==64 ||
       base64(sig).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')!==signature ||
       claims.envelopeHash!==await hex(row.envelope) || !await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,bytes(sig),bytes(encoder.encode(`${header}.${body}`)))) throw new Error('OFFLINE_ACK_INVALID');
-    return this.db.transaction('rw',[this.db.delivery_queue,this.db.records,this.db.device_keys,this.db.key_envelopes,this.db.pin_attempts,this.db.meta],async()=>{
+    return this.db.transaction('rw',[this.db.delivery_queue,this.db.delivery_receipts,this.db.records,this.db.device_keys,this.db.key_envelopes,this.db.pin_attempts,this.db.meta],async()=>{
       const current=await this.db.delivery_queue.get(row.id);
       if (!current) return false;
       if (current.envelope.length!==row.envelope.length || current.envelope.some((v,i)=>v!==row.envelope[i])) throw new Error('OFFLINE_ACK_INVALID');
-      await this.db.records.filter(record=>record.kind==='operation' && record.id===row.id).delete();
+      await this.db.records.filter(record=>['operation','sale','sale-draft'].includes(record.kind) && record.id===row.id).delete();
+      await this.db.delivery_receipts.add({ id: row.id, status: claims.status, envelopeHash: claims.envelopeHash });
       await this.db.delivery_queue.delete(row.id);
       if (await this.db.delivery_queue.count()===0) {
         const currentDevice=await this.db.device_keys.get('device');
@@ -98,7 +99,7 @@ export function startOpaqueDelivery(deliver:()=>Promise<void>,target:Window=wind
     if (running || stopped) return;
     running=true;
     void (async()=>{
-      while (requested && !stopped) { requested=false;try {await deliver();} catch {target.dispatchEvent(new Event('uco:delivery-pending'));} }
+      while (requested && !stopped) { requested=false;try {await deliver();} catch {target.dispatchEvent(new Event('uco:delivery-pending'));} finally {target.dispatchEvent(new Event('uco:delivery-state'));} }
     })().finally(()=>{running=false;});
   };
   const visible=()=>{if (page.visibilityState==='visible') trigger();};

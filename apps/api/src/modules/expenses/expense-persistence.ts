@@ -50,7 +50,7 @@ export class ExpensePersistence {
     }
     const branch = await client.query<{ base_currency: string }>(`SELECT o.base_currency FROM branches b
       JOIN organizations o ON o.id = b.organization_id
-      WHERE b.organization_id = $1 AND b.id = $2 AND b.status = 'ACTIVE'`,
+      WHERE b.organization_id = $1 AND b.id = $2 AND b.status = 'ACTIVE' FOR SHARE OF b`,
     [context.organizationId, input.branchId]);
     const currency = branch.rows[0]?.base_currency;
     if (!currency) throw new ExpensePersistenceError('EXPENSE_BRANCH_NOT_AVAILABLE', 'La sucursal no está disponible.');
