@@ -7,6 +7,7 @@ import { OfflineRecordCipher } from './offline-record-cipher';
 const operationSchema = z.object({ operation: z.object({ id: z.uuid(), actorId: z.string(), organizationId: z.uuid(),
   deviceId: z.uuid(), kind: z.string(), sequence: z.string(), occurredAt: z.iso.datetime() }) });
 export interface OfflineStatus {
+  readonly timezone: string;
   readonly expiresAt: string;
   readonly lastSyncAt: string;
   readonly expired: boolean;
@@ -27,7 +28,7 @@ export async function readOfflineStatus(db: OfflineDatabase, keys: OfflineKeys, 
   }));
   if (keys.dekFor(userId) !== dek) throw new Error('Identidad offline bloqueada.');
   await authorization.read(userId);
-  return { expiresAt: new Date(context.claims.exp * 1000).toISOString(), lastSyncAt: context.bootstrap.serverTime,
+  return { timezone: context.bootstrap.timezone, expiresAt: new Date(context.claims.exp * 1000).toISOString(), lastSyncAt: context.bootstrap.serverTime,
     expired: Boolean(context.knownExpired) || now() >= context.claims.exp * 1000,
     pending: pending.sort((a, b) => BigInt(a.sequence) < BigInt(b.sequence) ? -1 : 1) };
 }

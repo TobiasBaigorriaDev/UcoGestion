@@ -13,6 +13,7 @@ import { runMigrations } from '../src/database/migrate.js';
 import { TenantTransaction } from '../src/database/tenant-transaction.js';
 import { createGlobalUser } from '../src/modules/auth/global-user.repository.js';
 import { SaleCancellationPreparation } from '../src/modules/sales/sale-cancellation-preparation.js';
+import { CustomerManagementService } from '../src/modules/customers/customer-management.service.js';
 
 describe('T145 sales HTTP confirmation', () => {
   let app: INestApplication;
@@ -115,6 +116,14 @@ describe('T145 sales HTTP confirmation', () => {
       previousKey: 'sale-stale', acceptedPriceChange: true,
       payments: [{ method: 'CASH', appliedAmount: '6.00', receivedAmount: '10.00' },
         { method: 'TRANSFER', appliedAmount: '5.00' }] };
+    for (const field of ['unitPrice', 'lineTotal', 'subtotal', 'discount', 'total', 'currencyCode', 'expectedCash', 'change']) {
+      await post('/api/v1/sales', randomUUID()).send({ ...accepted, [field]: '0.01' }).expect(400);
+    }
+    for (const field of ['unitPrice', 'lineTotal', 'priceVersion']) {
+      await post('/api/v1/sales', randomUUID()).send({ ...accepted,
+        lines: accepted.lines.map(line => ({ ...line, [field]: '0.01' })) }).expect(400);
+    }
+    expect((await pool.query('SELECT count(*)::integer AS count FROM sales')).rows[0]?.count).toBe(0);
     const confirmed = await post('/api/v1/sales', 'sale-accepted').send(accepted).expect(201);
     expect(confirmed.body).toMatchObject({ id: sale.clientOperationId, total: '11.00',
       receipt: { label: 'Comprobante no fiscal', customer: { name: 'Comprador' } } });
@@ -310,6 +319,12 @@ describe('T145 sales HTTP confirmation', () => {
     expect((await request(app.getHttpServer()).get(`/api/v1/sales/${sale.clientOperationId}/receipt`)
       .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200)).body)
       .toEqual(receipt.body);
+    const historicalCustomer = (await pool.query<{ version: number }>('SELECT version::integer AS version FROM customers WHERE id=$1',
+      [customerId])).rows[0];
+    expect(historicalCustomer).toBeDefined();
+    await expect(new CustomerManagementService(transaction).deletePhysically(context, customerId,
+      historicalCustomer?.version ?? 0)).rejects.toMatchObject({ code: 'CUSTOMER_DELETE_BLOCKED_BY_HISTORY' });
+    expect((await pool.query('SELECT id FROM customers WHERE id=$1', [customerId])).rows).toEqual([{ id: customerId }]);
     const isolated = await pool.connect();
     try {
       await isolated.query('BEGIN');
@@ -334,6 +349,7 @@ describe('T145 sales HTTP confirmation', () => {
       [freeSaleId])).rows[0]?.count).toBe(0);
     expect((await pool.query('SELECT quantity::text FROM branch_stocks WHERE item_id = $1 AND branch_id = $2',
       [freeItemId, branchId])).rows[0]?.quantity).toBe('0.000');
+    const cancellationStarted = new Date();
     const cancelled = await post(`/api/v1/sales/${freeSaleId}/cancel`, 'cancel-free')
       .send({ reason: '  Error de carga  ' }).expect(201);
     expect(cancelled.body).toMatchObject({ saleId: freeSaleId, status: 'CANCELLED' });
@@ -341,6 +357,12 @@ describe('T145 sales HTTP confirmation', () => {
       .send({ reason: '  Error de carga  ' }).expect(201)).body).toEqual(cancelled.body);
     expect((await pool.query('SELECT reason FROM sale_cancellations WHERE sale_id = $1',
       [freeSaleId])).rows[0]?.reason).toBe('Error de carga');
+    const cancellationMetadata = (await pool.query<{ actor_user_id: string; cancelled_at: Date }>(
+      'SELECT actor_user_id,cancelled_at FROM sale_cancellations WHERE sale_id=$1', [freeSaleId])).rows[0];
+    const authenticatedOwner = (await pool.query<{ id: string }>('SELECT id FROM users WHERE email_normalized=$1', [email])).rows[0];
+    expect(cancellationMetadata?.actor_user_id).toBe(authenticatedOwner?.id);
+    expect(cancellationMetadata?.cancelled_at.getTime()).toBeGreaterThanOrEqual(cancellationStarted.getTime());
+    expect(cancellationMetadata?.cancelled_at.getTime()).toBeLessThanOrEqual(Date.now());
     const cancelledDetails = await request(app.getHttpServer()).get(`/api/v1/sales/${freeSaleId}`)
       .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
     expect(cancelledDetails.body).toMatchObject({ status: 'CANCELLED',

@@ -10,6 +10,9 @@ import { SalesQuoteService } from '../src/modules/sales/sales-quote.service.js';
 import { SalesPersistence } from '../src/modules/sales/sales-persistence.js';
 import { SalesOperationsService } from '../src/modules/sales/sales-operations.service.js';
 import { fingerprintSaleQuote } from '../src/modules/sales/sales-price-acceptance.js';
+import { CatalogPriceService } from '../src/modules/catalog/catalog-price.service.js';
+import { OrganizationTimezoneService } from '../src/modules/organizations/organization-timezone.service.js';
+import { OrganizationCurrencyChangeService } from '../src/modules/organizations/organization-currency-change.service.js';
 
 describe('sales quote', () => {
   let container: StartedPostgreSqlContainer;
@@ -116,6 +119,8 @@ describe('sales quote', () => {
       .rejects.toMatchObject({ code: 'SALE_DISCOUNT_INVALID' });
     await expect(quotes.quote(context(organizationId, cashierId), branchId, lines, { kind: 'FIXED', value: '0.01' }))
       .rejects.toMatchObject({ code: 'SALE_DISCOUNT_FORBIDDEN' });
+    await expect(quotes.quote(context(organizationId, employeeId), branchId, lines, { kind: 'FIXED', value: '0.01' }))
+      .rejects.toMatchObject({ code: 'SALE_DISCOUNT_FORBIDDEN' });
   });
 
   it('T135 persists a confirmed sale with immutable item and receipt snapshots', async () => {
@@ -134,6 +139,28 @@ describe('sales quote', () => {
     const item = await admin.query(`SELECT item_name, unit_price::text, line_total::text, currency_code
       FROM sale_items WHERE sale_id = $1`, [saleId]);
     expect(item.rows[0]).toMatchObject({ item_name: 'Unidad', unit_price: '0.05', line_total: '0.05', currency_code: 'ARS' });
+    const priceService = new CatalogPriceService(transaction);
+    const version = (await admin.query<{ version: string }>('SELECT version FROM catalog_items WHERE id=$1', [unitId])).rows[0];
+    if (!version) throw new Error('Missing item fixture');
+    const changed = await priceService.setPrice(context(), unitId, Number(version.version), '25.00');
+    expect((await admin.query('SELECT price::text FROM catalog_items WHERE id=$1', [unitId])).rows).toEqual([{ price: '25.00' }]);
+    expect((await admin.query(`SELECT status,currency_code,customer_id,receipt_snapshot FROM sales WHERE id=$1`, [saleId])).rows).toEqual(sale.rows);
+    expect((await admin.query(`SELECT item_name,unit_price::text,line_total::text,currency_code FROM sale_items WHERE sale_id=$1`, [saleId])).rows).toEqual(item.rows);
+    await priceService.setPrice(context(), unitId, changed.version, '0.05');
+    const documentsBefore = (await admin.query('SELECT * FROM sales WHERE id=$1', [saleId])).rows;
+    const movementsBefore = (await admin.query('SELECT * FROM cash_movements WHERE source_id=$1 ORDER BY id', [saleId])).rows;
+    expect(movementsBefore).toHaveLength(1);
+    const organizationVersion = (await admin.query<{ version: string }>('SELECT version FROM organizations WHERE id=$1', [organizationId])).rows[0];
+    if (!organizationVersion) throw new Error('Missing organization fixture');
+    const timezones = new OrganizationTimezoneService(transaction);
+    const timezone = await timezones.update(context(), Number(organizationVersion.version), { timezone: 'America/Argentina/Buenos_Aires' });
+    expect((await admin.query('SELECT * FROM sales WHERE id=$1', [saleId])).rows).toEqual(documentsBefore);
+    expect((await admin.query('SELECT * FROM cash_movements WHERE source_id=$1 ORDER BY id', [saleId])).rows).toEqual(movementsBefore);
+    await timezones.update(context(), timezone.version, { timezone: 'UTC' });
+    await expect(new OrganizationCurrencyChangeService(transaction).change(context(), timezone.version + 1, 'USD', randomUUID()))
+      .rejects.toMatchObject({ code: 'CURRENCY_LOCKED_BY_HISTORY' });
+    expect((await admin.query('SELECT * FROM sales WHERE id=$1', [saleId])).rows).toEqual(documentsBefore);
+    expect((await admin.query('SELECT * FROM cash_movements WHERE source_id=$1 ORDER BY id', [saleId])).rows).toEqual(movementsBefore);
     expect((await admin.query('SELECT operational_history_started_at FROM organizations WHERE id = $1',
       [organizationId])).rows[0]?.operational_history_started_at).not.toBeNull();
     expect(await transaction.read(context(otherOrganizationId), async (client) =>
@@ -273,10 +300,16 @@ describe('sales quote', () => {
       .rejects.toMatchObject({ code: '42501' });
   });
 
-  it('T141 leaves stock and inventory ledger untouched for untracked items', async () => {
-    const quote = await quotes.quote(context(), branchId, [{ itemId: unitId, quantity: '2' }]);
+  it.each(['PRODUCT', 'SERVICE'])('T141 leaves stock and inventory ledger untouched for untracked %s (RF-76)', async (type) => {
+    const itemId = randomUUID();
+    await admin.query(`INSERT INTO catalog_items (id, organization_id, name, type, base_unit, price,
+      price_version, track_inventory) VALUES ($1,$2,'Sin existencias',$3,'UNIT','0.05',1,false)`,
+    [itemId, organizationId, type]);
+    // Absence of any stock row must not prevent confirming an untracked item.
+    const quote = await quotes.quote(context(), branchId, [{ itemId, quantity: '2000' }]);
     const before = await admin.query('SELECT quantity::text AS quantity, version::text AS version FROM branch_stocks WHERE item_id = $1 AND branch_id = $2',
-      [unitId, branchId]);
+      [itemId, branchId]);
+    expect(before.rows).toEqual([]);
     const saleId = randomUUID();
     await new TenantTransaction(runtime).runWithOptionalAudit(context(), async (client) => ({
       result: await new SalesPersistence().persist(client, context(), { id: saleId, branchId,
@@ -284,7 +317,7 @@ describe('sales quote', () => {
         payments: [{ method: 'CASH', appliedAmount: quote.total }] }),
     }));
     expect((await admin.query('SELECT quantity::text AS quantity, version::text AS version FROM branch_stocks WHERE item_id = $1 AND branch_id = $2',
-      [unitId, branchId])).rows).toEqual(before.rows);
+      [itemId, branchId])).rows).toEqual(before.rows);
     expect((await admin.query('SELECT count(*)::integer AS count FROM inventory_movements WHERE source_id = $1',
       [saleId])).rows[0]?.count).toBe(0);
   });

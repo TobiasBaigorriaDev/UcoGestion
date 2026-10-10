@@ -4,7 +4,7 @@ import { Pool } from 'pg';
 import { expect, it } from 'vitest';
 import { runMigrations } from '../src/database/migrate.js';
 import { TenantTransaction } from '../src/database/tenant-transaction.js';
-import { readOperationalSnapshot } from '../src/core/observability/operational-monitor.js';
+import { readIdentityDeadLetters, readOperationalSnapshot } from '../src/core/observability/operational-monitor.js';
 
 it('T230 counts durable failures under RLS and rejects cross-tenant monitoring', async () => {
   const container = await new PostgreSqlContainer('postgres:16-alpine').start();
@@ -26,5 +26,8 @@ it('T230 counts durable failures under RLS and rejects cross-tenant monitoring',
       .toEqual({deadLetters:1,conflicts:0,syncPendingAgeSeconds:0});
     await expect(readOperationalSnapshot(transactions,{organizationId:foreign,userId:user,requestId:randomUUID()})).rejects.toThrow(/OWNER/);
     expect((await admin.query('SELECT count(*)::int AS count FROM outbox_jobs')).rows[0]?.count).toBe(2);
+    await admin.query(`INSERT INTO identity_outbox_jobs(id,job_key,job_type,payload,status)
+      VALUES ($1,$2,'PASSWORD_RESET_EMAIL','{}','DEAD_LETTER')`, [randomUUID(), randomUUID()]);
+    expect(await readIdentityDeadLetters(runtime)).toBe(1);
   } finally { await runtime?.end(); await admin.end(); await container.stop(); }
 });

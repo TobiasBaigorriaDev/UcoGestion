@@ -3,6 +3,7 @@ import { base64,bytes,unbase64 } from './offline-crypto';
 import { OfflineDatabase } from './offline-database';
 import type { OfflineKeys } from './offline-keys';
 import { OfflineLease } from './offline-lease';
+import { announceIdentityRetirement } from './identity-retirement-events';
 export async function assertOfflineIdentity(db:OfflineDatabase,userId:string,requireCredential = false):Promise<void> {
   const device=await db.device_keys.get('device');
   if ((await db.meta.get('device-chain'))?.deviceRevoked || device?.revoked || device?.revokedUsers?.includes(userId)) throw new Error('OFFLINE_REVOKED');
@@ -34,8 +35,7 @@ export class OfflineRevocation {
   private retireAccess(): void {
     this.keys.lockDevice();
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem('uco:identity-retired', crypto.randomUUID());
-      window.dispatchEvent(new Event('uco:identity-retired'));
+      announceIdentityRetirement();
       window.dispatchEvent(new Event('uco:delivery-request'));
     }
   }

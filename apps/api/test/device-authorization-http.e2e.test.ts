@@ -16,6 +16,7 @@ import { configureApi } from '../src/configure-api.js';
 import { runMigrations } from '../src/database/migrate.js';
 import { createGlobalUser } from '../src/modules/auth/global-user.repository.js';
 import { DeviceCertificate } from '../src/modules/offline-sync/device-certificate.js';
+import { createOpenApiDocument } from '../src/core/validation/openapi.js';
 
 describe('T185 POS device HTTP authorization', () => {
   let app: INestApplication;
@@ -186,8 +187,13 @@ describe('T185 POS device HTTP authorization', () => {
     const envelopes = [JSON.stringify({version:1,keyId:'test-ingestion',operationId:randomUUID(),certificate,
       iv:randomBytes(12).toString('base64'),wrappedCek:randomBytes(384).toString('base64'),ciphertext:ciphertext.toString('base64'),
       ciphertextHash:createHash('sha256').update(ciphertext).digest('base64'),signature:randomBytes(64).toString('base64')})];
-    const proof = sign('sha256', Buffer.from(deliveryProofPayload(challenge, envelopes)),
-      { key: keyPair.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64');
+    const deviceSigner = await crypto.subtle.importKey('pkcs8',
+      new Uint8Array(keyPair.privateKey.export({ type: 'pkcs8', format: 'der' })),
+      { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    expect(deviceSigner.extractable).toBe(false);
+    await expect(crypto.subtle.exportKey('pkcs8', deviceSigner)).rejects.toThrow();
+    const proof = Buffer.from(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, deviceSigner,
+      new TextEncoder().encode(deliveryProofPayload(challenge, envelopes)))).toString('base64');
     // Unauthenticated envelope ciphertext has no business effects or definitive ACK.
     await post('push', { certificate, challenge, envelopes, proof }).expect(503);
     const replay = await post('push', { certificate, challenge, envelopes, proof }).expect(403);
@@ -227,17 +233,21 @@ describe('T185 POS device HTTP authorization', () => {
   it('T201B denies ordinary reads/writes and discordant tenant headers to a delivery certificate', async () => {
     const device = (await pool.query('SELECT id, public_key_thumbprint FROM devices WHERE organization_id=$1 LIMIT 1', [organizationId])).rows[0];
     const certificate = new DeviceCertificate(secret).issue({ organizationId, deviceId: device.id, thumbprint: device.public_key_thumbprint });
-    for (const path of ['/catalog/items', `/sales/${randomUUID()}/receipt`, `/sales/${randomUUID()}`, '/offline/status', '/reports/sales', '/sales/checkout-context']) {
-      const response = await request(app.getHttpServer()).get(`/api/v1${path}`)
-        .set('Authorization', `Bearer ${certificate}`).set('X-Organization-Id', organizationId);
-      expect([401,404]).toContain(response.status);
+    let checked = 0;
+    for (const [path, operations] of Object.entries(createOpenApiDocument(app).paths)) {
+      if (!/^\/api\/v1\/(?:catalog|sales|cash-sessions|inventory|branches|customers|suppliers|purchases|expenses|dashboard|audit|reports|organizations|users|expense-categories|offline)(?:\/|$)/.test(path)
+        || path.startsWith('/api/v1/offline/delivery/')) continue;
+      for (const method of ['get', 'post', 'put', 'patch', 'delete'] as const) {
+        if (!operations?.[method]) continue;
+        const response = await request(app.getHttpServer())[method](path.replace(/\{[^}]+\}/g, randomUUID()))
+          .set('Origin', 'http://localhost:3000').set('Authorization', `Bearer ${certificate}`)
+          .set('X-Organization-Id', organizationId).set('Idempotency-Key', randomUUID()).send({ certificate });
+        expect([401,403], `${method.toUpperCase()} ${path}`).toContain(response.status);
+        expect(JSON.stringify(response.body)).not.toContain(certificate);
+        checked++;
+      }
     }
-    for (const path of ['/sales', '/cash-sessions/open', '/catalog/items', '/offline/bootstrap', '/inventory/adjustments']) {
-      const response = await request(app.getHttpServer()).post(`/api/v1${path}`)
-        .set('Origin','http://localhost:3000').set('Authorization', `Bearer ${certificate}`)
-        .set('X-Organization-Id', foreignOrganizationId).send({certificate});
-      expect([401,403,404]).toContain(response.status);
-    }
+    expect(checked).toBeGreaterThan(50);
     await request(app.getHttpServer()).post('/api/v1/offline/delivery/challenge')
       .set('Origin','http://localhost:3000').set('X-Organization-Id',foreignOrganizationId).send({certificate}).expect(403);
   });

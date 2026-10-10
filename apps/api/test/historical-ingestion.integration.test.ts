@@ -106,6 +106,9 @@ describe('historical delivery transactions',()=>{
     await pool.query("UPDATE memberships SET status='ACTIVE',revoked_at=NULL WHERE organization_id=$1",[org]);
     await new CatalogPriceService(transactions).setPrice(context(),item,1,'99.00');
     await pool.query("UPDATE catalog_items SET status='INACTIVE' WHERE id=$1",[item]);
+    await pool.query("UPDATE branches SET status='INACTIVE' WHERE id=$1",[branch]);
+    await pool.query("UPDATE cash_registers SET status='INACTIVE' WHERE id=$1",[register]);
+    await pool.query("UPDATE payment_method_settings SET enabled=false WHERE organization_id=$1 AND method='CASH'",[org]);
     await pool.query("UPDATE memberships SET status='REVOKED',revoked_at=now() WHERE organization_id=$1",[org]);
     const bytes=seal(sale);const first=await ingestion.ingest(claims,bytes);
     expect(first?.status).toBe('ACKED');expect(await ingestion.ingest(claims,bytes)).toEqual(first);
@@ -116,6 +119,22 @@ describe('historical delivery transactions',()=>{
     const persisted=(await pool.query('SELECT receipt_snapshot,occurred_at,received_at FROM sales WHERE id=$1',[id])).rows[0];
     expect(persisted?.receipt_snapshot.items[0]).toMatchObject({name:'Original',unit:'UNIT',unitPrice:'10.00'});
     expect(persisted?.occurred_at.toISOString()).toBe(occurredAt);expect(persisted?.received_at).toBeInstanceOf(Date);
+    expect((await pool.query(`SELECT context_data FROM audit_events WHERE organization_id=$1 AND operation_id=$2
+      AND action='offline.configuration_discrepancy'`,[org,id])).rows).toEqual([{context_data:{configurationVersion:String(operation.configVersion),
+      discrepancies:[{resource:'BRANCH',resourceId:branch,field:'status',historical:'ACTIVE',current:'INACTIVE'},
+        {resource:'CASH_REGISTER',resourceId:register,field:'status',historical:'ACTIVE',current:'INACTIVE'},
+        {resource:'CATALOG_ITEM',resourceId:item,field:'status',historical:'ACTIVE',current:'INACTIVE'},
+        {resource:'CATALOG_ITEM',resourceId:item,field:'unitPrice',historical:'10.00',current:'99.00'},
+        {resource:'CATALOG_ITEM',resourceId:item,field:'priceVersion',historical:'1',current:'2'},
+        {resource:'PAYMENT_METHOD',resourceId:'CASH',field:'enabled',historical:'true',current:'false'}]}}]);
+    expect((await pool.query(`SELECT count(*)::integer AS n FROM audit_events WHERE organization_id=$1 AND operation_id=$2
+      AND action='offline.configuration_discrepancy'`,[org,id])).rows[0]?.n).toBe(1);
+    expect((await pool.query('SELECT branch_id,cash_session_id FROM sales WHERE id=$1',[id])).rows[0])
+      .toEqual({branch_id:branch,cash_session_id:operation.sessionId});
+    expect((await pool.query('SELECT method FROM sale_payments WHERE sale_id=$1',[id])).rows).toEqual([{method:'CASH'}]);
+    await pool.query("UPDATE branches SET status='ACTIVE' WHERE id=$1",[branch]);
+    await pool.query("UPDATE cash_registers SET status='ACTIVE' WHERE id=$1",[register]);
+    await pool.query("UPDATE payment_method_settings SET enabled=true WHERE organization_id=$1 AND method='CASH'",[org]);
     operation=sale;exact=bytes;
   });
 

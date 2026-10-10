@@ -6,13 +6,14 @@ import { OfflineLease } from '../src/offline/offline-lease.js';
 import { OfflineSealer } from '../src/offline/offline-sealer.js';
 import { OfflinePos } from '../src/offline/offline-pos.js';
 import { OfflineAuthorization } from '../src/offline/offline-authorization.js';
+import { OfflineRecordCipher } from '../src/offline/offline-record-cipher.js';
 import { authorizationFixture, org, device, actor, now } from './offline-authorization.fixture.js';
 
 afterEach(async () => { await Dexie.delete(OfflineDatabase.nameFor(org, device)); });
 const register = '66666666-6666-4666-8666-666666666666';
-async function fixture() {
-  const setup = await authorizationFixture();
-  await setup.authorization.install(actor, setup.signed, setup.jwt());
+async function fixture(configure?: Parameters<typeof authorizationFixture>[0], install = true) {
+  const setup = await authorizationFixture(configure);
+  if (install) await setup.authorization.install(actor, setup.signed, setup.jwt());
   const sealer = new OfflineSealer(setup.db, setup.keys, new OfflineLease(setup.db), {
     certificate: 'opaque', publication: setup.bootstrap.ingestionKey, trustedSigner: setup.trusted, trustedSigningKeyId: 'trusted',
   });
@@ -22,8 +23,21 @@ async function fixture() {
 it('T192 opens and seals cash state atomically and rejects a duplicate device session', async () => {
   const setup = await fixture();
   try {
+    const started = Date.now();
     const opened = await setup.pos.open(actor, { cashRegisterId: register, openingCash: '10.00' });
     expect(await setup.db.getEncrypted(actor, 'cash-session', opened.sessionId)).toBeDefined();
+    const session = await setup.pos.session(actor, opened.sessionId);
+    expect(session).toEqual({ id: opened.sessionId, actorUserId: actor, branchId: setup.claims.branchId,
+      cashRegisterId: register, openingCash: '10.00', currency: 'ARS', openedAt: expect.any(String), status: 'OPEN' });
+    expect(Date.parse(session.openedAt)).toBeGreaterThanOrEqual(started);
+    expect(Date.parse(session.openedAt)).toBeLessThanOrEqual(Date.now());
+    expect(opened.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    const bytes = await setup.db.getEncrypted(actor, 'operation', opened.operationId);
+    if (!bytes) throw new Error('Missing sealed opening');
+    const sealed: unknown = JSON.parse(new TextDecoder().decode(await new OfflineRecordCipher().decrypt(setup.keys.dekFor(actor),
+      { organizationId: org, deviceId: device, userId: actor, kind: 'operation', id: opened.operationId }, bytes)));
+    expect(sealed).toMatchObject({ operation: { id: opened.operationId, actorId: actor, organizationId: org, deviceId: device,
+      sessionId: opened.sessionId, kind: 'cash-session-open', occurredAt: session.openedAt, receivedAt: null, payload: session } });
     expect(await setup.db.delivery_queue.count()).toBe(1);
     expect((await setup.db.meta.get('device-chain'))?.sequence).toBe('1');
     await expect(setup.pos.open(actor, { cashRegisterId: register, openingCash: '0.00' })).rejects.toThrow();
@@ -57,6 +71,28 @@ it('T192 rejects wrong register, invalid money, missing capabilities and locked 
     setup.keys.lock();
     await expect(setup.pos.open(actor, { cashRegisterId: register, openingCash: '0.00' })).rejects.toThrow();
     expect(await setup.db.delivery_queue.count()).toBe(0);
+  } finally { setup.db.close(); }
+});
+
+it.each(['branch','register','payment'] as const)('RF-168 denies a resource absent from known signed configuration: %s', async resource => {
+  const setup = await fixture(bootstrap => {
+    if (resource === 'branch') bootstrap.configuration.branches = [];
+    if (resource === 'register') bootstrap.configuration.cashRegisters = [];
+    if (resource === 'payment') bootstrap.configuration.paymentMethods = [];
+  }, resource !== 'branch');
+  try {
+    if (resource === 'branch') await expect(setup.authorization.install(actor,setup.signed,setup.jwt())).rejects.toThrow('Sucursal offline no disponible');
+    if (resource !== 'payment') {
+      await expect(setup.pos.open(actor,{cashRegisterId:register,openingCash:'0.00'})).rejects.toThrow();
+      expect(await setup.db.delivery_queue.count()).toBe(0);
+    } else {
+      const opened = await setup.pos.open(actor,{cashRegisterId:register,openingCash:'0.00'});
+      const draft = await setup.pos.prepareSale(actor,{sessionId:opened.sessionId,lines:[{itemId:org,quantity:'1'}]});
+      const pending = await setup.db.deliveryBytes(), records = await setup.db.records.toArray();
+      await expect(setup.pos.confirmSale(actor,{draftId:draft.id,payments:[{method:'CASH',appliedAmount:'10.00',receivedAmount:'10.00'}]})).rejects.toThrow();
+      expect(await setup.db.deliveryBytes()).toEqual(pending);
+      expect(await setup.db.records.toArray()).toEqual(records);
+    }
   } finally { setup.db.close(); }
 });
 

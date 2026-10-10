@@ -1,6 +1,10 @@
 /* global window, document, getComputedStyle, sessionStorage, URL */
 // eslint-disable-next-line @typescript-eslint/no-unused-expressions
 async page => {
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') pageErrors.push(message.text()); });
+  page.on('response', response => { if (response.status() === 404) pageErrors.push(`404 ${response.url()}`); });
   const selection = new URL(page.url()).searchParams.get('verifyRoutes')?.split(',');
   const verifyCards = new URL(page.url()).searchParams.has('verifyCards');
   const check = (value, message) => { if (!value) throw new Error(message); };
@@ -49,6 +53,7 @@ async page => {
   });
   const source = await (await page.request.get('http://127.0.0.1:4179/apps/web/node_modules/axe-core/axe.min.js')).text();
   const scan = async (route, width, state) => {
+    try {
     await page.evaluate(source => {
       const script = document.createElement('script'); script.nonce = document.querySelector('script[nonce]')?.nonce ?? '';
       script.textContent = source; document.head.append(script);
@@ -71,6 +76,9 @@ async page => {
     const result = { route, width, state, violations, overflow, focus };
     result.passed = !violations.length && !overflow && focus.length > 0 && focus.every(v => v.visible && v.indicated);
     return result;
+    } catch (error) {
+      throw new Error(`${route} ${width} ${state}: ${error.message}; ${JSON.stringify(pageErrors)}; ${page.url()}`, { cause: error });
+    }
   };
   const results = [];
   const routes = ['/login', '/forgot-password', '/reset-password?token=test', '/accept-invitation?token=test', '/platform/organizations/new', '/organizations/select',
@@ -81,9 +89,13 @@ async page => {
   for (const route of routes.filter(route => !selection || selection.includes(route))) {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`http://localhost:3001${route}`);
-    await page.getByRole('heading', { level: 1 }).first().waitFor({ timeout: 20000 });
+    try {
+      await page.getByRole('heading', { level: 1 }).first().waitFor({ timeout: 20000 });
+    } catch (error) {
+      throw new Error(`${route}: ${error.message}; visible page: ${(await page.locator('body').innerText()).slice(0, 1000)}`, { cause: error });
+    }
     await page.waitForFunction(() => ![...document.querySelectorAll('[role="status"]')].some(e => e.textContent?.startsWith('Cargando')), undefined, { timeout: 20000 });
-    for (const width of [1440, 390]) {
+    for (const width of [1440, 1024, 768, 390]) {
       await page.setViewportSize({ width, height: 1000 }); results.push(await scan(route, width, 'loaded'));
       if (verifyCards) {
         if (route === '/workspace') {

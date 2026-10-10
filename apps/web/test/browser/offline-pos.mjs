@@ -1,4 +1,4 @@
-/* global window, navigator */
+/* global window, navigator, indexedDB */
 // eslint-disable-next-line @typescript-eslint/no-unused-expressions
 async (page) => {
   const check = (condition, message) => { if (!condition) throw new Error(message); };
@@ -7,7 +7,11 @@ async (page) => {
   await page.evaluate(() => window.posHarness.initialize());
   // Initialize the real worker and ensure the capability gate can operate without network.
   await page.evaluate(async () => {
-    await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready;
+    try {
+      await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready;
+    } catch (error) {
+      throw new Error(`${error.message}; databases: ${JSON.stringify(await indexedDB.databases())}`, { cause: error });
+    }
   });
   await page.context().setOffline(true);
   const opened = await page.evaluate(() => window.posHarness.open());

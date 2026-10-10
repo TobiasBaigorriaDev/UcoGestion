@@ -107,6 +107,9 @@ export class OfflineAuthorization {
   }
 
   assertCurrent(context: OfflineAuthorizationContext): void {
+    if (!context.bootstrap.configuration.branches.some(branch => branch.id === context.claims.branchId)) {
+      throw new Error('Sucursal offline no disponible. Renová la configuración online.');
+    }
     if (context.knownExpired || this.now() < context.claims.iat * 1000 || this.now() >= context.claims.exp * 1000) {
       throw new Error('La credencial offline venció. Sincronizá online.');
     }

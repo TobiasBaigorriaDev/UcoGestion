@@ -6,8 +6,20 @@ import { posFixture, register } from './offline-pos.fixture';
 import { OfflineKeys } from '../src/offline/offline-keys';
 import { activateOfflineIdentity, retireOfflineIdentity } from '../src/offline/offline-identity';
 import { OpaqueDelivery } from '../src/offline/opaque-delivery';
+import { announceIdentityRetirement } from '../src/offline/identity-retirement-events';
 
 afterEach(() => Dexie.delete(`uconext-offline-${org}-${device}`));
+
+it('RF-128 locks credentials on an identity notification without a page-specific observer', async () => {
+  const setup = await posFixture();
+  const before = await setup.db.deliveryBytes();
+  expect(setup.keys.canCreate()).toBe(true);
+  announceIdentityRetirement();
+  expect(setup.keys.canCreate()).toBe(false);
+  expect(() => setup.keys.dekFor(actor)).toThrow();
+  expect(await setup.db.deliveryBytes()).toEqual(before);
+  setup.db.close();
+});
 
 it('T219 retires every in-memory credential and persistent unlock while retaining exact sealed operations', async () => {
   const setup = await posFixture();

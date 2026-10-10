@@ -132,6 +132,8 @@ describe('branch management', () => {
     const branch = await service.create(context(), { name: `Deactivate ${randomUUID()}` });
     const result = await deactivation.deactivate(context(), branch.id, 1, 'branch-deactivate');
     expect(result).toMatchObject({ id: branch.id, status: 'INACTIVE', version: 2 });
+    await expect(service.create(context(), { name: `  ${branch.name.toUpperCase()}  ` }))
+      .rejects.toMatchObject({ code: 'BRANCH_NAME_CONFLICT' });
     expect(await deactivation.deactivate(context(), branch.id, 1, 'branch-deactivate')).toEqual(result);
     await expect(deactivation.deactivate(context(), branch.id, 2, 'new-key-inactive')).rejects.toMatchObject({ code: 'BRANCH_VERSION_CONFLICT' });
     await expect(deactivation.deactivate(context(), branch.id, 2, 'branch-deactivate')).rejects.toThrow();

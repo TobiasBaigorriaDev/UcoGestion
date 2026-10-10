@@ -23,6 +23,15 @@ describe('money input validation', () => {
     expect(validatePercentageDiscount('100.01')).toBeUndefined();
   });
 
+  it('RF-246 rejects excess input scale even when the extra decimals are zeros', () => {
+    fc.assert(fc.property(fc.integer({ min: 0, max: 100_000 }), (whole) => {
+      for (const value of [`${whole}.000`, `${whole}.010`, `${whole}.001`]) {
+        expect(validateNonNegativeMoney(value)).toBeUndefined();
+      }
+      expect(validateNonNegativeMoney(`${whole}.00`)).toBe(`${whole}.00`);
+    }));
+  });
+
   it('never accepts a fixed discount above its subtotal', () => {
     fc.assert(
       fc.property(

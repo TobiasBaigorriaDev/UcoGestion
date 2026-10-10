@@ -9,7 +9,7 @@ import { Pool } from 'pg';
 import { expect, it } from 'vitest';
 import { runMigrations } from '../src/database/migrate.js';
 import { publishBackup, downloadBackup } from '../src/operations/backup.js';
-import { checkRecoveredDatabase, prepareEmptyRestore } from '../src/operations/restore.js';
+import { checkRecoveredDatabase, prepareEmptyRestore, restoreIdentityDispatcherOwnership } from '../src/operations/restore.js';
 import { runRecoverySmoke } from '../src/operations/recovery-smoke.js';
 import { TenantTransaction } from '../src/database/tenant-transaction.js';
 import { BranchManagementService } from '../src/modules/branches/branch-management.service.js';
@@ -60,6 +60,14 @@ it('T231/T232 restores an authenticated pg_dump with historical keys, grants, mi
     await execute('docker',['cp',join(destination,'database.dump'),`${target.getId()}:/tmp/drill.dump`]);
     await execute('docker',['exec',target.getId(),'pg_restore','-U','test','-d','uco_restore_drill','--exit-on-error','--single-transaction','--no-owner','/tmp/drill.dump']);
     await runMigrations(target.getConnectionUri());
+    await restoreIdentityDispatcherOwnership(client);
+    expect((await client.query(`SELECT r.rolname,r.rolsuper,r.rolbypassrls FROM pg_proc p JOIN pg_roles r ON r.oid=p.proowner
+      WHERE p.oid='claim_identity_email_jobs(integer,integer)'::regprocedure`)).rows).toEqual([
+      {rolname:'uco_identity_dispatcher',rolsuper:false,rolbypassrls:false},
+    ]);
+    await client.query('SET ROLE uco_worker');
+    expect((await client.query('SELECT * FROM claim_identity_email_jobs(1,30)')).rows).toEqual([]);
+    await client.query('RESET ROLE');
     expect((await client.query('SELECT name FROM organizations')).rows).toEqual([{name:'Recovered organization'}]);
     await expect(checkRecoveredDatabase(client,recovered.environment)).resolves.toBeUndefined();
     expect((await client.query('SELECT quantity FROM branch_stocks WHERE item_id=$1',[item.id])).rows[0]?.quantity).toBe('7.125');

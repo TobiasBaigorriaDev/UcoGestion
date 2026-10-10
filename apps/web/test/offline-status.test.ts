@@ -14,6 +14,7 @@ it('T220A returns verified validity, last sync and only the active identity encr
   const status = await readOfflineStatus(setup.db, setup.keys, setup.authorization, actor);
   expect(status.pending).toEqual([{ id: opened.operationId, kind: 'cash-session-open', sequence: '1', occurredAt: expect.any(String) }]);
   expect(status.lastSyncAt).toBe(setup.bootstrap.serverTime);
+  expect(status.timezone).toBe(setup.bootstrap.timezone);
   expect(status.expiresAt).toBe(new Date(setup.claims.exp * 1000).toISOString());
   setup.keys.lock();
   await expect(readOfflineStatus(setup.db, setup.keys, setup.authorization, actor)).rejects.toThrow();

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { Pool } from 'pg';
 import { downloadBackup } from './backup.js';
 import { IndependentBackupStore, required } from './backup-store.js';
-import { checkRecoveredDatabase, prepareEmptyRestore, validateRestoreTarget } from './restore.js';
+import { checkRecoveredDatabase, prepareEmptyRestore, restoreIdentityDispatcherOwnership, validateRestoreTarget } from './restore.js';
 import { postgresTool } from './postgres-tools.js';
 import { runMigrations } from '../database/migrate.js';
 import { createJsonLogger } from '../core/observability/logger.js';
@@ -26,6 +26,7 @@ async function main(): Promise<void> {
     await postgresTool('pg_restore',['--exit-on-error','--single-transaction','--no-owner',
       `--dbname=${decodeURIComponent(new URL(target).pathname.slice(1))}`,join(directory,'database.dump')],target);
     await runMigrations(target);
+    await restoreIdentityDispatcherOwnership(client);
     await checkRecoveredDatabase(client,recovered.environment);
     await runRecoverySmoke(target,recovered.environment);
     const targets=verifyRecoveryTargets(recovered.manifest.createdAt,

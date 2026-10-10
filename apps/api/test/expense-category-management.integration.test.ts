@@ -14,6 +14,7 @@ import {
   ExpenseCategorySelectionError,
   ExpenseCategorySelectionPolicy,
 } from '../src/modules/expenses/expense-category-selection.policy.js';
+import { CatalogCategoryManagementService } from '../src/modules/catalog/catalog-category-management.service.js';
 
 describe('expense category management', () => {
   let container: StartedPostgreSqlContainer;
@@ -79,6 +80,15 @@ describe('expense category management', () => {
     )).toMatchObject({ rows: [{ count: '0' }] });
     await expect(requireActiveCategory(organizationA, ownerUserId, active.id))
       .resolves.toMatchObject({ id: active.id, name: 'Servicios', status: 'ACTIVE' });
+    const catalogCategoryId = randomUUID();
+    await pool.query('INSERT INTO catalog_categories(id,organization_id,name) VALUES ($1,$2,$3)',
+      [catalogCategoryId, organizationA, 'Servicios']);
+    await expect(requireActiveCategory(organizationA, ownerUserId, catalogCategoryId))
+      .rejects.toMatchObject({ code: 'EXPENSE_CATEGORY_NOT_AVAILABLE' });
+    await expect(new CatalogCategoryManagementService(new TenantTransaction(runtimePool)).changeStatus(
+      context(ownerUserId, randomUUID()), active.id, 1, 'INACTIVE', randomUUID()))
+      .rejects.toThrow();
+    expect((await pool.query('SELECT status FROM expense_categories WHERE id=$1', [active.id])).rows).toEqual([{ status: 'ACTIVE' }]);
 
     const inactiveId = randomUUID();
     await pool.query(

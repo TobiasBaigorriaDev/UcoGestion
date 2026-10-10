@@ -1,4 +1,5 @@
 'use client';
+import { OrganizationTime } from '../../components/organization-time';
 
 import { useRef, useState, type FormEvent } from 'react';
 
@@ -120,9 +121,9 @@ export function ExpenseWorkspace({ organizationId, branchId, role, categories, p
       <p><strong>Concepto:</strong> {detail.concept}</p>
       <p><strong>Importe:</strong> {detail.amount} {detail.currency}</p>
       <p><strong>Medio histórico:</strong> {detail.method}</p>
-      <p><strong>Registrado:</strong> {new Date(detail.occurredAt).toLocaleString('es-AR')}</p>
+      <p><strong>Registrado:</strong> <OrganizationTime value={detail.occurredAt} /></p>
       {detail.cancellation ? <p role="status"><strong>Anulación:</strong> {detail.cancellation.reason}
-        {' · '}{new Date(detail.cancellation.cancelledAt).toLocaleString('es-AR')}</p> : null}
+        {' · '}<OrganizationTime value={detail.cancellation.cancelledAt} /></p> : null}
       {role !== 'CASHIER' && detail.status === 'CONFIRMED' ? <div><h3>Anular gasto</h3>
         <label htmlFor="expense-reason">Motivo de anulación</label><textarea id="expense-reason"
           maxLength={500} value={reason} onChange={(event) => { setReason(event.target.value); cancelKey.current = null; }} />

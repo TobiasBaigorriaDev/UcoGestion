@@ -27,6 +27,61 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/audit": {
+      "get": {
+        "operationId": "AuditController_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "actorUserId",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "number",
+            },
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Audit",
+        ],
+      },
+    },
     "/api/v1/auth/accept-invitation": {
       "post": {
         "operationId": "AuthController_acceptInvitation",
@@ -243,6 +298,243 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/branches/{branchId}/deactivate": {
+      "post": {
+        "operationId": "BranchesController_deactivate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Branches",
+        ],
+      },
+    },
+    "/api/v1/branches/{branchId}/deactivation-blockers": {
+      "get": {
+        "operationId": "BranchesController_blockers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Branches",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions": {
+      "get": {
+        "operationId": "CashController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions/abort-close": {
+      "post": {
+        "operationId": "CashController_abortClose",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions/begin-close": {
+      "post": {
+        "operationId": "CashController_beginClose",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions/close": {
+      "post": {
+        "operationId": "CashController_close",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions/exceptional-close": {
+      "post": {
+        "operationId": "CashController_exceptionalClose",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions/final-sync": {
+      "post": {
+        "operationId": "CashController_finalSync",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions/manual-deposits": {
+      "post": {
+        "operationId": "CashController_deposit",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions/manual-withdrawals": {
+      "post": {
+        "operationId": "CashController_withdraw",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions/open": {
+      "post": {
+        "operationId": "CashController_open",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions/reconcile": {
+      "post": {
+        "operationId": "CashController_reconcile",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions/review-difference": {
+      "post": {
+        "operationId": "CashController_reviewDifference",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions/review-late-data": {
+      "post": {
+        "operationId": "CashController_reviewLateData",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
+    "/api/v1/cash-sessions/{sessionId}/checkpoint": {
+      "get": {
+        "operationId": "CashController_checkpoint",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Cash",
+        ],
+      },
+    },
     "/api/v1/catalog/categories": {
       "get": {
         "operationId": "CatalogReadController_readCategories",
@@ -272,6 +564,27 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
     "/api/v1/catalog/categories/{categoryId}": {
       "delete": {
         "operationId": "CatalogLifecycleController_deleteCategory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "categoryId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CatalogLifecycle",
+        ],
+      },
+      "patch": {
+        "operationId": "CatalogLifecycleController_editCategory",
         "parameters": [
           {
             "in": "path",
@@ -661,6 +974,59 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/dashboard": {
+      "get": {
+        "operationId": "DashboardController_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Dashboard",
+        ],
+      },
+    },
+    "/api/v1/devices/authorize-pos": {
+      "post": {
+        "operationId": "DeviceAuthorizationController_authorize",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "DeviceAuthorization",
+        ],
+      },
+    },
     "/api/v1/expense-categories": {
       "get": {
         "operationId": "ExpenseCategoriesController_list",
@@ -747,6 +1113,66 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/expenses": {
+      "post": {
+        "operationId": "ExpensesController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Expenses",
+        ],
+      },
+    },
+    "/api/v1/expenses/{id}": {
+      "get": {
+        "operationId": "ExpensesController_detail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Expenses",
+        ],
+      },
+    },
+    "/api/v1/expenses/{id}/cancellations": {
+      "post": {
+        "operationId": "ExpensesController_cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Expenses",
+        ],
+      },
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "AppController_getLiveness",
@@ -775,6 +1201,254 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/inventory/adjustments": {
+      "get": {
+        "operationId": "InventoryController_listAdjustments",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Inventory",
+        ],
+      },
+      "post": {
+        "operationId": "InventoryController_adjust",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Inventory",
+        ],
+      },
+    },
+    "/api/v1/inventory/adjustments/{id}/compensations": {
+      "post": {
+        "operationId": "InventoryController_compensate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Inventory",
+        ],
+      },
+    },
+    "/api/v1/inventory/incidents/{id}/resolve": {
+      "post": {
+        "operationId": "InventoryController_resolveIncident",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Inventory",
+        ],
+      },
+    },
+    "/api/v1/inventory/stocks": {
+      "get": {
+        "operationId": "InventoryController_stocks",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Inventory",
+        ],
+      },
+    },
+    "/api/v1/inventory/stocks/{branchId}/{itemId}": {
+      "get": {
+        "operationId": "InventoryController_stock",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Inventory",
+        ],
+      },
+    },
+    "/api/v1/inventory/stocks/{branchId}/{itemId}/threshold": {
+      "put": {
+        "operationId": "InventoryController_threshold",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Inventory",
+        ],
+      },
+    },
+    "/api/v1/inventory/transfers": {
+      "get": {
+        "operationId": "InventoryController_listTransfers",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Inventory",
+        ],
+      },
+      "post": {
+        "operationId": "InventoryController_transfer",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Inventory",
+        ],
+      },
+    },
+    "/api/v1/inventory/transfers/{id}/compensations": {
+      "post": {
+        "operationId": "InventoryController_compensateTransfer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Inventory",
+        ],
+      },
+    },
     "/api/v1/metrics": {
       "get": {
         "operationId": "AppController_getMetrics",
@@ -786,6 +1460,153 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         },
         "tags": [
           "App",
+        ],
+      },
+    },
+    "/api/v1/offline/authorize": {
+      "post": {
+        "operationId": "OfflineBootstrapController_authorize",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "OfflineBootstrap",
+        ],
+      },
+    },
+    "/api/v1/offline/bootstrap": {
+      "post": {
+        "operationId": "OfflineBootstrapController_issue",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "OfflineBootstrap",
+        ],
+      },
+    },
+    "/api/v1/offline/configuration-barriers": {
+      "post": {
+        "operationId": "ConfigurationBarrierController_begin",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "ConfigurationBarrier",
+        ],
+      },
+    },
+    "/api/v1/offline/configuration-barriers/{id}/checkpoints": {
+      "post": {
+        "operationId": "ConfigurationBarrierController_checkpoint",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "ConfigurationBarrier",
+        ],
+      },
+    },
+    "/api/v1/offline/configuration-barriers/{id}/complete": {
+      "post": {
+        "operationId": "ConfigurationBarrierController_complete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "ConfigurationBarrier",
+        ],
+      },
+    },
+    "/api/v1/offline/configuration-barriers/{id}/grants": {
+      "get": {
+        "operationId": "ConfigurationBarrierController_grants",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "deviceId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "ConfigurationBarrier",
+        ],
+      },
+    },
+    "/api/v1/offline/delivery/challenge": {
+      "post": {
+        "operationId": "OfflineDeliveryController_challenge",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "OfflineDelivery",
+        ],
+      },
+    },
+    "/api/v1/offline/delivery/push": {
+      "post": {
+        "operationId": "OfflineDeliveryController_push",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "OfflineDelivery",
         ],
       },
     },
@@ -953,6 +1774,417 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         },
         "tags": [
           "PlatformAdmin",
+        ],
+      },
+    },
+    "/api/v1/purchases": {
+      "post": {
+        "operationId": "PurchasesController_confirmPending",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Purchases",
+        ],
+      },
+    },
+    "/api/v1/purchases/paid": {
+      "post": {
+        "operationId": "PurchasesController_confirmPaid",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Purchases",
+        ],
+      },
+    },
+    "/api/v1/purchases/{id}": {
+      "get": {
+        "operationId": "PurchasesController_detail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Purchases",
+        ],
+      },
+    },
+    "/api/v1/purchases/{id}/cancel": {
+      "post": {
+        "operationId": "PurchasesController_cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Purchases",
+        ],
+      },
+    },
+    "/api/v1/purchases/{id}/pay": {
+      "post": {
+        "operationId": "PurchasesController_pay",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Purchases",
+        ],
+      },
+    },
+    "/api/v1/reports/exports/{id}": {
+      "get": {
+        "operationId": "ReportsController_exportStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Reports",
+        ],
+      },
+    },
+    "/api/v1/reports/{dataset}": {
+      "get": {
+        "operationId": "ReportsController_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "lowStock",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "number",
+            },
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Reports",
+        ],
+      },
+    },
+    "/api/v1/reports/{dataset}/csv": {
+      "get": {
+        "operationId": "ReportsController_csv",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Reports",
+        ],
+      },
+    },
+    "/api/v1/reports/{dataset}/exports": {
+      "post": {
+        "operationId": "ReportsController_queueExport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Reports",
+        ],
+      },
+    },
+    "/api/v1/sales": {
+      "post": {
+        "operationId": "SalesController_confirm",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Sales",
+        ],
+      },
+    },
+    "/api/v1/sales/checkout-context": {
+      "get": {
+        "operationId": "SalesController_checkoutContext",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Sales",
+        ],
+      },
+    },
+    "/api/v1/sales/quote": {
+      "post": {
+        "operationId": "SalesController_quote",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Sales",
+        ],
+      },
+    },
+    "/api/v1/sales/{id}": {
+      "get": {
+        "operationId": "SalesController_detail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Sales",
+        ],
+      },
+    },
+    "/api/v1/sales/{id}/cancel": {
+      "post": {
+        "operationId": "SalesController_cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Sales",
+        ],
+      },
+    },
+    "/api/v1/sales/{id}/receipt": {
+      "get": {
+        "operationId": "SalesController_receipt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Sales",
+        ],
+      },
+    },
+    "/api/v1/sales/{id}/receipt.pdf": {
+      "get": {
+        "operationId": "SalesController_receiptPdf",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Sales",
+        ],
+      },
+    },
+    "/api/v1/sales/{id}/receipt/print": {
+      "get": {
+        "operationId": "SalesController_printableReceipt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Sales",
         ],
       },
     },

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { AppShell } from '../../components/app-shell';
+import { OrganizationTimezone } from '../../components/organization-time';
 import { ApiProblemError } from '../../lib/api/client';
 import { ErrorSummary } from '../../components/error-summary';
 import { loadMemberships, selectOrganization, logout } from './auth-flow';
@@ -85,6 +86,7 @@ export function Workspace({ page = 'home' }: { page?: WorkspacePage }) {
 }
 
 function WorkspaceContent({ page }: { page: WorkspacePage }) {
+  const requiresTimezone = ['cash-sessions','sales','purchases','expenses','users'].includes(page);
   const activeId = useIdentityContext((state) => state.activeOrganizationId);
   const setActiveId = useIdentityContext((state) => state.setActiveOrganizationId);
   const activeBranchId = useIdentityContext((state) => state.activeBranchId);
@@ -94,7 +96,7 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
   const settings = useQuery({
     queryKey: ['organization-settings', activeId],
     queryFn: () => loadOrganizationSettings(activeId ?? ''),
-    enabled: (page === 'settings' || page === 'home' || page === 'audit' || page === 'reports') && !!activeId,
+    enabled: (requiresTimezone || page === 'settings' || page === 'home' || page === 'audit' || page === 'reports') && !!activeId,
   });
   const users = useQuery({ queryKey: ['user-management', activeId], queryFn: () => loadUserManagement(activeId ?? ''), enabled: page === 'users' && !!activeId });
   const branches = useQuery({ queryKey: ['branches', activeId], queryFn: () => loadBranches(activeId ?? ''), enabled: !!activeId });
@@ -159,7 +161,9 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
   if (!activeId) return <main><p>Elegí una organización para continuar.</p><a href="/organizations/select">Seleccionar organización</a></main>;
   const organizations = memberships.data;
   const current = organizations.find((item) => item.organizationId === activeId);
-  return <AppShell organizations={organizations.map((item) => ({ id: item.organizationId, name: item.organizationName, branches: item.organizationId === activeId ? branches.data?.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => ({ id: branch.id, name: branch.name })) ?? [] : [] }))}
+  if (requiresTimezone && settings.error) return <main><ErrorSummary error={settings.error instanceof ApiProblemError ? settings.error : new ApiProblemError({status:0,code:'SETTINGS_LOAD_FAILED',message:'No pudimos cargar la zona horaria de la organización.'})} /><button type="button" onClick={() => void settings.refetch()}>Reintentar</button></main>;
+  if (requiresTimezone && !settings.data) return <main><p role="status">Cargando zona horaria…</p></main>;
+  return <OrganizationTimezone.Provider value={settings.data?.timezone ?? 'UTC'}><AppShell organizations={organizations.map((item) => ({ id: item.organizationId, name: item.organizationName, branches: item.organizationId === activeId ? branches.data?.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => ({ id: branch.id, name: branch.name })) ?? [] : [] }))}
     activeOrganizationId={activeId} activeBranchId={activeBranchId} onOrganizationChange={(id) => void changeOrganization(id)} onBranchChange={setActiveBranchId}
     navigation={[
       { href: '/workspace', label: 'Inicio' },
@@ -325,5 +329,5 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
           role={current.role} timezone={settings.data.timezone} branches={branches.data?.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => ({ id: branch.id, name: branch.name })) ?? []} />
           : <p role="status">Cargando zona horaria…</p>
         : <section><h1>{current?.organizationName}</h1><p>Organización activa.</p></section>}
-    </AppShell>;
+    </AppShell></OrganizationTimezone.Provider>;
 }

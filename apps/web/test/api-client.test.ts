@@ -17,10 +17,14 @@ describe('ApiClient', () => {
   it('T199 blocks ordinary API requests offline before invoking transport', async () => {
     const fetcher = vi.fn<typeof fetch>();
     const client = new ApiClient(fetcher, '/api/v1', () => false);
-    for (const [path, method] of [['/organizations/settings', 'PATCH'], ['/memberships', 'POST'],
+    for (const [path, method] of [['/organizations/settings', 'PATCH'], ['/users/invitations', 'POST'], ['/users/memberships/id', 'PATCH'],
       ['/purchases', 'POST'], ['/expenses', 'POST'], ['/inventory/adjustments', 'POST'],
       ['/sales/id/cancel', 'POST'], ['/cash-sessions/id/close', 'POST'], ['/reports/sales', 'GET'],
-      ['/catalog/items', 'POST']] as const) {
+      ['/catalog/items', 'POST'], ['/suppliers', 'POST'], ['/inventory/transfers', 'POST'], ['/branches', 'POST'],
+      ['/branches/id/cash-registers', 'POST'], ['/organizations/payment-methods/CASH', 'PATCH'], ['/customers/id', 'DELETE'],
+      ['/catalog/categories', 'POST'], ['/catalog/categories/id', 'PATCH'], ['/catalog/categories/id/status', 'PATCH'],
+      ['/catalog/categories/id', 'DELETE'], ['/catalog/items/id', 'PATCH'], ['/catalog/items/id/status', 'PATCH'],
+      ['/catalog/items/id/structure', 'PATCH'], ['/catalog/items/id', 'DELETE']] as const) {
       await expect(client.request(path, { method, body: method === 'GET' ? undefined : {} }))
         .rejects.toMatchObject({ code: 'OFFLINE_NOT_ALLOWED' });
     }

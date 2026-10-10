@@ -36,7 +36,7 @@ async page=>{
   });
   const url='http://127.0.0.1:4179/apps/web/test/browser/cash-operations.html';
   const audit=async name=>{
-    await page.addScriptTag({path:'C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/web/node_modules/axe-core/axe.min.js'});
+    await page.addScriptTag({path:'apps/web/node_modules/axe-core/axe.min.js'});
     for(const width of [1440,390]){
       await page.setViewportSize({width,height:1000});await page.evaluate(()=>document.fonts.ready);
       const violations=await page.evaluate(async()=>window.axe.run());

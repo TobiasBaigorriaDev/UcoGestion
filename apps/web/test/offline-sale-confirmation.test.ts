@@ -91,7 +91,8 @@ it('T197 validates payment methods, change, zero total and current item knowledg
       discount: { kind: 'PERCENTAGE', value: '100' } });
     await expect(setup.pos.confirmSale(actor, { draftId: free.id, payments: [{ method: 'CASH', appliedAmount: '0.00' }] })).rejects.toThrow();
     const sale = await setup.pos.confirmSale(actor, { draftId: free.id, payments: [] });
-    expect(await setup.plaintext('sale', sale.id)).toMatchObject({ payments: [], quote: { total: '0.00' } });
+    expect(await setup.plaintext('sale', sale.id)).toMatchObject({ payments: [], quote: { total: '0.00' },
+      receipt: { label: 'Comprobante no fiscal' } });
   } finally { setup.db.close(); }
 });
 

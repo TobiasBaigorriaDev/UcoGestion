@@ -1,4 +1,5 @@
 'use client';
+import { OrganizationTime } from '../../components/organization-time';
 
 import { useRef, useState, type FormEvent } from 'react';
 
@@ -88,13 +89,13 @@ export function PurchaseLookup({ organizationId, branchId, role, paymentMethods,
         : purchase.status === 'PAID' ? 'Pagada' : 'Pendiente de pago'}</p>
       <p><strong>Proveedor:</strong> {purchase.supplierName}</p>
       <p><strong>Total:</strong> {purchase.total} {purchase.currency}</p>
-      <p><strong>Confirmada:</strong> {new Date(purchase.confirmedAt).toLocaleString('es-AR')}</p>
+      <p><strong>Confirmada:</strong> <OrganizationTime value={purchase.confirmedAt} /></p>
       <h3>Productos y costos de esta compra</h3><ul className={styles.rows}>
         {purchase.items.map((item, index) => <li key={index}>{item.itemName} · {item.quantity} × {item.unitCost} = {item.lineTotal}</li>)}
       </ul>
       {purchase.payment ? <p><strong>Pago histórico:</strong> {purchase.payment.method} · {purchase.payment.amount}</p> : null}
       {purchase.cancellation ? <p role="status"><strong>Anulación:</strong> {purchase.cancellation.reason}
-        {' · '}{new Date(purchase.cancellation.cancelledAt).toLocaleString('es-AR')}</p> : null}
+        {' · '}<OrganizationTime value={purchase.cancellation.cancelledAt} /></p> : null}
       {owner && purchase.status === 'PENDING_PAYMENT' && purchase.total === '0.00'
         ? <p role="status">Esta recepción tiene total cero y no admite un pago. Si se confirmó por error, podés anularla.</p>
         : null}

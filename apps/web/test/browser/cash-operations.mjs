@@ -56,7 +56,7 @@ async page=>{
   await page.getByRole('textbox',{name:'Motivo',exact:true}).fill('Cambio de turno');
   await page.getByRole('button',{name:'Registrar movimiento'}).focus();await page.keyboard.press('Enter');
   await page.getByText('Esperado: 7.00 ARS').waitFor();
-  await page.addScriptTag({path:'C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/web/node_modules/axe-core/axe.min.js'});
+  await page.addScriptTag({path:'apps/web/node_modules/axe-core/axe.min.js'});
   await page.evaluate(()=>document.fonts.ready);
   check(await page.evaluate(()=>document.fonts.check('16px "Plus Jakarta Sans"') && window.getComputedStyle(document.body).fontFamily.includes('Plus Jakarta Sans')),'Workspace font did not load');
   check((await page.evaluate(async()=>window.axe.run())).violations.length===0,'Desktop accessibility failed');

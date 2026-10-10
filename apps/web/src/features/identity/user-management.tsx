@@ -1,4 +1,5 @@
 'use client';
+import { OrganizationTime } from '../../components/organization-time';
 
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -107,7 +108,7 @@ export function UserManagement({ organizationId, data, onInvite = inviteUser, on
       {data.memberships.length === 0 ? <p>No hay personas administrables en tu alcance.</p> : <div className={styles.rows}>{data.memberships.map((member) => <MemberEditor key={`${member.id}:${member.version}`} member={member} branches={data.branches} actorRole={data.actorRole} busy={busy} onSave={(role, branchIds) => run(() => onChangeRole(organizationId, member.id, member.version, role, branchIds), 'Membresía actualizada.')} onStatus={() => run(() => onChangeStatus(organizationId, member.id, member.version, member.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'), 'Estado actualizado.')} onRevoke={() => run(() => onRevokeMembership(organizationId, member.id, member.version), 'Acceso revocado.')} />)}</div>}
     </section>
     <section className={styles.panel} aria-labelledby="invites-heading"><h2 id="invites-heading">Invitaciones pendientes</h2>
-      {data.invitations.length === 0 ? <p>No hay invitaciones pendientes en tu alcance.</p> : <ul className={styles.rows}>{data.invitations.map((invitation) => <li key={invitation.id} className={styles.row}><div><strong>{invitation.email}</strong><p>{roleLabels[invitation.role]} · {invitation.status === 'EXPIRED' ? 'Vencida' : `Vence el ${new Date(invitation.expiresAt).toLocaleDateString('es-AR')}`}</p></div><button type="button" disabled={busy} onClick={() => void run(() => onResendInvitation(organizationId, invitation.id), 'Invitación reenviada. El enlace anterior dejó de ser válido.')}>Reenviar invitación a {invitation.email}</button>{invitation.status === 'PENDING' ? <button type="button" disabled={busy} onClick={() => void run(() => onRevokeInvitation(organizationId, invitation.id), 'Invitación revocada.')}>Revocar invitación de {invitation.email}</button> : null}</li>)}</ul>}
+      {data.invitations.length === 0 ? <p>No hay invitaciones pendientes en tu alcance.</p> : <ul className={styles.rows}>{data.invitations.map((invitation) => <li key={invitation.id} className={styles.row}><div><strong>{invitation.email}</strong><p>{roleLabels[invitation.role]} · {invitation.status === 'EXPIRED' ? 'Vencida' : <>Vence el <OrganizationTime value={invitation.expiresAt} dateOnly /></>}</p></div><button type="button" disabled={busy} onClick={() => void run(() => onResendInvitation(organizationId, invitation.id), 'Invitación reenviada. El enlace anterior dejó de ser válido.')}>Reenviar invitación a {invitation.email}</button>{invitation.status === 'PENDING' ? <button type="button" disabled={busy} onClick={() => void run(() => onRevokeInvitation(organizationId, invitation.id), 'Invitación revocada.')}>Revocar invitación de {invitation.email}</button> : null}</li>)}</ul>}
     </section>
   </section>;
 }

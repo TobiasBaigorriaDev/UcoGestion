@@ -8,6 +8,7 @@ import { runMigrations } from '../src/database/migrate.js';
 import { TenantTransaction } from '../src/database/tenant-transaction.js';
 import { CatalogCategoryManagementService } from '../src/modules/catalog/catalog-category-management.service.js';
 import { CatalogItemCreationService } from '../src/modules/catalog/catalog-item-creation.service.js';
+import { CatalogItemEditService } from '../src/modules/catalog/catalog-item-edit.service.js';
 import {
   CatalogItemLifecycleService,
 } from '../src/modules/catalog/catalog-item-lifecycle.service.js';
@@ -20,6 +21,7 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
   let pool: Pool;
   let runtimePool: Pool;
   let itemCreation: CatalogItemCreationService;
+  let itemEditing: CatalogItemEditService;
   let itemLifecycle: CatalogItemLifecycleService;
   let categoryManagement: CatalogCategoryManagementService;
   let priceService: CatalogPriceService;
@@ -73,6 +75,7 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
 
     const transactions = new TenantTransaction(runtimePool);
     itemCreation = new CatalogItemCreationService(transactions);
+    itemEditing = new CatalogItemEditService(transactions);
     itemLifecycle = new CatalogItemLifecycleService(transactions);
     categoryManagement = new CatalogCategoryManagementService(transactions);
     priceService = new CatalogPriceService(transactions);
@@ -130,6 +133,81 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
         randomUUID(), otherOrganizationId, ownerId,
       ],
     );
+  });
+
+  it.each(['OWNER', 'ADMIN'])('T236I: %s manages items and categories globally with assigned branch scope', async role => {
+    const firstBranch = randomUUID(), secondBranch = randomUUID();
+    await pool.query("INSERT INTO branches(id,organization_id,name) VALUES ($1,$2,'Assigned'),($3,$2,'Unassigned')", [firstBranch, organizationId, secondBranch]);
+    await pool.query(`INSERT INTO membership_branches(organization_id,membership_id,branch_id)
+      SELECT organization_id,id,$3 FROM memberships WHERE organization_id=$1 AND user_id=$2`, [organizationId, adminId, firstBranch]);
+    const ctx = role === 'OWNER' ? ownerContext() : adminContext();
+    const item = await itemCreation.createIdempotent(ctx, { name: 'Global item', type: 'PRODUCT', trackInventory: true }, randomUUID());
+    expect((await pool.query('SELECT branch_id FROM branch_stocks WHERE item_id=$1 ORDER BY branch_id', [item.id])).rows.map(row => row.branch_id).sort())
+      .toEqual([firstBranch, secondBranch].sort());
+    const edited = await itemEditing.update(ctx, item.id, 1, { name: 'Global edited', sku: null, barcode: null }, randomUUID());
+    expect(edited).toMatchObject({ name: 'Global edited', version: 2 });
+    expect(await itemLifecycle.changeStatus(ctx, item.id, 2, 'INACTIVE', randomUUID())).toMatchObject({ status: 'INACTIVE', version: 3 });
+    expect(await itemLifecycle.changeStatus(ctx, item.id, 3, 'ACTIVE', randomUUID())).toMatchObject({ status: 'ACTIVE', version: 4 });
+    expect(await itemLifecycle.deletePhysically(ctx, item.id, 4, randomUUID())).toEqual({ id: item.id, deleted: true });
+    expect((await pool.query('SELECT 1 FROM branch_stocks WHERE item_id=$1', [item.id])).rowCount).toBe(0);
+    const category = await categoryManagement.create(ctx, { name: 'Global category' }, randomUUID());
+    expect(await categoryManagement.update(ctx, category.id, 1, { name: 'Global renamed' }, randomUUID())).toMatchObject({ name: 'Global renamed', version: 2 });
+    expect(await categoryManagement.changeStatus(ctx, category.id, 2, 'INACTIVE', randomUUID())).toMatchObject({ status: 'INACTIVE', version: 3 });
+    expect(await categoryManagement.changeStatus(ctx, category.id, 3, 'ACTIVE', randomUUID())).toMatchObject({ status: 'ACTIVE', version: 4 });
+    expect(await categoryManagement.deletePhysically(ctx, category.id, 4, randomUUID())).toEqual({ id: category.id, deleted: true });
+  });
+
+  it.each(['CASHIER', 'EMPLOYEE', 'FOREIGN'])('T236I: denies every global master command for %s with no effects', async role => {
+    const item = await itemCreation.createIdempotent(ownerContext(), { name: 'Protected item', type: 'SERVICE' }, randomUUID());
+    const category = await categoryManagement.create(ownerContext(), { name: 'Protected category' }, randomUUID());
+    const ctx = role === 'CASHIER' ? cashierContext() : role === 'EMPLOYEE' ? employeeContext() : ownerContext(randomUUID(), otherOrganizationId);
+    const commands = [
+      () => itemCreation.createIdempotent(ctx, { name: 'Denied', type: 'SERVICE' }, randomUUID()),
+      () => itemEditing.update(ctx, item.id, 1, { name: 'Denied', sku: null, barcode: null }, randomUUID()),
+      () => itemLifecycle.changeStatus(ctx, item.id, 1, 'INACTIVE', randomUUID()),
+      () => itemLifecycle.changeStatus(ctx, item.id, 1, 'ACTIVE', randomUUID()),
+      () => itemLifecycle.deletePhysically(ctx, item.id, 1, randomUUID()),
+      () => categoryManagement.create(ctx, { name: 'Denied' }, randomUUID()),
+      () => categoryManagement.update(ctx, category.id, 1, { name: 'Denied' }, randomUUID()),
+      () => categoryManagement.changeStatus(ctx, category.id, 1, 'INACTIVE', randomUUID()),
+      () => categoryManagement.changeStatus(ctx, category.id, 1, 'ACTIVE', randomUUID()),
+      () => categoryManagement.deletePhysically(ctx, category.id, 1, randomUUID()),
+    ];
+    // The foreign OWNER can create in its own tenant, but cannot touch this tenant's IDs.
+    for (const [index, command] of commands.entries()) {
+      if (role === 'FOREIGN' && (index === 0 || index === 5)) continue;
+      await expect(command()).rejects.toMatchObject({ code: expect.stringMatching(role === 'FOREIGN' ? /NOT_FOUND$/ : /FORBIDDEN$/) });
+    }
+    expect((await pool.query('SELECT name,version,status FROM catalog_items WHERE id=$1', [item.id])).rows).toEqual([{ name: 'Protected item', version: '1', status: 'ACTIVE' }]);
+    expect((await pool.query('SELECT name,version,status FROM catalog_categories WHERE id=$1', [category.id])).rows).toEqual([{ name: 'Protected category', version: '1', status: 'ACTIVE' }]);
+    expect((await pool.query('SELECT 1 FROM audit_events WHERE request_id=$1', [ctx.requestId])).rowCount).toBe(0);
+  });
+
+  it('T236I: stock cleanup retains zero balances with movement history and rejects nonzero balances', async () => {
+    const branchId = randomUUID();
+    await pool.query("INSERT INTO branches(id,organization_id,name) VALUES ($1,$2,'Protected stock')", [branchId, organizationId]);
+    const historical = await itemCreation.createIdempotent(ownerContext(), { name: 'Historical zero', type: 'PRODUCT', trackInventory: true }, randomUUID());
+    await pool.query(`INSERT INTO inventory_movements(id,organization_id,branch_id,item_id,actor_user_id,delta,source_type,source_id,source_line_id,effect_kind)
+      VALUES ($1,$2,$3,$4,$5,1,'TEST',$6,$7,'INCREASE')`, [randomUUID(), organizationId, branchId, historical.id, ownerId, randomUUID(), randomUUID()]);
+    const nonzero = await itemCreation.createIdempotent(ownerContext(), { name: 'Nonzero', type: 'PRODUCT', trackInventory: true }, randomUUID());
+    await pool.query('UPDATE branch_stocks SET quantity=1 WHERE item_id=$1', [nonzero.id]);
+    const before = (await pool.query('SELECT * FROM branch_stocks WHERE organization_id=$1 ORDER BY item_id', [organizationId])).rows;
+    const client = await runtimePool.connect();
+    try {
+      for (const item of [historical, nonzero]) {
+        await client.query('BEGIN');
+        await client.query("SELECT set_config('app.organization_id',$1,true)", [organizationId]);
+        await expect(client.query('DELETE FROM catalog_items WHERE organization_id=$1 AND id=$2', [organizationId, item.id]))
+          .rejects.toMatchObject({ code: item.id === historical.id ? '23503' : '55000' });
+        await client.query('ROLLBACK');
+      }
+      await client.query('BEGIN');
+      await client.query("SELECT set_config('app.organization_id',$1,true)", [otherOrganizationId]);
+      expect((await client.query('DELETE FROM catalog_items WHERE id=$1', [historical.id])).rowCount).toBe(0);
+      await client.query('ROLLBACK');
+    } finally { client.release(); }
+    expect((await pool.query('SELECT * FROM branch_stocks WHERE organization_id=$1 ORDER BY item_id', [organizationId])).rows).toEqual(before);
+    expect((await pool.query('SELECT 1 FROM inventory_movements WHERE item_id=$1', [historical.id])).rowCount).toBe(1);
   });
 
   describe('T078: Deactivate item with history and prevent new use without altering snapshots', () => {
@@ -441,6 +519,19 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
       ).rejects.toThrowError(
         expect.objectContaining({ code: 'CATEGORY_DELETE_BLOCKED_BY_OFFLINE_EXPOSURE' }),
       );
+      // T236I: cosmetic edits preserve identities, references and offline uncertainty.
+      const historyBefore = (await pool.query('SELECT * FROM catalog_category_history_references WHERE category_id=$1', [catWithHistory.id])).rows;
+      const exposureBefore = (await pool.query('SELECT * FROM offline_exposure_resources WHERE catalog_category_id=$1', [catWithExposure.id])).rows;
+      for (const category of [catWithHistory, catWithExposure]) {
+        const edited = await categoryManagement.update(adminContext(), category.id, 1, { name: `${category.name} renamed` }, randomUUID());
+        expect(edited).toEqual({ ...category, name: `${category.name} renamed`, version: 2 });
+        const inactive = await categoryManagement.changeStatus(adminContext(), category.id, 2, 'INACTIVE', randomUUID());
+        expect(inactive).toMatchObject({ id: category.id, status: 'INACTIVE', version: 3 });
+        await expect(categoryManagement.deletePhysically(adminContext(), category.id, 3, randomUUID()))
+          .rejects.toMatchObject({ code: category.id === catWithHistory.id ? 'CATEGORY_DELETE_BLOCKED_BY_HISTORY' : 'CATEGORY_DELETE_BLOCKED_BY_OFFLINE_EXPOSURE' });
+      }
+      expect((await pool.query('SELECT * FROM catalog_category_history_references WHERE category_id=$1', [catWithHistory.id])).rows).toEqual(historyBefore);
+      expect((await pool.query('SELECT * FROM offline_exposure_resources WHERE catalog_category_id=$1', [catWithExposure.id])).rows).toEqual(exposureBefore);
     });
   });
 
@@ -523,6 +614,24 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
       );
     });
 
+    it('RF-159 preserves type and unit with historical references even at zero stock', async () => {
+      const branchId = randomUUID();
+      await pool.query("INSERT INTO branches(id,organization_id,name) VALUES($1,$2,'Stock cero')", [branchId, organizationId]);
+      const item = await itemCreation.create(ownerContext(), { name: 'Histórico agotado', type: 'PRODUCT', trackInventory: true });
+      expect((await pool.query('SELECT quantity::text AS quantity FROM branch_stocks WHERE item_id=$1', [item.id])).rows)
+        .toEqual([{ quantity: '0.000' }]);
+      await pool.query(`INSERT INTO resource_history_references(id,organization_id,catalog_item_id,reference_type,source_id)
+        VALUES($1,$2,$3,'SALE_SNAPSHOT',$4)`, [randomUUID(), organizationId, item.id, randomUUID()]);
+      for (const change of [{ type: 'SERVICE' as const, trackInventory: false }, { type: 'PRODUCT' as const, baseUnit: 'FRACTIONAL' as const }]) {
+        await expect(itemLifecycle.changeStructural(ownerContext(), item.id, item.version, change, randomUUID()))
+          .rejects.toThrowError(expect.objectContaining({ code: 'CATALOG_ITEM_STRUCTURAL_CHANGE_BLOCKED_BY_HISTORY' }));
+      }
+      expect((await pool.query('SELECT type,base_unit,track_inventory FROM catalog_items WHERE id=$1', [item.id])).rows[0])
+        .toEqual({ type: 'PRODUCT', base_unit: 'UNIT', track_inventory: true });
+      expect((await pool.query('SELECT quantity::text AS quantity FROM branch_stocks WHERE item_id=$1', [item.id])).rows)
+        .toEqual([{ quantity: '0.000' }]);
+    });
+
     it('blocks structural change on item with history (both application policy and DB trigger)', async () => {
       const item = await itemCreation.create(ownerContext(), {
         name: 'Historical Item',
@@ -565,6 +674,14 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
       expect(rejectedRecord.rowCount).toBe(0);
 
       // Direct SQL trigger check
+      for (const change of [{ type: 'SERVICE' as const }, { type: 'PRODUCT' as const, baseUnit: 'FRACTIONAL' as const }]) {
+        await expect(itemLifecycle.changeStructural(ownerContext(), item.id, item.version, change, randomUUID()))
+          .rejects.toThrowError(expect.objectContaining({ code: 'CATALOG_ITEM_STRUCTURAL_CHANGE_BLOCKED_BY_HISTORY' }));
+      }
+      expect((await pool.query('SELECT quantity::text FROM branch_stocks WHERE item_id=$1', [item.id])).rows)
+        .toEqual([]);
+      await expect(pool.query("UPDATE catalog_items SET type='SERVICE' WHERE id=$1", [item.id])).rejects.toThrow(/blocked by history/i);
+      await expect(pool.query("UPDATE catalog_items SET base_unit='FRACTIONAL' WHERE id=$1", [item.id])).rejects.toThrow(/blocked by history/i);
       await expect(
         pool.query(
           `UPDATE catalog_items SET track_inventory = true WHERE id = $1`,
@@ -878,12 +995,12 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
         );
 
         // Transaction B attempts to insert a reference (which locks catalog_items row via foreign key)
-        const insertPromise = pool.query(
+        const insertRejected = expect(pool.query(
           `INSERT INTO resource_history_references
              (id, organization_id, catalog_item_id, reference_type, source_id)
            VALUES ($1, $2, $3, 'SALE_SNAPSHOT', $4)`,
           [randomUUID(), organizationId, item.id, randomUUID()],
-        );
+        )).rejects.toMatchObject({ code: '23503' });
 
         // While A is holding the lock, deletion inside transaction A proceeds
         await clientA.query(
@@ -893,7 +1010,7 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
         await clientA.query('COMMIT');
 
         // Transaction B must fail because the referenced catalog item was deleted
-        await expect(insertPromise).rejects.toThrow();
+        await insertRejected;
       } finally {
         clientA.release();
       }

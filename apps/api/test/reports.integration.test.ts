@@ -410,4 +410,23 @@ describe('read-only report datasets', () => {
     expect((await ownerPool.query('SELECT status FROM report_exports WHERE id = $1',
       [queued.id])).rows[0]?.status).toBe('FAILED');
   });
+  it('RF-148 includes positive data from every tenant branch for OWNER while ADMIN retains its scope', async () => {
+    const register = randomUUID(), device = randomUUID(), session = randomUUID(), sale = randomUUID();
+    await ownerPool.query("INSERT INTO cash_registers(id,organization_id,branch_id,name) VALUES ($1,$2,$3,'All branches')",
+      [register, organizationId, otherBranchId]);
+    await ownerPool.query(`INSERT INTO devices(id,organization_id,branch_id,authorized_by_user_id,authorized_at,status)
+      VALUES ($1,$2,$3,$4,now(),'ACTIVE')`, [device, organizationId, otherBranchId, ownerId]);
+    await ownerPool.query(`INSERT INTO cash_sessions(id,organization_id,branch_id,cash_register_id,owner_user_id,
+      device_id,origin,status,opening_cash,expected_cash,currency_code)
+      VALUES ($1,$2,$3,$4,$5,$6,'ONLINE','OPEN','0.00','0.00','ARS')`,
+      [session, organizationId, otherBranchId, register, ownerId, device]);
+    await ownerPool.query(`INSERT INTO sales(id,organization_id,branch_id,cash_session_id,device_id,actor_user_id,
+      session_owner_user_id,client_operation_id,currency_code,subtotal,discount,total,receipt_snapshot)
+      VALUES ($1,$2,$3,$4,$5,$6,$6,$7,'ARS','7.00','0.00','7.00','{}')`,
+      [sale, organizationId, otherBranchId, session, device, ownerId, randomUUID()]);
+    const all = await reports.list(context(ownerId), 'sales', { limit: 100 });
+    expect(all.items.map(row => row.id)).toEqual(expect.arrayContaining([saleId, sale]));
+    expect((await reports.list(context(ownerId), 'sales', { limit: 100, branchId: otherBranchId })).items.map(row => row.id)).toContain(sale);
+    expect((await reports.list(context(adminId), 'sales', { limit: 100 })).items.map(row => row.id)).not.toContain(sale);
+  });
 });

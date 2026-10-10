@@ -82,6 +82,9 @@ export const identityOutboxJobs = pgTable(
     availableAt: timestamp('available_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
+    leaseId: uuid('lease_id'),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+    lastErrorCode: text('last_error_code'),
   },
   (table) => [unique('identity_outbox_jobs_job_key_key').on(table.jobKey)],
 );

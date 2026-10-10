@@ -10,11 +10,12 @@ it('refreshes own pending state after automatic signed delivery without requesti
   await userEvent.type(screen.getByLabelText('PIN offline'), 'offline-pin');
   await userEvent.click(screen.getByRole('button', { name: 'Desbloquear mi identidad' }));
   await screen.findByText('own-id');
+  expect(screen.getByText(new Date(status.pending[0]!.occurredAt).toLocaleString('es-AR',{timeZone:status.timezone}))).toBeTruthy();
   fireEvent(window, new Event('uco:delivery-state'));
   await screen.findByText('No tenés operaciones pendientes.');
   expect(sync).not.toHaveBeenCalled();
 });
-const status = { expired: false, expiresAt: '2026-10-10T12:00:00Z', lastSyncAt: '2026-10-07T12:00:00Z',
+const status = { timezone: 'Pacific/Auckland', expired: false, expiresAt: '2026-10-10T12:00:00Z', lastSyncAt: '2026-10-07T12:00:00Z',
   pending: [{ id: 'own-id', kind: 'sale-confirm', sequence: '7', occurredAt: '2026-10-07T12:10:00Z' }] };
 it('T220A keeps detail hidden until PIN unlock and clears it immediately when locked', async () => {
   const unlock = vi.fn().mockResolvedValue(status), lock = vi.fn();

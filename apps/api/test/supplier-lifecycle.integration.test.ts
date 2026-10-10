@@ -65,6 +65,24 @@ describe('supplier lifecycle (T086 / RF-215, RF-218, RF-219, RF-220)', () => {
     await container?.stop();
   });
 
+  it.each(['OWNER', 'ADMIN'])('RF-215 permits the complete supplier lifecycle to %s and retains inactive tax IDs', async role => {
+    const context = { organizationId, requestId: randomUUID(), userId: role === 'OWNER' ? ownerUserId : adminUserId };
+    const taxId = `tax-${randomUUID()}`;
+    const created = await service.create(context, { name: `${role} lifecycle ${randomUUID()}`, taxId }, randomUUID());
+    expect((await service.findById(context, created.id)).id).toBe(created.id);
+    expect((await service.list(context, { search: created.name })).items.map(row => row.id)).toContain(created.id);
+    const updated = await service.update(context, created.id, created.version, { name: `${created.name} edited` }, randomUUID());
+    const inactive = await service.changeStatus(context, created.id, updated.version, 'INACTIVE', randomUUID());
+    expect(inactive.status).toBe('INACTIVE');
+    await expect(service.create(context, { name: 'Duplicate inactive tax ID', taxId }, randomUUID())).rejects.toThrow();
+    expect((await pool.query('SELECT tax_id,status FROM suppliers WHERE id=$1', [created.id])).rows)
+      .toEqual([{ tax_id: taxId, status: 'INACTIVE' }]);
+    const active = await service.changeStatus(context, created.id, inactive.version, 'ACTIVE', randomUUID());
+    expect(active.status).toBe('ACTIVE');
+    await service.deletePhysically(context, created.id, active.version, randomUUID());
+    expect((await pool.query('SELECT id FROM suppliers WHERE id=$1', [created.id])).rows).toEqual([]);
+  });
+
   it('allows OWNER and ADMIN to consult supplier by id and list suppliers (RF-215)', async () => {
     const ownerContext = {
       organizationId,

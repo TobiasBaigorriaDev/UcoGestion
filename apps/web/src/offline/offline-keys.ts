@@ -2,6 +2,7 @@ import { argon2id } from 'hash-wasm';
 
 import { assertOfflineIdentity } from './offline-revocation';
 import { OfflineDatabase } from './offline-database';
+import { observeRetirement } from './identity-retirement-events';
 
 const PIN_BACKOFF_THRESHOLD = 5;
 const PIN_LIMIT = 10;
@@ -17,11 +18,16 @@ async function derivePinKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
 
 export class OfflineKeys {
   private static readonly instances = new Set<WeakRef<OfflineKeys>>();
+  private static readonly observedWindows = new WeakSet<Window>();
   private generation = 0;
   private unlocked: { userId: string; dek: CryptoKey } | undefined;
 
   constructor(private readonly db: OfflineDatabase, private readonly now: () => number = Date.now) {
     OfflineKeys.instances.add(new WeakRef(this));
+    if (typeof window !== 'undefined' && !OfflineKeys.observedWindows.has(window)) {
+      observeRetirement(() => OfflineKeys.lockAll());
+      OfflineKeys.observedWindows.add(window);
+    }
   }
 
   static lockAll(databaseName?: string): void {

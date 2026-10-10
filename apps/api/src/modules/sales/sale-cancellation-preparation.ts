@@ -4,6 +4,7 @@ import type { PoolClient } from 'pg';
 
 import type { TenantTransactionContext } from '../../database/tenant-transaction.js';
 import { CashSessionDevicePolicy } from '../cash/index.js';
+import { reverseSaleStock } from '../inventory/index.js';
 
 export class SaleCancellationError extends Error {
   constructor(readonly code: 'SALE_CANCELLATION_FORBIDDEN' | 'SALE_CANCELLATION_REASON_REQUIRED' |
@@ -108,27 +109,7 @@ export class SaleCancellationPreparation {
 
   async reverseStock(client: PoolClient, context: TenantTransactionContext,
     cancellation: PreparedSaleCancellation): Promise<void> {
-    const originals = await client.query<{ branch_id: string; item_id: string;
-      source_line_id: string; quantity: string }>(
-      `SELECT branch_id, item_id, source_line_id, (-delta)::text AS quantity
-       FROM inventory_movements WHERE organization_id = $1 AND source_type = 'SALE'
-         AND source_id = $2 AND effect_kind = 'DECREASE'
-       ORDER BY branch_id, item_id, source_line_id`,
-      [context.organizationId, cancellation.saleId]);
-    for (const movement of originals.rows) {
-      const stock = await client.query(`SELECT 1 FROM branch_stocks
-        WHERE organization_id = $1 AND branch_id = $2 AND item_id = $3 FOR UPDATE`,
-      [context.organizationId, movement.branch_id, movement.item_id]);
-      if (!stock.rowCount) throw new Error('Sale stock projection missing');
-      await client.query(`INSERT INTO inventory_movements (id, organization_id, branch_id,
-        item_id, actor_user_id, delta, source_type, source_id, source_line_id, effect_kind)
-        VALUES ($1, $2, $3, $4, $5, $6, 'SALE_CANCELLATION', $7, $8, 'INCREASE')`,
-      [randomUUID(), context.organizationId, movement.branch_id, movement.item_id,
-        context.userId, movement.quantity, cancellation.cancellationId, movement.source_line_id]);
-      await client.query(`UPDATE branch_stocks SET quantity = quantity + $4::numeric,
-        version = version + 1 WHERE organization_id = $1 AND branch_id = $2 AND item_id = $3`,
-      [context.organizationId, movement.branch_id, movement.item_id, movement.quantity]);
-    }
+    await reverseSaleStock(client,context,cancellation.saleId,cancellation.cancellationId);
   }
 
   async refund(client: PoolClient, context: TenantTransactionContext,

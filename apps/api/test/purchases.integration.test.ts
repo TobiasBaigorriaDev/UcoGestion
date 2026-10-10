@@ -9,6 +9,7 @@ import { TenantTransaction } from '../src/database/tenant-transaction.js';
 import { PurchasePersistence } from '../src/modules/purchases/purchase-persistence.js';
 import { PurchasePolicy, type PurchaseAction } from '../src/modules/purchases/purchase-policy.js';
 import { PurchaseOperationsService } from '../src/modules/purchases/purchase-operations.service.js';
+import { SupplierManagementService } from '../src/modules/suppliers/supplier-management.service.js';
 import { PurchaseCancellationPreparation } from '../src/modules/purchases/purchase-cancellation-preparation.js';
 import { DeviceAuthorizationService } from '../src/modules/cash/device-authorization.service.js';
 
@@ -490,11 +491,29 @@ describe('purchase foundation', () => {
 
     const employeePurchase = await purchases.confirmPending(context(organizationId, employeeId),
       { ...input, branchId, clientOperationId: randomUUID() }, randomUUID());
-    expect((await purchases.detail(context(organizationId, employeeId), employeePurchase.id)).id)
-      .toBe(employeePurchase.id);
+    expect(await purchases.detail(context(organizationId, employeeId), employeePurchase.id))
+      .toMatchObject({ id: employeePurchase.id, items: [{ unitCost: '4.00', lineTotal: '4.00' }] });
     await expect(purchases.detail(context(organizationId, employeeId),
       (await purchases.confirmPending(context(), { ...input, branchId,
         clientOperationId: randomUUID() }, randomUUID())).id))
       .rejects.toMatchObject({ status: 403 });
+  });
+
+  it('RF-218/RF-219 refuses inactive suppliers and keeps their cancelled purchase history', async () => {
+    const transactions = new TenantTransaction(runtime);
+    const suppliers = new SupplierManagementService(transactions);
+    const supplier = await suppliers.create(context(), { name: 'Inactive historical supplier' }, randomUUID());
+    const purchases = new PurchaseOperationsService(transactions);
+    const input = { branchId, supplierId: supplier.id, clientOperationId: randomUUID(),
+      lines: [{ itemId, quantity: '1', unitCost: '4.00' }] };
+    const purchase = await purchases.confirmPending(context(), input, randomUUID());
+    await purchases.cancel(context(), purchase.id, { reason: 'Supplier history test' }, randomUUID());
+    const before = (await admin.query('SELECT * FROM purchases WHERE id=$1', [purchase.id])).rows;
+    await suppliers.changeStatus(context(), supplier.id, supplier.version, 'INACTIVE', randomUUID());
+    await expect(purchases.confirmPending(context(), { ...input, clientOperationId: randomUUID() }, randomUUID()))
+      .rejects.toThrow();
+    expect((await admin.query('SELECT * FROM purchases WHERE id=$1', [purchase.id])).rows).toEqual(before);
+    await expect(suppliers.deletePhysically(context(), supplier.id, supplier.version + 1, randomUUID())).rejects.toThrow();
+    expect((await admin.query('SELECT id FROM suppliers WHERE id=$1', [supplier.id])).rows).toEqual([{ id: supplier.id }]);
   });
 });

@@ -107,6 +107,9 @@
     {"idx": 102, "version": "7", "when": 102, "tag": "0102_cash_exceptional_closures", "breakpoints": true},
     {"idx": 103, "version": "7", "when": 103, "tag": "0103_cash_late_recoveries", "breakpoints": true},
     {"idx": 104, "version": "7", "when": 104, "tag": "0104_cash_late_reviews", "breakpoints": true},
-    {"idx": 105, "version": "7", "when": 105, "tag": "0105_branch_deactivation", "breakpoints": true}
+    {"idx": 105, "version": "7", "when": 105, "tag": "0105_branch_deactivation", "breakpoints": true},
+    { "idx": 106, "version": "7", "when": 106, "tag": "0106_identity_email_worker", "breakpoints": true },
+    { "idx": 107, "version": "7", "when": 107, "tag": "0107_sale_cancellation_lock", "breakpoints": true },
+    { "idx": 108, "version": "7", "when": 108, "tag": "0108_catalog_category_edit", "breakpoints": true }
   ]
 }

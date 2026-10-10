@@ -1,0 +1,19 @@
+$ pnpm --filter @uconext/api exec vitest run --config vitest.browser.config.mts
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+{"level":30,"time":"2026-10-10T17:44:54.859Z","component":"api","duration_ms":8.572999999996682,"method":"GET","path":"/api/v1/catalog/categories","request_id":"e9b486a9-65b5-417b-96ae-ed7199a54694","status_code":401,"trace_id":"624d2f4b81689c8d45c660581ebcc38e","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T17:44:55.552Z","component":"api","duration_ms":554.5412999999971,"method":"POST","path":"/api/v1/auth/login","request_id":"c7951f91-ca2c-4c10-94f6-43bdfc9e6a55","status_code":204,"trace_id":"83613669531a6d7a749b9076a51e4bbc","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T17:44:57.995Z","component":"api","duration_ms":97.52239999999438,"method":"GET","path":"/api/v1/catalog/categories","request_id":"c1d26f7a-cb12-4c8d-9f9b-ac5cb042d962","status_code":200,"trace_id":"75d62141055dac034fd443636277ec2b","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T17:44:59.822Z","component":"api","duration_ms":11.795399999995425,"method":"GET","path":"/api/v1/auth/csrf","request_id":"499d98fc-6a2b-4e35-811c-f106a65244c7","status_code":200,"trace_id":"e8c58e959cc05c4298d76a7a4b037c61","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T17:44:59.979Z","component":"api","duration_ms":127.863400000002,"method":"PATCH","path":"/api/v1/catalog/categories/8eff97b8-b980-4e4b-81ea-87538b4044ad","request_id":"457c0af1-fd0c-4901-b141-6616bc2e3d76","status_code":200,"trace_id":"e3021459ed0154bdd4d0558ba7861dd1","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T17:45:00.767Z","component":"api","duration_ms":51.04559999999765,"method":"GET","path":"/api/v1/catalog/categories","request_id":"962ee0d0-4cf4-4bce-a32e-bacca796bc74","status_code":200,"trace_id":"523d9dbc9284e258d8f23f98a62da58a","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T17:45:02.223Z","component":"api","duration_ms":26.348500000000058,"method":"GET","path":"/api/v1/auth/csrf","request_id":"f3b2b4e8-ca71-4193-a97a-82a8512e6dfb","status_code":200,"trace_id":"0385111c7a250bfb0ca878981f23e5a0","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T17:45:02.286Z","component":"api","duration_ms":47.35099999999511,"method":"PATCH","path":"/api/v1/catalog/categories/8eff97b8-b980-4e4b-81ea-87538b4044ad","request_id":"c91a6942-ac58-4146-859c-8f501573bd06","status_code":200,"trace_id":"6810a21b7df0d6fa1b95ecdf099a76e5","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T17:45:02.333Z","component":"api","duration_ms":29.52440000000206,"method":"GET","path":"/api/v1/catalog/categories","request_id":"a0f30b70-a68d-4d05-892a-b9c3061acf58","status_code":200,"trace_id":"336167aa8fb061b386942ea045b46ee8","msg":"http request completed"}
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  14:44:12
+   Duration  52.67s (transform 2.95s, setup 0ms, import 10.63s, tests 41.52s, environment 0ms)
+

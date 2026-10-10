@@ -13,6 +13,7 @@ import { readHistoricalEnvelopeContext } from './historical-envelope-context.js'
 import { readEnvelopeOrder } from './offline-envelope-order.js';
 import { recordOfflineReceipt } from './sync-operation-receipt.js';
 import type { HistoricalDeliveryIngestionPort } from './offline-delivery.service.js';
+import { recordConfigurationDiscrepancy } from './configuration-discrepancy.js';
 
 export interface DeliveryResult {
   readonly operationId: string; readonly ack:string; readonly envelopeHash: string; readonly status:'ACKED'|'SECURITY_REJECTED';
@@ -89,6 +90,7 @@ export class HistoricalDeliveryIngestion implements HistoricalDeliveryIngestionP
         {...payload,operationId:operation.id,organizationId:operation.organizationId,actorUserId:operation.actorId,
           deviceId:operation.deviceId,grantId:validated.claims.grantId});
       } else await new OfflineSaleImporter().apply(client,{organizationId:operation.organizationId,userId:operation.actorId,requestId:randomUUID()},operation.payload,operation.id);
+      await recordConfigurationDiscrepancy(client,operation,history.configuration);
       await client.query("UPDATE sync_operations SET status='ACKED' WHERE organization_id=$1 AND id=$2",[operation.organizationId,operation.id]);
       const ack=this.signAck({operationId:operation.id,envelopeHash:opened.envelopeHash,status:'ACKED'},history);
       await client.query("INSERT INTO offline_delivery_results (organization_id,device_id,operation_id,envelope_hash,status,ack_jws) VALUES ($1,$2,$3,$4,'ACKED',$5)",

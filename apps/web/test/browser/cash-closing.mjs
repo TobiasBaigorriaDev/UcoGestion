@@ -60,7 +60,7 @@ async page=>{
   await page.getByRole('textbox',{name:'Efectivo contado'}).fill('8.00');
   await page.getByRole('button',{name:'Confirmar cierre'}).click();await page.getByText('Explicá la diferencia antes de cerrar.').waitFor();
   await page.getByRole('textbox',{name:'Motivo del cierre'}).fill('Sobrante contado');
-  await page.addScriptTag({path:'C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/web/node_modules/axe-core/axe.min.js'});
+  await page.addScriptTag({path:'apps/web/node_modules/axe-core/axe.min.js'});
   for(const width of [1440,390]){
     await page.setViewportSize({width,height:1000});await page.evaluate(()=>document.fonts.ready);
     check((await page.evaluate(async()=>window.axe.run())).violations.length===0,'Closing accessibility');

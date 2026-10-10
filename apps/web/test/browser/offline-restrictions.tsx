@@ -13,9 +13,14 @@ createRoot(root).render(<OnlineOnlyBoundary><main><h1>Administración</h1>
 const client = new ApiClient();
 const harness = { async restrictedRequests() {
   const failures: string[] = [];
-  for (const [path, method] of [['/organizations/settings', 'PATCH'], ['/purchases', 'POST'], ['/expenses', 'POST'],
+  for (const [path, method] of [['/organizations/settings', 'PATCH'], ['/users/invitations', 'POST'], ['/users/memberships/id', 'PATCH'],
+    ['/suppliers', 'POST'], ['/purchases', 'POST'], ['/expenses', 'POST'],
     ['/inventory/adjustments', 'POST'], ['/sales/id/cancel', 'POST'], ['/cash-sessions/id/close', 'POST'],
-    ['/reports/sales', 'GET']] as const) {
+    ['/reports/sales', 'GET'], ['/inventory/transfers', 'POST'], ['/catalog/items', 'POST'], ['/branches', 'POST'],
+    ['/branches/id/cash-registers', 'POST'], ['/organizations/payment-methods/CASH', 'PATCH'], ['/customers/id', 'DELETE'],
+    ['/catalog/categories', 'POST'], ['/catalog/categories/id', 'PATCH'], ['/catalog/categories/id/status', 'PATCH'],
+    ['/catalog/categories/id', 'DELETE'], ['/catalog/items/id', 'PATCH'], ['/catalog/items/id/status', 'PATCH'],
+    ['/catalog/items/id/structure', 'PATCH'], ['/catalog/items/id', 'DELETE']] as const) {
     try { await client.request(path, { method }); } catch (error) {
       if (error instanceof Error && 'code' in error && error.code === 'OFFLINE_NOT_ALLOWED') failures.push(path);
     }

@@ -63,6 +63,23 @@ describe('T157 purchase HTTP confirmation', () => {
       .set('Idempotency-Key', key);
     const input = { branchId, supplierId, clientOperationId: randomUUID(),
       lines: [{ itemId, quantity: '2', unitCost: '3.25' }] };
+    for (const field of ['branchId', 'supplierId', 'lines']) {
+      const incomplete: Record<string, unknown> = { ...input };
+      delete incomplete[field];
+      await post(owner.cookie, owner.csrf, randomUUID()).send(incomplete).expect(400);
+    }
+    for (const field of ['itemId', 'quantity', 'unitCost']) {
+      const incomplete: Record<string, unknown> = { ...input.lines[0] };
+      delete incomplete[field];
+      await post(owner.cookie, owner.csrf, randomUUID()).send({ ...input, lines: [incomplete] }).expect(400);
+    }
+    await post(owner.cookie, owner.csrf, randomUUID()).send({ ...input, lines: [] }).expect(400);
+    for (const field of ['total', 'subtotal', 'currencyCode']) {
+      await post(owner.cookie, owner.csrf, randomUUID()).send({ ...input, [field]: '0.01' }).expect(400);
+    }
+    await post(owner.cookie, owner.csrf, randomUUID()).send({ ...input,
+      lines: [{ ...input.lines[0], lineTotal: '0.01' }] }).expect(400);
+    expect((await pool.query('SELECT count(*)::integer AS n FROM purchases')).rows[0]?.n).toBe(0);
     const key = randomUUID();
     const first = await post(owner.cookie, owner.csrf, key).send(input).expect(201);
     expect(first.body).toMatchObject({ id: input.clientOperationId, status: 'PENDING_PAYMENT', total: '6.50' });
@@ -103,6 +120,32 @@ describe('T157 purchase HTTP confirmation', () => {
     expect(zeroResult.body).toMatchObject({ status: 'PAID', total: '0.00' });
     expect((await pool.query('SELECT count(*)::integer AS n FROM purchase_payments WHERE purchase_id = $1',
       [zero.clientOperationId])).rows[0]?.n).toBe(0);
+  });
+
+  it('RF-246 rejects negative and excess-scale unit costs without persisting effects', async () => {
+    const owner = await identity(ownerEmail);
+    for (const path of ['/api/v1/purchases', '/api/v1/purchases/paid']) {
+      const operationId = randomUUID();
+      const key = randomUUID();
+      const post = () => request(app.getHttpServer()).post(path)
+        .set('Origin', 'http://localhost:3000').set('Cookie', owner.cookie)
+        .set('X-Organization-Id', organizationId).set('X-CSRF-Token', owner.csrf)
+        .set('Idempotency-Key', key);
+      for (const unitCost of ['10.005', '10.000', '-0.01']) {
+        const rejected = await post().send({ branchId, supplierId, clientOperationId: operationId,
+          lines: [{ itemId, quantity: '1', unitCost }] }).expect(400);
+        expect(rejected.body.code).toBe('PURCHASE_LINE_INVALID');
+      }
+      expect((await pool.query('SELECT count(*)::integer AS n FROM purchases WHERE id = $1',
+        [operationId])).rows[0]?.n).toBe(0);
+      expect((await pool.query('SELECT count(*)::integer AS n FROM inventory_movements WHERE source_id = $1',
+        [operationId])).rows[0]?.n).toBe(0);
+      const input = { branchId, supplierId, clientOperationId: operationId,
+        lines: [{ itemId, quantity: '1', unitCost: '0.00' }] };
+      const first = await post().send(input).expect(201);
+      expect(first.body.total).toBe('0.00');
+      expect((await post().send(input).expect(201)).body).toEqual(first.body);
+    }
   });
 
   it('T162B exposes exact payment of a pending purchase with replay and immutable status', async () => {

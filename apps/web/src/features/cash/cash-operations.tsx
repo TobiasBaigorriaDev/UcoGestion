@@ -1,4 +1,5 @@
 'use client';
+import { OrganizationTime } from '../../components/organization-time';
 
 import { useEffect,useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
@@ -78,7 +79,7 @@ export function CashOperations({organizationId,branchId,role,data,localDeviceId,
           onChange={event=>{setSelected(event.target.value);movement.reset();setError(null);setMessage('');}}>
           {data.sessions.map(row=><option key={row.id} value={row.id}>{row.registerName} · {row.status==='OPEN'?'Abierta':row.status==='CLOSING'?'En cierre':row.status==='CONFLICTED'?'En conflicto':'Finalizada'}</option>)}</select>
         {session ? <><p>Esperado: {session.expectedCash} {session.currencyCode}</p>
-          <p>Apertura: <time dateTime={session.openedAt}>{new Date(session.openedAt).toLocaleString('es-AR')}</time> · Inicial: {session.openingCash} {session.currencyCode}</p>
+          <p>Apertura: <OrganizationTime value={session.openedAt} /> · Inicial: {session.openingCash} {session.currencyCode}</p>
           {session.status==='OPEN' && device?.id===session.deviceId ? <form noValidate onSubmit={movement.handleSubmit(values=>execute(values.path,
             {cashSessionId:session.id,deviceId:session.deviceId,amount:Money.from(values.amount).toString(),reason:values.reason},
             'Movimiento registrado. El estado se actualiza desde el servidor.',()=>movement.reset()))}>

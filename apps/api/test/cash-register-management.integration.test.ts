@@ -164,6 +164,19 @@ describe('cash register management', () => {
       branchId: branchA,
       name: 'Historical register',
     });
+    const deviceId = randomUUID(), sessionId = randomUUID();
+    await pool.query(`INSERT INTO devices(id,organization_id,branch_id,authorized_by_user_id,authorized_at,status)
+      VALUES ($1,$2,$3,$4,now(),'ACTIVE')`, [deviceId, organizationA, branchA, ownerAUserId]);
+    await pool.query(`INSERT INTO cash_sessions(id,organization_id,branch_id,cash_register_id,owner_user_id,
+      device_id,origin,status,opening_cash,expected_cash,currency_code,opened_at)
+      VALUES ($1,$2,$3,$4,$5,$6,'ONLINE','OPEN','10.00','10.00','ARS','2024-01-01T12:00:00Z')`,
+      [sessionId, organizationA, branchA, created.id, ownerAUserId, deviceId]);
+    await pool.query(`INSERT INTO cash_movements(id,organization_id,branch_id,cash_session_id,actor_user_id,
+      device_id,delta,currency_code,source_type,source_id,effect_kind,occurred_at)
+      VALUES ($1,$2,$3,$4,$5,$6,'2.00','ARS','MANUAL_DEPOSIT',$7,'IN','2024-01-01T12:01:00Z')`,
+      [randomUUID(), organizationA, branchA, sessionId, ownerAUserId, deviceId, randomUUID()]);
+    const sessionBefore = (await pool.query('SELECT * FROM cash_sessions WHERE id=$1', [sessionId])).rows;
+    const movementsBefore = (await pool.query('SELECT * FROM cash_movements WHERE cash_session_id=$1 ORDER BY id', [sessionId])).rows;
     const deactivated = await service.deactivate(
       context(adminAUserId, 'register-deactivate'),
       created.id,
@@ -176,6 +189,10 @@ describe('cash register management', () => {
       [created.id],
     );
     expect(stored.rows).toEqual([{ id: created.id, status: 'INACTIVE' }]);
+    expect((await pool.query('SELECT * FROM cash_sessions WHERE id=$1', [sessionId])).rows).toEqual(sessionBefore);
+    expect((await pool.query('SELECT * FROM cash_movements WHERE cash_session_id=$1 ORDER BY id', [sessionId])).rows).toEqual(movementsBefore);
+    await expect(service.create(context(ownerAUserId, randomUUID()), { branchId: branchA, name: ' historical REGISTER ' }))
+      .rejects.toMatchObject({ code: 'CASH_REGISTER_NAME_CONFLICT' });
 
     await expect(requireOpenableRegister(organizationA, adminAUserId, created.id))
       .rejects.toMatchObject({

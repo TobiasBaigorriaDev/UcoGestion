@@ -1,4 +1,5 @@
 'use client';
+import { OrganizationTime } from '../../components/organization-time';
 
 import { useRef, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -73,14 +74,14 @@ export function SaleLookup({ organizationId, branchId, role }: {
       <h2 id="sale-detail-heading">Venta {sale.id}</h2>
       <p><strong>Estado:</strong> {sale.status === 'CANCELLED' ? 'Anulada' : 'Confirmada'}</p>
       <p><strong>Total:</strong> {sale.total} {sale.currency}</p>
-      <p><strong>Confirmada:</strong> {new Date(sale.confirmedAt).toLocaleString('es-AR')}</p>
+      <p><strong>Confirmada:</strong> <OrganizationTime value={sale.confirmedAt} /></p>
       <h3>Ítems</h3><ul className={styles.detailList}>{sale.items.map((item, index) => <li key={index}>
         {item.name} · {item.quantity} × {item.unitPrice} = {item.lineTotal}</li>)}</ul>
       <h3>Pagos originales</h3><ul className={styles.detailList}>{sale.payments.map((payment, index) =>
         <li key={index}>{payment.method}: {payment.amount}{payment.change !== '0.00'
           ? ` · Vuelto ${payment.change}` : ''}</li>)}</ul>
       {sale.cancellation ? <p role="status"><strong>Anulación:</strong> {sale.cancellation.reason}
-        {' · '}{new Date(sale.cancellation.cancelledAt).toLocaleString('es-AR')}</p> : null}
+        {' · '}<OrganizationTime value={sale.cancellation.cancelledAt} /></p> : null}
       <ReceiptActions organizationId={organizationId} saleId={sale.id} />
       {canCancel ? <div className={styles.cancellation}>
         <h3>Anular venta</h3>

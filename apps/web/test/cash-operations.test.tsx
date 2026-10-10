@@ -4,6 +4,7 @@ import axe from 'axe-core';
 import { afterEach, expect, it, vi } from 'vitest';
 import { CashOperations, type CashWorkspaceData } from '../src/features/cash/cash-operations';
 import { ApiProblemError } from '../src/lib/api/client';
+import { OrganizationTimezone } from '../src/components/organization-time';
 
 afterEach(cleanup);
 const org='00000000-0000-4000-8000-000000000001',branch='00000000-0000-4000-8000-000000000002';
@@ -11,6 +12,19 @@ const device='00000000-0000-4000-8000-000000000003',register='00000000-0000-4000
 const session='00000000-0000-4000-8000-000000000005';
 const data:CashWorkspaceData={actorUserId:org,registers:[{id:register,name:'Mostrador',available:true}],
   devices:[{id:device,status:'ACTIVE'}],sessions:[]};
+
+it('RF-271 shows the organization day across midnight while preserving the UTC timestamp', () => {
+  const openedAt = '2026-10-07T00:00:00Z';
+  const {container} = render(<OrganizationTimezone.Provider value="Pacific/Auckland">
+    <CashOperations organizationId={org} branchId={branch} role="CASHIER" localDeviceId={device}
+      data={{...data,sessions:[{id:session,cashRegisterId:register,registerName:'Mostrador',deviceId:device,
+        status:'OPEN',openingCash:'5.00',expectedCash:'5.00',currencyCode:'ARS',openedAt}]}}
+      onCommand={vi.fn()} onReload={vi.fn()} />
+  </OrganizationTimezone.Provider>);
+  const time = container.querySelector('time');
+  expect(time?.dateTime).toBe(openedAt);
+  expect(time?.textContent).toBe(new Date(openedAt).toLocaleString('es-AR',{timeZone:'Pacific/Auckland'}));
+});
 
 it('T218A opens with the bound device and retries the exact command after a lost response',async()=>{
   const submit=vi.fn().mockRejectedValueOnce(new ApiProblemError({status:0,code:'NETWORK_ERROR',message:'Conexión interrumpida.'}))

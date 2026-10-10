@@ -1,0 +1,16 @@
+$ turbo run typecheck "--filter=@uconext/api" "--filter=@uconext/web"
+• turbo 2.10.13
+
+   • Packages in scope: @uconext/api, @uconext/web
+   • Running typecheck in 2 packages
+   • Remote caching disabled
+
+@uconext/api:typecheck: cache miss, executing 30e6c0c693891349
+@uconext/web:typecheck: cache hit, replaying logs f1568b7f7ea4a3e1
+@uconext/web:typecheck: $ tsc --noEmit --project tsconfig.json
+@uconext/api:typecheck: $ tsc --noEmit --project tsconfig.json
+
+ Tasks:    2 successful, 2 total
+Cached:    1 cached, 2 total
+  Time:    13.684s 
+

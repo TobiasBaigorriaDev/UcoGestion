@@ -9,6 +9,9 @@ export default mergeConfig(
     plugins: [react()],
     test: {
       environment: 'jsdom',
+      // Bound JSDOM and Argon2 concurrency to keep the root CI gate within its
+      // resource budget while API PostgreSQL integration tests run alongside it.
+      maxWorkers: 2,
     },
   }),
 );

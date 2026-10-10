@@ -50,7 +50,7 @@ it('T220A response loss retains the exact grant proof and idempotency key for re
 it('registers a new device with the same PIN wrapping and exact request after response loss', async () => {
   const fixture = await authorizationFixture(); await fixture.db.delete();
   Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true });
-  vi.stubGlobal('navigator', { onLine: true, serviceWorker: { register: async () => ({ active: true }) } });
+  vi.stubGlobal('navigator', { onLine: true, serviceWorker: { getRegistration: async () => undefined, register: async () => ({ active: true }) } });
   const stage = new OfflineDatabase(org, branch);
   const setup = new OfflineSetup(stage, actor, branch, false, false);
   const registrations: { body: string; key: string | null }[] = [];

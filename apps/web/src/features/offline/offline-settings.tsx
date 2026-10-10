@@ -1,4 +1,5 @@
 'use client';
+import { OrganizationTime } from '../../components/organization-time';
 
 import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -74,8 +75,8 @@ export function OfflineSettings(actions: OfflineSettingsActions) {
       </form> : <>
         <section className={styles.panel} aria-labelledby="offline-validity"><h2 id="offline-validity">Autorización y sincronización</h2>
           <p role="status">{status.expired ? 'Autorización vencida. Conectate y renovala antes de abrir caja o vender.' : 'Autorización vigente para operar sin conexión.'}</p>
-          <dl><dt>Vigente hasta</dt><dd><time dateTime={status.expiresAt}>{new Date(status.expiresAt).toLocaleString('es-AR')}</time></dd>
-            <dt>Última validación y sincronización</dt><dd><time dateTime={status.lastSyncAt}>{new Date(status.lastSyncAt).toLocaleString('es-AR')}</time></dd></dl>
+          <dl><dt>Vigente hasta</dt><dd><OrganizationTime value={status.expiresAt} timezone={status.timezone} /></dd>
+            <dt>Última validación y sincronización</dt><dd><OrganizationTime value={status.lastSyncAt} timezone={status.timezone} /></dd></dl>
           <div className={styles.actions}><button type="button" disabled={busy} onClick={() => void run(actions.sync)}>Sincronizar mis pendientes</button>
             <button type="button" disabled={busy} onClick={() => void run(actions.refresh)}>Renovar autorización online</button>
             <button type="button" onClick={() => { generation.current++; actions.lock(); setStatus(null); reset(); }}>Bloquear datos offline</button></div>
@@ -84,7 +85,7 @@ export function OfflineSettings(actions: OfflineSettingsActions) {
           <p>Se conservan protegidas hasta recibir la confirmación del servidor. Podés reintentar sin duplicarlas.</p>
           {status.pending.length ? <ul className={styles.rows}>{status.pending.map(row => <li className={styles.row} key={row.id}>
             <strong>{row.kind === 'sale-confirm' ? 'Venta' : row.kind === 'cash-session-open' ? 'Apertura de caja' : 'Operación'}</strong>
-            <span>{row.id}</span><span>Secuencia {row.sequence} · Pendiente de confirmación</span><time dateTime={row.occurredAt}>{new Date(row.occurredAt).toLocaleString('es-AR')}</time>
+            <span>{row.id}</span><span>Secuencia {row.sequence} · Pendiente de confirmación</span><OrganizationTime value={row.occurredAt} timezone={status.timezone} />
           </li>)}</ul> : <p>No tenés operaciones pendientes.</p>}
         </section>
       </>}

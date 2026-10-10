@@ -1,0 +1,1082 @@
+{
+  "task": "T236D–T236H",
+  "date": "2026-10-10T17:01:27.893Z",
+  "verdict": "PENDIENTES",
+  "scope": "Seguimiento individual de los 74 hallazgos del informe original; no sustituye ni reescribe el sdd-check de los 316 RF. Sus 242 coberturas previas no se reauditan en este delta.",
+  "originalSha256": "804c10341a67703e14ac705cd355334bfdabb05966019a7ebdab959c2e4f3a9c",
+  "counts": {
+    "CUBIERTO": 51,
+    "PENDIENTE": 22,
+    "VIOLADO": 1
+  },
+  "browsers": [
+    {
+      "browser": "chromium",
+      "version": "155.0.8059.12",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.8059.12 Safari/537.36",
+      "os": "linux 6.6.114.1-microsoft-standard-WSL2",
+      "scenarios": 17,
+      "uiStates": 129
+    },
+    {
+      "browser": "firefox",
+      "version": "156.0",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64; rv:156.0) Gecko/20100101 Firefox/156.0",
+      "os": "linux 6.6.114.1-microsoft-standard-WSL2",
+      "scenarios": 17,
+      "uiStates": 129
+    },
+    {
+      "browser": "webkit",
+      "version": "26.6",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15",
+      "os": "linux 6.6.114.1-microsoft-standard-WSL2",
+      "scenarios": 17,
+      "uiStates": 129
+    }
+  ],
+  "logSha256": {
+    "final-gate.log": "0d78cee2486f8b7e5940efb182de14de482a387afdc64b3cb9b23998fe3c3608",
+    "images-final.log": "c6e447a76e7bf2b35715ebc1a4ba4465a5ee9399dc21d3cf390c0b3941d9f697",
+    "monetary-inactive-green.log": "32777124b72426975ef7da4dd421daa69ffdfe1f9995156ad0ea1e553ed0ee47",
+    "monetary-matrix.log": "f5eb2a3cb064d9f45b5cdc7a3d312631e3a80d074f393568b94661cda0d4a117",
+    "discrepancy-red.log": "0566432ac700d4dda67c48768c0c16190131ea1d63759b8ce16758c961063f1f",
+    "discrepancy-resource-green.log": "4d3d82ef2f06d3fbba9ac84b0fc9e10eb514ca6fe0b649d81bb3ae9fa351430a",
+    "known-inactive-red.log": "919de8cbaf095e8058936eeae2765d3d64714249cc2e65cf4bd6e86e0b6fe8cd",
+    "known-inactive-green.log": "9948eb59ca549031f75128d85c3ba3d83658c3d9765bbb614089fe2f448c8b2a",
+    "timezone-red.log": "70dd1cfd5e40e09d9f15b5b56a6e2bf58a86e8d5c73589b527c2851722bdf7fe",
+    "timezone-green.log": "3665d4c1f8a45f5631754a3fa3db977d0d84279f82310ab3b0eaab7ed9ed0a7a",
+    "restore-role-migration-red.log": "70eb4af20226e53c4fffc0a8b4c39e2ac84f4d7d3f6e94b153c0b6fc45d1c6f5",
+    "restore-role-migration-green.log": "ad404156cd364595b5a995e32b5eb7d5fc31717c2e708db12f06d12a81517a01",
+    "chromium-nightly-final.log": "6945a3001e964354f051ee00ba3bcfa4bf63e7fa7b2dece1afce3f9522a469d7",
+    "firefox-nightly-final.log": "c5d1d40d241e711eae48a02b7bf01c64cc580e7ec77b4e58956599587d8ae590",
+    "webkit-nightly-final.log": "e6b60ddd304f336e79d628d34cbf7d7a559831f7e6d4711a5fc06d21f57598c1"
+  },
+  "sourceSha256": {
+    ".dockerignore": "d17c1885717190a54ce6d1b084bdbc812403c49bfcd52b7b085bbf97637be7b2",
+    ".github/workflows/browser-nightly.yaml": "f70427ff3a67b11117d7ddebfd75b124c6f2125e81db83963452fdf2f30e665a",
+    ".github/workflows/ci.yaml": "cd8aa52f128730d2dfbc0dd6988ad6bbcbc035b30dc2411aa5621af1243d4ee7",
+    "apps/api/src/core/email/email-port.ts": "ec9eef6f78ac923c475104da25fe7ef75bf95a1832c920823e381d30007ceac0",
+    "apps/api/src/core/observability/operational-monitor.ts": "1415d0d9b6a33468c254fbd0b763e20342056b39777c8d2e3cce662ff00027c4",
+    "apps/api/src/core/outbox/identity-email-worker.ts": "d54e8c58b40c154225a2e6444694b717dad0fc8e7bf4d5181e21d3407ee16f2c",
+    "apps/api/src/database/migrations/0106_identity_email_worker.sql": "1ae92c2be5900b26e90987e2f287eeae3a9bf88a86808251243a33acb89b52d5",
+    "apps/api/src/database/migrations/0107_sale_cancellation_lock.sql": "94c6227bc6fcd4aa5e112826024c8b3eea9ea447dbe5af4c769ae95da448fb65",
+    "apps/api/src/database/migrations/meta/_journal.json": "f8ffc011f5959d78284c91e3deeee5ae1306f69ced2f2f632af2b79b9643dd18",
+    "apps/api/src/database/schema.ts": "b772b2e9e8488372a2e9ab394fc78ba1a892dc966f3b4127e0dac92c6ef907e0",
+    "apps/api/src/modules/catalog/catalog-price.service.ts": "a1f6a52374301a06b647e38b71a62c0b71182b4a1a69681fb3dcc0dae1859199",
+    "apps/api/src/modules/inventory/index.ts": "7716af5a75e0bcd2876438e7fc300e7e5794f35100049d712ffd1112af65df39",
+    "apps/api/src/modules/inventory/sale-stock-reversal.ts": "a4721c8d36251148ced6ccfc4ddf5833d292a1eefd04bd73a0f2dabfa1a1203d",
+    "apps/api/src/modules/offline-sync/configuration-discrepancy.ts": "3acdb2ca8c29a29d045649c697c920af7bdff04d464f025cec74810711b63c56",
+    "apps/api/src/modules/offline-sync/historical-delivery-ingestion.ts": "4f71654869e36f91946a0957bc56fe778f3b3708679a867c021758d669350204",
+    "apps/api/src/modules/sales/sale-cancellation-preparation.ts": "845b5dc5858eaa764a74b8b005a79582df9ad363a9bbb1977c894803807cdf25",
+    "apps/api/src/operations/restore-cli.ts": "371d9ea21b43b0581ffeb9def896ceb2946dcbb378a4c95ca1b0930348b87a70",
+    "apps/api/src/operations/restore.ts": "eb44586e3af87a69850deb40520f118fa407cd22bc03bc9dc11b9d6f5cbd82cd",
+    "apps/api/src/runtime-worker.ts": "6403fc425655bd1cfa884960b108f79925158db5fbc55f7bd75113e4ad944076",
+    "apps/api/src/worker.ts": "e3226bf6f132f5108d7c65b6138d4350eec271ab50b98d72510fb5a3b68e85f2",
+    "apps/api/test/__snapshots__/request-contracts.test.ts.snap": "d820a0e1d67047f953d7318afa282ac0f270e50da057b0ab7bf0d2c6c07a18c2",
+    "apps/api/test/backup-restore.integration.test.ts": "0630d9ad94edb7f1698d6506a5483615db52769df650c5750ac153aea35e41a6",
+    "apps/api/test/branch-management.integration.test.ts": "b5553db2aaf396d773f3a25b7a19698901494ab46427664197ae1d8a4112a95c",
+    "apps/api/test/cash-foundation.integration.test.ts": "e9075d042270e82cb844ffdb9fce05d44ee8808a3792780f27daef2143dbefe9",
+    "apps/api/test/cash-register-management.integration.test.ts": "1376eaeda4fd782e481d71ee6e1edd6eaeb1e4375e1dae15317947f027c27058",
+    "apps/api/test/catalog-and-invitation-http.e2e.test.ts": "a082fc7b2ab3a78ea409e278b7f9789a37744a3d0ad138ce2718a0090df2353c",
+    "apps/api/test/catalog-item-creation.integration.test.ts": "9c69e29d15576d5cd6b0953bb8b9ab43396d16bc49a6c746fba0b7ba9851e0c7",
+    "apps/api/test/catalog-item-lifecycle.integration.test.ts": "2e62b0c21135b485281f4481ac210f57ab7e6cb64572f6345fb8633f9da84a9b",
+    "apps/api/test/catalog-price.integration.test.ts": "58eddfffa2c6ba0d71495e99f1e289d086430203a0a68e37b8da97ecc6a9ac32",
+    "apps/api/test/customer-lifecycle.integration.test.ts": "c179060f75ec76fd28d56beacf69a81c14c568235834bc835c0fb3b6d2179488",
+    "apps/api/test/delivery-runtime.integration.test.ts": "e99d73083c07e64fb3b70e93b8148cc5ddda16699c0788e49d220f825cec7bbc",
+    "apps/api/test/device-authorization-http.e2e.test.ts": "90d4d001d0e3efbe33eb55ccac98d55f430573f92aec6df84294e131f090fb4c",
+    "apps/api/test/expense-category-management.integration.test.ts": "ee5abdfe7ddf3b80aee237ef96151392b7f7d8f638c136cb768a6f11bb44b26b",
+    "apps/api/test/historical-ingestion.integration.test.ts": "48ba020e10698a8639b6b368a6e7d3fb3fcab6560b9cb5bcc4d966a23f6e3965",
+    "apps/api/test/identity-worker.integration.test.ts": "68ed5aea0a38b91b724855540c640f8d263709d1ca3157ef49075cc30f18dc68",
+    "apps/api/test/inventory-foundation.integration.test.ts": "4b83a31949404a8b5aa20b54e42639c3301889bb43724dff9b7e7e93f18c2993",
+    "apps/api/test/monetary-currency.integration.test.ts": "c21cd9cd93ee5db3cef13b2bada473100635e45bf0bebb4c5feaa8c348a30fa2",
+    "apps/api/test/operations-monitor.integration.test.ts": "7ca5dc9103456eff69e866b6667d43ffdbbdb334450b8c899935d9f5430e6286",
+    "apps/api/test/proxy-rate-limit.integration.test.ts": "d2d9517aee98362ed23c97517447c0915272e399fd4b6027bfd9fcf18ef8a5ef",
+    "apps/api/test/purchases-http.e2e.test.ts": "e72c974cb808bec2af5267c635bd6da384ea2370dd8a60b2b45050e068b60812",
+    "apps/api/test/purchases.integration.test.ts": "82a71692990c5294224f71677c97204e171ff67c8eec32c595315d5e990350a7",
+    "apps/api/test/reports.integration.test.ts": "ab53cb9779aebd70198fc12663e8afe9d44e10fe47ec2e65c56d70c3d476e2f5",
+    "apps/api/test/sales-http.e2e.test.ts": "f329a271daeb9d0014250a52d70fbf23e0b3acef66efc4d70df8b816aff87910",
+    "apps/api/test/sales-quote.integration.test.ts": "300582e784630033afd8a98f97659992a5d25509a2085c591d40b6155f06a613",
+    "apps/api/test/supplier-lifecycle.integration.test.ts": "52365a59c3ef6ee80e026ee5095bba097f57b8b14a9a9e0e23af3cc160dbdb6d",
+    "apps/web/src/components/organization-time.tsx": "81a21f96a0c871480c068f26b5119092190815f03bb1ff465e0a34cfad7e4d59",
+    "apps/web/src/features/cash/cash-exceptional.tsx": "b46b7c00a9d61a50cb70ac9df98372f892af8ba427aa4e844073aa7e4216b10f",
+    "apps/web/src/features/cash/cash-operations.tsx": "39a17fa5be84e4d2501a8562db8509e9df533eb4c32765cd841c270c34bd20ac",
+    "apps/web/src/features/expenses/expense-workspace.tsx": "dff986f3c1deb1ad2915d433be6a55c8f56b7af41c6fbd40d47e3fa2815ace56",
+    "apps/web/src/features/identity/management.module.css": "b031ecbbb1c1e518d04e57177cbc8771e94514c64988fe31b40040abfc824975",
+    "apps/web/src/features/identity/user-management.tsx": "2c21e318675c9c535b694343aded0ab719e1949e752bca05f363ad93cbc46363",
+    "apps/web/src/features/identity/workspace.tsx": "afa404e2c02212e4bca522b94258a98d0b3aa98b7ba72ef4a92341700a75db6b",
+    "apps/web/src/features/offline/offline-settings.tsx": "0250bddcdc09cf1917f44674c198ed7cf798a22c2d1c351644ee6125ece4d7c8",
+    "apps/web/src/features/purchases/purchase-lookup.tsx": "63f098d39ed9fbe6ab4a1d1a8bee8bb77166b20b151a12889fcf49456c2faaa9",
+    "apps/web/src/features/sales/sale-lookup.tsx": "956c20175a2675a84c49f58e07ea58b0f26f74e99ed6e36b7c47516a287f1b84",
+    "apps/web/src/offline/capability-gate.ts": "d615324ec0976f686d08f23b20de40b53524c31810d1be143d4378e848149870",
+    "apps/web/src/offline/identity-retirement-events.ts": "a53283ff31646b9db5649e1714a2c2abe515d277afcbaeb245d894d2c56d8db5",
+    "apps/web/src/offline/offline-authorization.ts": "ec83ac0862ad4159c497c91da16b7f9b9550b1eb914a223bf467d16f5ed78574",
+    "apps/web/src/offline/offline-identity.ts": "bf41606be6e356209b2e633fc97e93301eaae5c0f62ae6b434347a9d8986003c",
+    "apps/web/src/offline/offline-keys.ts": "21258a45021129257c2134e265c46b5c2837b8ba57cf20d5ecad31991984ad8e",
+    "apps/web/src/offline/offline-revocation.ts": "5ce9d4871f919c77efafef6823c9f5db8975eb0c42fcb2502283edbd634b68bf",
+    "apps/web/src/offline/offline-status.ts": "24f8fd8ba3c2e5ea1e91aab1be2f1cbaa38336bccef2a59fb161726a0d0cc7f9",
+    "apps/web/test/api-client.test.ts": "cae49e3ebddedb9ec2672821fba69616028c7cb50c275d5d2ce7c61d34783d3a",
+    "apps/web/test/browser/cash-closing.mjs": "74767edf53454f29fc85276d55c885d9dd8ae64570e995d5aa5098972e8ed543",
+    "apps/web/test/browser/cash-exceptional.mjs": "8733ac1128e70afde01aae90004eb8ff5165232c7b2c9fe4b6c555f7a3b161ec",
+    "apps/web/test/browser/cash-operations.mjs": "96fd52859013bd2549f1db86e4f1a06d9c683cd0a0eb97f1eee2e2002fd7f018",
+    "apps/web/test/browser/offline-pos.mjs": "4ebf8db1fd517153cbd668ee13df208b049835364c8adc33a97eac0459b34d3e",
+    "apps/web/test/browser/offline-restrictions.mjs": "ef8da4856ccff22757145a7409fbe1ca5cfaca9c8d9512c2c275b972132fc48c",
+    "apps/web/test/browser/offline-restrictions.tsx": "e51196564b11cc3cc266d9b4a7bd5a27c77613ed72c7f631cb4913beba7583f3",
+    "apps/web/test/browser/opaque-delivery.mjs": "a8202a7980922faf19a0afbfb8943cc38fdfbfb577090ab4c1cca30ad659ac20",
+    "apps/web/test/browser/ui-critical.mjs": "9c3842d27807f444bca0ad4879b5b05bef99c12cdfe0bc4231f72d1f049b4e03",
+    "apps/web/test/cash-operations.test.tsx": "dc9696bd20cb8727a8bc76e3b8cbd3c5d0c917011e656baf23ab5f202050a429",
+    "apps/web/test/offline-identity.test.ts": "7e6031b65c506acfcb99eaa45836202b4d90951f991d06c4d78302e1f651323e",
+    "apps/web/test/offline-pos.test.ts": "85c588901a437b09d16656450ac4e50ac29fff147fc549b55358305048fbe7e9",
+    "apps/web/test/offline-sale-confirmation.test.ts": "140243f60e292343c37050709c91c2d95c65566920a511417c5e5809c936d692",
+    "apps/web/test/offline-settings.test.tsx": "13e50f78ecd4f6b7d9dc6f8c14c87f0504cf92b78dec518ee196819dcc2f25b8",
+    "apps/web/test/offline-setup.test.ts": "f253ca9e4930224a2050c38ca7e3f989412a31d3ea7bd8ca7e5f64e6580217a4",
+    "apps/web/test/offline-status.test.ts": "ff69b6030e73ae523504783f88e3bbf1639e413a41e645e0d57d073fc8ea8998",
+    "apps/web/vitest.config.mts": "e1e725c7fb734e25c8ac4cffcbbbaa36be5d37c59ab87d4e054b69a10a298553",
+    "infra/deploy/README.md": "f9122fa9b4318b29e51fbf433574d67faee027b8bcc27446b3b545908cedc4c4",
+    "ops/browser/install.mjs": "f347f2072e6df7ce9299eca93883479da56adfff58dcde7538a217d61e13a724",
+    "ops/browser/run.mjs": "95308b5ba133222611af575af038c7dccae596649fd1373fdb0e53eccaf16457",
+    "package.json": "b30a293b77fb1b2ac6e8de785ba7d1820dea70d3a2b4e481a0bfd9c1d50d3f71",
+    "packages/shared/src/index.ts": "f5e1c169bb5680c7a250b68c039c136f1ab2aa17ae43261239e5d6356e333865",
+    "packages/shared/src/money-validation.test.ts": "63cb680c992ee4f3820bf38c96588f893aa7fa87ea8dd734b97e60066009ef8c",
+    "pnpm-lock.yaml": "318bf47cd9a3ef4a680199bbe98d2ac32f6a463ad11929eb6066493fa2bf10a3",
+    "test/browser-runner.test.mjs": "8c84ce6775277cae5a06a0e6779c55692f00136f7d2d065a7e5368d7a07ffe7a"
+  },
+  "checks": [
+    " Tasks:    4 successful, 4 total\r",
+    " Tasks:    4 successful, 4 total\r",
+    " Tasks:    3 successful, 3 total\r",
+    "@uconext/shared:test:  Test Files  9 passed (9)\r",
+    "@uconext/shared:test:       Tests  20 passed (20)\r",
+    "@uconext/shared:test:    Duration  6.50s (transform 1.03s, setup 0ms, import 22.83s, tests 1.61s, environment 2ms)\r",
+    "@uconext/ui:test:  Test Files  3 passed (3)\r",
+    "@uconext/ui:test:       Tests  8 passed (8)\r",
+    "@uconext/ui:test:    Duration  13.20s (transform 987ms, setup 0ms, import 3.07s, tests 1.35s, environment 20.15s)\r",
+    "@uconext/web:test:  Test Files  75 passed (75)\r",
+    "@uconext/web:test:       Tests  200 passed (200)\r",
+    "@uconext/web:test:    Duration  188.76s (transform 5.68s, setup 0ms, import 52.73s, tests 135.37s, environment 157.59s)\r",
+    "@uconext/api:test:  Test Files  119 passed (119)\r",
+    "@uconext/api:test:       Tests  505 passed (505)\r",
+    "@uconext/api:test:    Duration  1183.75s (transform 5.52s, setup 0ms, import 191.33s, tests 956.63s, environment 28ms)\r",
+    " Tasks:    4 successful, 4 total\r",
+    "ℹ tests 3\r",
+    "ℹ pass 3\r",
+    "ℹ fail 0\r"
+  ],
+  "requirements": [
+    {
+      "id": "RF-03",
+      "requirement": "Cuando un usuario pertenezca a más de una organización, el sistema debe permitirle seleccionar y cambiar su organización activa entre sus membresías vigentes.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/organization-discovery.integration.test.ts",
+        "apps/web/test/identity-branch-context.test.ts"
+      ],
+      "evidence": "Lectura de membresías aisladas comprobada; falta cerrar evidencia de cambio activo y retiro de todo estado previo en el flujo completo.",
+      "gap": "Lectura de membresías aisladas comprobada; falta cerrar evidencia de cambio activo y retiro de todo estado previo en el flujo completo."
+    },
+    {
+      "id": "RF-09",
+      "requirement": "Cuando OWNER modifique la zona horaria de una organización, el sistema debe conservar sin alteración los timestamps históricos almacenados.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/sales-quote.integration.test.ts"
+      ],
+      "evidence": "T135 compara venta, ítems y ledger completos después del cambio de precio/zona horaria y del intento de cambio de moneda rechazado.",
+      "gap": null
+    },
+    {
+      "id": "RF-11",
+      "requirement": "Cuando un usuario solicite recuperar su contraseña, el sistema debe permitirle restablecerla mediante correo electrónico.",
+      "previousStatus": "VIOLADO",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/identity-worker.integration.test.ts",
+        "apps/api/test/delivery-runtime.integration.test.ts"
+      ],
+      "evidence": "Registry de producción y worker compilado entregan reset/invitación y expiran invitación; lease, ACK vencido, recuperación de lease, retry estable, dead-letter, token scrub y auditoría.",
+      "gap": null
+    },
+    {
+      "id": "RF-12",
+      "requirement": "Cuando el sistema almacene o procese una contraseña, el sistema no debe conservarla ni transmitirla en texto plano.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/login.integration.test.ts",
+        "apps/api/test/global-users.integration.test.ts",
+        "apps/api/test/password.test.ts"
+      ],
+      "evidence": "Hash de contraseña y no persistencia comprobados; transporte HTTPS real de todos los flujos no demostrado por unitarios.",
+      "gap": "Hash de contraseña y no persistencia comprobados; transporte HTTPS real de todos los flujos no demostrado por unitarios."
+    },
+    {
+      "id": "RF-13",
+      "requirement": "Cuando OWNER o ADMIN incorpore a un usuario, el sistema debe enviar una invitación por correo con rol y sucursales asignadas.",
+      "previousStatus": "VIOLADO",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/identity-worker.integration.test.ts",
+        "apps/api/test/delivery-runtime.integration.test.ts"
+      ],
+      "evidence": "Registry de producción y worker compilado entregan reset/invitación y expiran invitación; lease, ACK vencido, recuperación de lease, retry estable, dead-letter, token scrub y auditoría.",
+      "gap": null
+    },
+    {
+      "id": "RF-21",
+      "requirement": "Cuando se autorice una acción, el sistema debe aplicar los roles fijos OWNER, ADMIN, CASHIER y EMPLOYEE sobre la membresía de la organización.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/operational-role-policy.test.ts",
+        "apps/api/test/owner-branch-scope.integration.test.ts"
+      ],
+      "evidence": "No se cerró matriz exacta acción×rol usando membresía de backend; política aislada no basta para cada autorización.",
+      "gap": "No se cerró matriz exacta acción×rol usando membresía de backend; política aislada no basta para cada autorización."
+    },
+    {
+      "id": "RF-23",
+      "requirement": "Cuando el usuario sea ADMIN, el sistema debe permitirle administrar la operación comercial y usuarios no propietarios únicamente dentro de sus sucursales asignadas.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/operational-role-policy.test.ts",
+        "apps/api/test/owner-branch-scope.integration.test.ts"
+      ],
+      "evidence": "Scopes probados por módulos; cerrar todas las operaciones administrativas y de usuarios no propietarios exigidas.",
+      "gap": "Scopes probados por módulos; cerrar todas las operaciones administrativas y de usuarios no propietarios exigidas."
+    },
+    {
+      "id": "RF-29",
+      "requirement": "Cuando se desactive una sucursal con historial, el sistema debe conservar sus datos históricos e impedir nuevas operaciones en ella.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/branch-management.integration.test.ts"
+      ],
+      "evidence": "Bloqueos y conservación de branch comprobados; cerrar matriz explícita de cada nueva operación contra branch inactiva.",
+      "gap": "Bloqueos y conservación de branch comprobados; cerrar matriz explícita de cada nueva operación contra branch inactiva."
+    },
+    {
+      "id": "RF-31",
+      "requirement": "Cuando se desactive una caja, el sistema debe impedir nuevas aperturas y conservar íntegramente su historial.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/cash-register-management.integration.test.ts"
+      ],
+      "evidence": "Sesión y movimientos completos antes/después de desactivación son idénticos; nueva apertura rechazada.",
+      "gap": null
+    },
+    {
+      "id": "RF-32",
+      "requirement": "Cuando se cree un ítem de catálogo, el sistema debe admitir los tipos PRODUCT y SERVICE.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/catalog-item-creation.integration.test.ts"
+      ],
+      "evidence": "Creación PRODUCT/SERVICE, control de inventario válido, nombre/ID, categoría opcional y unicidad tenant; regresión de privilegios T236B verde.",
+      "gap": null
+    },
+    {
+      "id": "RF-33",
+      "requirement": "Cuando se configure un PRODUCT, el sistema debe permitir habilitar o deshabilitar su control de inventario.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/catalog-item-creation.integration.test.ts"
+      ],
+      "evidence": "Creación PRODUCT/SERVICE, control de inventario válido, nombre/ID, categoría opcional y unicidad tenant; regresión de privilegios T236B verde.",
+      "gap": null
+    },
+    {
+      "id": "RF-34",
+      "requirement": "Cuando se configure un SERVICE, el sistema no debe permitirle control de inventario.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/catalog-item-creation.integration.test.ts"
+      ],
+      "evidence": "Creación PRODUCT/SERVICE, control de inventario válido, nombre/ID, categoría opcional y unicidad tenant; regresión de privilegios T236B verde.",
+      "gap": null
+    },
+    {
+      "id": "RF-35",
+      "requirement": "Cuando se cree un ítem, el sistema debe exigir un nombre y asignarle un identificador interno único.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/catalog-item-creation.integration.test.ts"
+      ],
+      "evidence": "Creación PRODUCT/SERVICE, control de inventario válido, nombre/ID, categoría opcional y unicidad tenant; regresión de privilegios T236B verde.",
+      "gap": null
+    },
+    {
+      "id": "RF-36",
+      "requirement": "Cuando se informe un SKU o código de barras, el sistema debe exigir su unicidad dentro de la organización.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/catalog-item-creation.integration.test.ts"
+      ],
+      "evidence": "Creación PRODUCT/SERVICE, control de inventario válido, nombre/ID, categoría opcional y unicidad tenant; regresión de privilegios T236B verde.",
+      "gap": null
+    },
+    {
+      "id": "RF-37",
+      "requirement": "Cuando se creen ítems con nombres iguales o similares, el sistema no debe bloquear su creación por el nombre y debe poder advertir posibles duplicados en la interfaz.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/catalog-item-creation.integration.test.ts",
+        "apps/web/test/catalog-item-management.test.tsx"
+      ],
+      "evidence": "Backend permite nombres iguales; UI muestra Posibles duplicados y llama creación aun con el aviso.",
+      "gap": null
+    },
+    {
+      "id": "RF-46",
+      "requirement": "Cuando se modifique el precio de catálogo, el sistema debe conservar sin cambios los precios históricos usados en ventas anteriores.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/sales-quote.integration.test.ts"
+      ],
+      "evidence": "T135 compara venta, ítems y ledger completos después del cambio de precio/zona horaria y del intento de cambio de moneda rechazado.",
+      "gap": null
+    },
+    {
+      "id": "RF-49",
+      "requirement": "Cuando CASHIER o EMPLOYEE intente modificar precios o aplicar descuentos, el sistema debe rechazar la acción.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/catalog-and-invitation-http.e2e.test.ts",
+        "apps/api/test/sales-quote.integration.test.ts"
+      ],
+      "evidence": "CASHIER/EMPLOYEE reciben 403 al cambiar precio por HTTP y ambos son rechazados al aplicar descuento.",
+      "gap": null
+    },
+    {
+      "id": "RF-50",
+      "requirement": "Cuando se gestione una categoría de catálogo o gasto, el sistema debe mantener ambos dominios separados y aislados por organización.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/expense-category-management.integration.test.ts"
+      ],
+      "evidence": "Categoría CATALOG no es seleccionable como EXPENSE y una categoría EXPENSE de otro tenant es rechazada.",
+      "gap": null
+    },
+    {
+      "id": "RF-51",
+      "requirement": "Cuando se cree un producto o servicio, el sistema debe permitir que no tenga categoría de catálogo.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/catalog-item-creation.integration.test.ts"
+      ],
+      "evidence": "Creación PRODUCT/SERVICE, control de inventario válido, nombre/ID, categoría opcional y unicidad tenant; regresión de privilegios T236B verde.",
+      "gap": null
+    },
+    {
+      "id": "RF-56",
+      "requirement": "Cuando un ítem esté desactivado, el sistema debe impedir su uso en nuevas ventas, compras y ajustes y conservarlo en el historial.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/monetary-currency.integration.test.ts"
+      ],
+      "evidence": "ARS/USD en doce clases monetarias y compensaciones positivas con dirección explícita; rol runtime, replay, negativos cross-tenant/escrituras directas; ítem inactivo rechaza venta/compra/ajuste sin alterar documentos, proyecciones ni ledgers.",
+      "gap": null
+    },
+    {
+      "id": "RF-76",
+      "requirement": "Cuando se confirme una venta con ítems sin control de inventario, el sistema no debe validar ni modificar existencias para dichos ítems.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/sales-quote.integration.test.ts"
+      ],
+      "evidence": "PRODUCT y SERVICE sin control admiten cantidad 2000 sin fila de stock ni movimientos de inventario.",
+      "gap": null
+    },
+    {
+      "id": "RF-82",
+      "requirement": "Cuando falle, se desconecte o no exista una impresora, el sistema no debe impedir ni revertir la confirmación de una venta.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/sales-quote.integration.test.ts",
+        "apps/api/test/sales-http.e2e.test.ts",
+        "apps/web/test/receipt-actions.test.tsx",
+        "apps/api/test/generated-files.test.ts"
+      ],
+      "evidence": "Fallo PDF probado; falta error/ausencia de impresión real o puerto externo equivalente sin revertir confirmación.",
+      "gap": "Fallo PDF probado; falta error/ausencia de impresión real o puerto externo equivalente sin revertir confirmación."
+    },
+    {
+      "id": "RF-85",
+      "requirement": "Cuando se anule una venta, el sistema debe exigir usuario, fecha/hora y motivo y debe prohibir modificar o eliminar sus ítems originales.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/sales-http.e2e.test.ts"
+      ],
+      "evidence": "Anulación coteja actor, timestamp y motivo; HTTP rechaza campos económicos manipulados y conserva cero efectos para cada payload inválido.",
+      "gap": null
+    },
+    {
+      "id": "RF-93",
+      "requirement": "Cuando OWNER o ADMIN abra, cierre o mueva efectivo, el sistema debe permitirlo solo en cajas de sucursales dentro de su alcance.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/cash-foundation.integration.test.ts"
+      ],
+      "evidence": "Completar scope negativo de abrir/cerrar/mover efectivo para OWNER y ADMIN.",
+      "gap": "Completar scope negativo de abrir/cerrar/mover efectivo para OWNER y ADMIN."
+    },
+    {
+      "id": "RF-97",
+      "requirement": "Cuando se cierre una sesión de caja, el sistema debe calcular el efectivo esperado desde el estado consolidado del servidor usando monto inicial, efectivo aplicado a ventas, reintegros, gastos, pagos de compras e ingresos/retiros manuales aplicables.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/cash-foundation.integration.test.ts"
+      ],
+      "evidence": "T124 mezcla apertura, depósitos/retiros, venta, reintegro, gasto y compra y cierra en 10.95; revisión conserva cierre/ledger y registra revisor/fecha; corrección trazable en nueva sesión; CLOSING bloquea otra apertura.",
+      "gap": null
+    },
+    {
+      "id": "RF-100",
+      "requirement": "Cuando se confirme una compra, el sistema debe exigir proveedor, sucursal, uno o más productos, cantidades y costos unitarios.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/purchases-http.e2e.test.ts"
+      ],
+      "evidence": "Proveedor, sucursal, producto, cantidad, costo ausentes y líneas vacías producen 400 sin efectos.",
+      "gap": null
+    },
+    {
+      "id": "RF-115",
+      "requirement": "Cuando se abra una sesión offline, el sistema debe registrar localmente usuario, caja, sucursal, dispositivo, fecha/hora, monto inicial e identificador único pendiente de sincronización.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/web/test/offline-pos.test.ts"
+      ],
+      "evidence": "Se descifra apertura y se cotejan usuario, caja, sucursal, dispositivo, timestamp absoluto, monto, moneda y UUID campo a campo.",
+      "gap": null
+    },
+    {
+      "id": "RF-116",
+      "requirement": "Cuando un dispositivo no haya sido autorizado, sincronizado y autenticado online previamente, el sistema no debe permitirle iniciar operaciones offline.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/offline-bootstrap.integration.test.ts",
+        "apps/web/test/offline-capability.test.ts"
+      ],
+      "evidence": "Falta escenario integrado de dispositivo sin autorización/sync/auth online previa, incluido bootstrap.",
+      "gap": "Falta escenario integrado de dispositivo sin autorización/sync/auth online previa, incluido bootstrap."
+    },
+    {
+      "id": "RF-118",
+      "requirement": "Cuando se opere offline, el sistema no debe permitir configuraciones, usuarios, compras, proveedores, gastos, ajustes, anulaciones, cierre definitivo de caja, reportes ni otras mutaciones administrativas.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/web/test/api-client.test.ts",
+        "apps/web/test/browser/offline-restrictions.mjs"
+      ],
+      "evidence": "Lista de mutaciones administrativas offline, cierre y CSV: rechazo individual y cero requests al API.",
+      "gap": null
+    },
+    {
+      "id": "RF-122",
+      "requirement": "Cuando se sincronice una venta offline con catálogo cambiado o ítem posteriormente desactivado, el sistema debe conservar los ítems y precios históricos usados por el dispositivo y registrar la discrepancia relevante.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/historical-ingestion.integration.test.ts"
+      ],
+      "evidence": "Ingestión con versión retenida tras desactivar sucursal/caja/CASH/ítem y cambiar precio; mantiene referencias y precio originales, seis discrepancias exactas, un solo evento ante replay y rollback atómico.",
+      "gap": null
+    },
+    {
+      "id": "RF-124",
+      "requirement": "Cuando una apertura offline entre en conflicto con una sesión incompatible de la misma caja, el sistema debe marcar la sesión offline como `CONFLICTED` y conservar ambas sesiones y sus operaciones.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/cash-foundation.integration.test.ts"
+      ],
+      "evidence": "Estado y sesiones separadas comprobados; falta comparar todas las operaciones de ambas sesiones.",
+      "gap": "Estado y sesiones separadas comprobados; falta comparar todas las operaciones de ambas sesiones."
+    },
+    {
+      "id": "RF-133",
+      "requirement": "Cuando una operación sea rechazada o falle, el sistema debe mostrar un mensaje claro y accionable sin exponer información sensible.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/problem-details.test.ts",
+        "apps/web/test/workspace-errors.test.tsx"
+      ],
+      "evidence": "Contrato y algunos fallos UI probados; falta exactitud y ausencia de datos sensibles de cada función principal.",
+      "gap": "Contrato y algunos fallos UI probados; falta exactitud y ausencia de datos sensibles de cada función principal."
+    },
+    {
+      "id": "RF-140",
+      "requirement": "Cuando una acción relevante de seguridad, administración, inventario, ventas, compras, gastos o caja se complete, el sistema debe crear un evento de auditoría inmutable con actor, organización, fecha/hora, entidad, acción y contexto aplicable.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/audit-events.integration.test.ts",
+        "apps/api/test/audit-query.integration.test.ts"
+      ],
+      "evidence": "Writer/append-only probados; falta matriz exhaustiva action→actor/tenant/time/entity/context y no solo un ejemplo.",
+      "gap": "Writer/append-only probados; falta matriz exhaustiva action→actor/tenant/time/entity/context y no solo un ejemplo."
+    },
+    {
+      "id": "RF-147",
+      "requirement": "Cuando se exporte un reporte, el sistema debe permitir visualización en pantalla y exportación CSV y PDF únicamente para los datos filtrados y autorizados.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/reports.integration.test.ts",
+        "apps/api/test/dashboard.integration.test.ts"
+      ],
+      "evidence": "Worker PDF y scope probados; equivalencia CSV/PDF de cada filtro/dataset no acreditada.",
+      "gap": "Worker PDF y scope probados; equivalencia CSV/PDF de cada filtro/dataset no acreditada."
+    },
+    {
+      "id": "RF-148",
+      "requirement": "Cuando OWNER consulte reportes, el sistema debe permitirle abarcar todas las sucursales de su organización.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/reports.integration.test.ts"
+      ],
+      "evidence": "OWNER obtiene datos positivos de todas las sucursales para los siete datasets; ADMIN conserva scope y filtro ajeno es rechazado.",
+      "gap": null
+    },
+    {
+      "id": "RF-151",
+      "requirement": "Cuando se acceda a cualquier API protegida, el sistema debe exigir autenticación, autorización backend, validación y normalización de entradas y límites de tasa apropiados.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/proxy-rate-limit.integration.test.ts",
+        "apps/api/test/device-authorization-http.e2e.test.ts",
+        "apps/api/test/request-contracts.test.ts"
+      ],
+      "evidence": "Nginx usa las directivas reales de producción: ráfaga HTTP obtiene 200/503, rechazo no llega al upstream, ruta pública sigue disponible y API vuelve a 200. Se conserva la evidencia previa de auth/RBAC/contratos.",
+      "gap": null
+    },
+    {
+      "id": "RF-152",
+      "requirement": "Cuando se utilice el MVP en computadora, notebook, tablet o teléfono móvil, el sistema debe presentar una interfaz web responsive y funcional.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/web/test/browser/ui-critical.mjs",
+        "apps/web/test/error-summary.test.tsx"
+      ],
+      "evidence": "Ahora pasan 129 estados de UI en cuatro viewports por Chromium, Firefox y WebKit con axe/contraste/labels/teclado/foco/overflow; esta evidencia no acredita todavía los navegadores/versiones completos de RF-289.",
+      "gap": "Ahora pasan 129 estados de UI en cuatro viewports por Chromium, Firefox y WebKit con axe/contraste/labels/teclado/foco/overflow; esta evidencia no acredita todavía los navegadores/versiones completos de RF-289."
+    },
+    {
+      "id": "RF-153",
+      "requirement": "Cuando se use una función principal, el sistema debe permitir operación por teclado con orden lógico y foco visible.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/web/test/browser/ui-critical.mjs",
+        "apps/web/test/error-summary.test.tsx"
+      ],
+      "evidence": "Ahora pasan 129 estados de UI en cuatro viewports por Chromium, Firefox y WebKit con axe/contraste/labels/teclado/foco/overflow; esta evidencia no acredita todavía los navegadores/versiones completos de RF-289.",
+      "gap": "Ahora pasan 129 estados de UI en cuatro viewports por Chromium, Firefox y WebKit con axe/contraste/labels/teclado/foco/overflow; esta evidencia no acredita todavía los navegadores/versiones completos de RF-289."
+    },
+    {
+      "id": "RF-154",
+      "requirement": "Cuando se presente un formulario, control, icono interactivo o error, el sistema debe proporcionar semántica, etiquetas, contraste y estados accesibles sin comunicar información importante solo con color.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/web/test/browser/ui-critical.mjs",
+        "apps/web/test/error-summary.test.tsx"
+      ],
+      "evidence": "Ahora pasan 129 estados de UI en cuatro viewports por Chromium, Firefox y WebKit con axe/contraste/labels/teclado/foco/overflow; esta evidencia no acredita todavía los navegadores/versiones completos de RF-289.",
+      "gap": "Ahora pasan 129 estados de UI en cuatro viewports por Chromium, Firefox y WebKit con axe/contraste/labels/teclado/foco/overflow; esta evidencia no acredita todavía los navegadores/versiones completos de RF-289."
+    },
+    {
+      "id": "RF-159",
+      "requirement": "Cuando un ítem tenga cualquier referencia operativa histórica, el sistema no debe permitir cambiar `type`, `trackInventory` ni `baseUnit`, aunque su stock actual sea cero.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/catalog-item-lifecycle.integration.test.ts"
+      ],
+      "evidence": "type/baseUnit/trackInventory con referencias históricas y stock cero se rechazan tanto en aplicación como por SQL.",
+      "gap": null
+    },
+    {
+      "id": "RF-163",
+      "requirement": "Cuando se consulte o modifique stock, el sistema debe tratarlo como resultado de movimientos válidos y no debe permitir editar directamente la existencia actual.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/inventory-foundation.integration.test.ts",
+        "apps/api/test/monetary-currency.integration.test.ts"
+      ],
+      "evidence": "Rol runtime no puede editar directamente branch_stocks; movimientos/proyección por funciones autorizadas. Anulación restaura stock mediante función contextualizada.",
+      "gap": null
+    },
+    {
+      "id": "RF-167",
+      "requirement": "Cuando una venta offline se haya creado con la última configuración válida conocida antes de una desactivación, el sistema debe aceptarla aunque la sucursal, caja o medio de pago esté inactivo al sincronizar.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/historical-ingestion.integration.test.ts"
+      ],
+      "evidence": "Ingestión con versión retenida tras desactivar sucursal/caja/CASH/ítem y cambiar precio; mantiene referencias y precio originales, seis discrepancias exactas, un solo evento ante replay y rollback atómico.",
+      "gap": null
+    },
+    {
+      "id": "RF-168",
+      "requirement": "Cuando el dispositivo ya conozca la desactivación de una sucursal, caja o medio de pago, el sistema debe impedir su uso en nuevas operaciones offline.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/web/test/offline-pos.test.ts"
+      ],
+      "evidence": "Configuración firmada que ya excluye sucursal/caja/medio de pago impide instalar/abrir/confirmar según corresponda y no cambia cola ni registros.",
+      "gap": null
+    },
+    {
+      "id": "RF-170",
+      "requirement": "Cuando una operación offline use una configuración obsoleta legítima, el sistema debe conservar sus referencias originales y registrar la discrepancia sin reasignarla a otros recursos.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/historical-ingestion.integration.test.ts"
+      ],
+      "evidence": "Ingestión con versión retenida tras desactivar sucursal/caja/CASH/ítem y cambiar precio; mantiene referencias y precio originales, seis discrepancias exactas, un solo evento ante replay y rollback atómico.",
+      "gap": null
+    },
+    {
+      "id": "RF-172",
+      "requirement": "Cuando se almacenen credenciales offline, el sistema debe vincularlas exclusivamente al usuario, organización y dispositivo autorizado y no debe persistir contraseñas, tokens reutilizables ni secretos en texto plano.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/web/test/offline-keys.test.ts",
+        "apps/web/test/offline-authorization.test.ts"
+      ],
+      "evidence": "Aislamiento/clave probados; no se acredita inventario exhaustivo de almacenamiento sin tokens/contraseñas reutilizables.",
+      "gap": "Aislamiento/clave probados; no se acredita inventario exhaustivo de almacenamiento sin tokens/contraseñas reutilizables."
+    },
+    {
+      "id": "RF-203",
+      "requirement": "Cuando una diferencia se marque `REVIEWED`, el sistema debe registrar revisor, fecha/hora, transición y nota opcional sin modificar importes, cierre ni movimientos.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/cash-foundation.integration.test.ts"
+      ],
+      "evidence": "T124 mezcla apertura, depósitos/retiros, venta, reintegro, gasto y compra y cierra en 10.95; revisión conserva cierre/ledger y registra revisor/fecha; corrección trazable en nueva sesión; CLOSING bloquea otra apertura.",
+      "gap": null
+    },
+    {
+      "id": "RF-204",
+      "requirement": "Cuando una corrección real de efectivo sea necesaria después de revisar una diferencia, el sistema debe exigir una nueva operación trazable en una sesión abierta sin alterar la diferencia histórica.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/cash-foundation.integration.test.ts"
+      ],
+      "evidence": "T124 mezcla apertura, depósitos/retiros, venta, reintegro, gasto y compra y cierra en 10.95; revisión conserva cierre/ledger y registra revisor/fecha; corrección trazable en nueva sesión; CLOSING bloquea otra apertura.",
+      "gap": null
+    },
+    {
+      "id": "RF-205",
+      "requirement": "Cuando se registre cualquier precio, costo, venta, compra, gasto, pago, movimiento o sesión de caja, el sistema debe expresarlo en la moneda base ISO 4217 de la organización.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/monetary-currency.integration.test.ts"
+      ],
+      "evidence": "ARS/USD en doce clases monetarias y compensaciones positivas con dirección explícita; rol runtime, replay, negativos cross-tenant/escrituras directas; ítem inactivo rechaza venta/compra/ajuste sin alterar documentos, proyecciones ni ledgers.",
+      "gap": null
+    },
+    {
+      "id": "RF-206",
+      "requirement": "Cuando la moneda base ya esté bloqueada por historial operativo, el sistema no debe convertir, reinterpretar ni recalcular importes históricos para cambiarla.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/sales-quote.integration.test.ts"
+      ],
+      "evidence": "T135 compara venta, ítems y ledger completos después del cambio de precio/zona horaria y del intento de cambio de moneda rechazado.",
+      "gap": null
+    },
+    {
+      "id": "RF-211",
+      "requirement": "Cuando OWNER o ADMIN administre clientes, el sistema debe permitir crear, consultar, editar, desactivar, reactivar y eliminar sin historial cualquier cliente de la organización.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/customer-lifecycle.integration.test.ts"
+      ],
+      "evidence": "OWNER y ADMIN completan creación, lectura, edición, desactivación, reactivación y eliminación sin historial.",
+      "gap": null
+    },
+    {
+      "id": "RF-215",
+      "requirement": "Cuando OWNER o ADMIN administre proveedores, el sistema debe permitir crear, consultar, editar, desactivar, reactivar y eliminar sin historial cualquier proveedor de la organización.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/supplier-lifecycle.integration.test.ts"
+      ],
+      "evidence": "OWNER y ADMIN completan creación, lectura, edición, desactivación, reactivación y eliminación sin historial.",
+      "gap": null
+    },
+    {
+      "id": "RF-218",
+      "requirement": "Cuando un proveedor esté inactivo, el sistema debe conservarlo en el historial e impedir su selección para nuevas compras.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/purchases.integration.test.ts",
+        "apps/api/test/sales-http.e2e.test.ts"
+      ],
+      "evidence": "Proveedor inactivo rechaza compra y conserva snapshot completo; cliente/proveedor con operación anulada no se eliminan físicamente.",
+      "gap": null
+    },
+    {
+      "id": "RF-219",
+      "requirement": "Cuando un cliente o proveedor tenga cualquier referencia histórica, el sistema no debe permitir su eliminación física aunque la operación relacionada haya sido anulada o revertida.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/purchases.integration.test.ts",
+        "apps/api/test/sales-http.e2e.test.ts"
+      ],
+      "evidence": "Proveedor inactivo rechaza compra y conserva snapshot completo; cliente/proveedor con operación anulada no se eliminan físicamente.",
+      "gap": null
+    },
+    {
+      "id": "RF-220",
+      "requirement": "Cuando ADMIN acceda a una ficha maestra global de cliente o proveedor, el sistema debe permitirle administrarla sin conceder acceso a operaciones de sucursales fuera de su alcance.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/customer-lifecycle.integration.test.ts",
+        "apps/api/test/supplier-lifecycle.integration.test.ts"
+      ],
+      "evidence": "Falta flujo maestro global ADMIN permitido seguido de operación de otra branch denegada.",
+      "gap": "Falta flujo maestro global ADMIN permitido seguido de operación de otra branch denegada."
+    },
+    {
+      "id": "RF-221",
+      "requirement": "Cuando OWNER o ADMIN administre el catálogo maestro, el sistema debe permitirle crear, editar, activar, desactivar y eliminar sin historial ítems y categorías de toda la organización. La operación queda sujeta además a las restricciones de preservación offline de RF-302–RF-306.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/catalog-category-management.integration.test.ts",
+        "apps/api/test/catalog-item-lifecycle.integration.test.ts",
+        "apps/api/test/catalog-and-invitation-http.e2e.test.ts",
+        "apps/api/test/catalog-category-browser.e2e.ts",
+        "apps/web/test/browser/offline-restrictions.mjs"
+      ],
+      "evidence": "T236I: OWNER/ADMIN completan comandos globales de ítems/categorías con ADMIN asignado a una sola sucursal. Edición/versionado/replay/concurrencia/rollback de auditoría y negativos por rol/tenant pasan bajo PostgreSQL runtime y HTTP real. Historial/exposición conservados; borrado bloqueado. UI de producción edita por teclado en dos viewports contra NestJS/PostgreSQL sin interceptar backend; administración offline rechaza 25 solicitudes con cero requests. Ver t236i-catalog-category-evidence.md.",
+      "gap": null
+    },
+    {
+      "id": "RF-225",
+      "requirement": "Cuando EMPLOYEE confirme una compra `PENDING_PAYMENT`, el sistema debe permitirle ingresar y visualizar sus costos unitarios solo dentro de esa compra.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/purchases.integration.test.ts"
+      ],
+      "evidence": "EMPLOYEE lee costo unitario y total de línea en su recepción; lectura de recepción ajena denegada.",
+      "gap": null
+    },
+    {
+      "id": "RF-244",
+      "requirement": "Cuando el usuario ingrese cantidades de ventas, compras, ajustes o transferencias, el sistema debe exigir magnitudes estrictamente positivas con la precisión admitida por la unidad.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/inventory-foundation.integration.test.ts"
+      ],
+      "evidence": "Ajustes y transferencias con cuatro decimales se rechazan sin documentos, movimientos ni idempotencia confirmada.",
+      "gap": null
+    },
+    {
+      "id": "RF-246",
+      "requirement": "Cuando se configure un precio de venta o costo unitario de compra, el sistema debe permitir cero y prohibir valores negativos y más de dos decimales.",
+      "previousStatus": "VIOLADO",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/catalog-price.integration.test.ts",
+        "apps/api/test/catalog-and-invitation-http.e2e.test.ts",
+        "apps/api/test/purchases-http.e2e.test.ts",
+        "packages/shared/src/money-validation.test.ts"
+      ],
+      "evidence": "Regresiones T236A rechazan negativo y escala excedida antes de redondear; cero es válido. Cambios previos del usuario conservados.",
+      "gap": null
+    },
+    {
+      "id": "RF-251",
+      "requirement": "Cuando se registre un reintegro o reversión, el sistema debe guardar una magnitud positiva y representar la dirección mediante el tipo de operación.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/monetary-currency.integration.test.ts"
+      ],
+      "evidence": "ARS/USD en doce clases monetarias y compensaciones positivas con dirección explícita; rol runtime, replay, negativos cross-tenant/escrituras directas; ítem inactivo rechaza venta/compra/ajuste sin alterar documentos, proyecciones ni ledgers.",
+      "gap": null
+    },
+    {
+      "id": "RF-254",
+      "requirement": "Cuando se confirme una venta online, el sistema debe calcular y validar en backend los precios vigentes, cantidades, descuentos y total sin confiar en importes enviados por el cliente.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/sales-http.e2e.test.ts"
+      ],
+      "evidence": "Anulación coteja actor, timestamp y motivo; HTTP rechaza campos económicos manipulados y conserva cero efectos para cada payload inválido.",
+      "gap": null
+    },
+    {
+      "id": "RF-265",
+      "requirement": "Cuando se valide unicidad de SKU, código de barras o identificador fiscal, el sistema debe normalizar el valor y considerar todos los registros no eliminados de la organización, incluidos los inactivos.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/supplier-lifecycle.integration.test.ts",
+        "apps/api/test/catalog-item-creation.integration.test.ts"
+      ],
+      "evidence": "Identificador fiscal de proveedor INACTIVE sigue reservado; SKU/barcode normalizados incluyen inactivos y aislamiento tenant.",
+      "gap": null
+    },
+    {
+      "id": "RF-266",
+      "requirement": "Cuando se valide unicidad de nombres de sucursal o caja, el sistema debe ignorar espacios periféricos y diferencias de mayúsculas y considerar los registros no eliminados dentro de su alcance de unicidad.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/branch-management.integration.test.ts",
+        "apps/api/test/cash-register-management.integration.test.ts"
+      ],
+      "evidence": "Nombre INACTIVE no eliminado reserva trim/case en su alcance para sucursal y caja.",
+      "gap": null
+    },
+    {
+      "id": "RF-269",
+      "requirement": "Cuando se confirme una venta o compra, el sistema debe guardar snapshots de identificación de sus ítems, unidad, categoría aplicable, precio o costo y moneda usados en ese momento.",
+      "previousStatus": "PENDIENTE",
+      "status": "VIOLADO",
+      "tests": [
+        "apps/api/test/sales-quote.integration.test.ts",
+        "apps/api/test/sales-http.e2e.test.ts"
+      ],
+      "evidence": "sale_items tiene category_id/category_name, pero SalesPersistence no los captura; configuración/sale offline tampoco conserva categoría aplicable. No reconstruir historia usando el maestro actual.",
+      "gap": "sale_items tiene category_id/category_name, pero SalesPersistence no los captura; configuración/sale offline tampoco conserva categoría aplicable. No reconstruir historia usando el maestro actual."
+    },
+    {
+      "id": "RF-271",
+      "requirement": "Cuando se almacene una fecha operativa online, el sistema debe persistir un timestamp absoluto y presentarlo según la zona horaria de la organización.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/web/test/cash-operations.test.tsx",
+        "apps/web/test/offline-status.test.ts"
+      ],
+      "evidence": "Timestamp absoluto se muestra en Pacific/Auckland frente a UTC; componentes operativos comparten timezone de settings/bootstrap firmado. Timestamps persistidos permanecen UTC.",
+      "gap": null
+    },
+    {
+      "id": "RF-274",
+      "requirement": "Cuando una sincronización individual falle, el sistema debe mantener la operación local sin modificar, mostrar su estado y permitir reintentos automáticos y manuales seguros.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/web/test/opaque-delivery.test.ts",
+        "apps/api/test/offline-ack.test.ts",
+        "apps/api/test/sync-envelope-keys.test.ts"
+      ],
+      "evidence": "Falta integrar estado de error individual, preservación exacta y retry automático/manual en el mismo flujo.",
+      "gap": "Falta integrar estado de error individual, preservación exacta y retry automático/manual en el mismo flujo."
+    },
+    {
+      "id": "RF-285",
+      "requirement": "Cuando una entidad tenant se relacione con otra, el sistema debe validar en backend que ambas pertenezcan a la misma organización y no debe aceptar identificadores cruzados entre tenants.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/tenant-base.integration.test.ts",
+        "apps/api/test/tenant-rls.integration.test.ts"
+      ],
+      "evidence": "Negativos de FK/RLS en tabla base y módulos revisados; no extrapolar un caso a todas las relaciones tenant de todos los endpoints.",
+      "gap": "Negativos de FK/RLS en tabla base y módulos revisados; no extrapolar un caso a todas las relaciones tenant de todos los endpoints."
+    },
+    {
+      "id": "RF-289",
+      "requirement": "Cuando se ejecute el MVP, el sistema debe soportar las dos últimas versiones estables de Chrome, Edge, Firefox y Safari, con instalación PWA y modo offline donde el navegador ofrezca las capacidades requeridas.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/web/test/browser/pwa-install.mjs",
+        "apps/web/test/browser/pwa-capability.mjs"
+      ],
+      "evidence": "T224/T227 siguen pendientes: dos versiones estables por Chrome/Edge/Firefox/Safari; WebKit automatizado no demuestra Safari real.",
+      "gap": "T224/T227 siguen pendientes: dos versiones estables por Chrome/Edge/Firefox/Safari; WebKit automatizado no demuestra Safari real."
+    },
+    {
+      "id": "RF-292",
+      "requirement": "Si una caja tiene una sesión en `OPEN`, `CLOSING` o `CONFLICTED`, el sistema no debe permitir otra apertura normal online hasta que la situación activa alcance un estado final.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/cash-foundation.integration.test.ts"
+      ],
+      "evidence": "T124 mezcla apertura, depósitos/retiros, venta, reintegro, gasto y compra y cierra en 10.95; revisión conserva cierre/ledger y registra revisor/fecha; corrección trazable en nueva sesión; CLOSING bloquea otra apertura.",
+      "gap": null
+    },
+    {
+      "id": "RF-293",
+      "requirement": "Cuando una invitación permanezca sin aceptar durante siete días, el sistema debe marcarla `EXPIRED` e impedir el uso de su token.",
+      "previousStatus": "VIOLADO",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/identity-worker.integration.test.ts",
+        "apps/api/test/delivery-runtime.integration.test.ts"
+      ],
+      "evidence": "Registry de producción y worker compilado entregan reset/invitación y expiran invitación; lease, ACK vencido, recuperación de lease, retry estable, dead-letter, token scrub y auditoría.",
+      "gap": null
+    },
+    {
+      "id": "RF-295",
+      "requirement": "Cuando se confirme una venta de total cero, el sistema debe exigir igualmente sesión válida, permisos, stock y generación de comprobante.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/sales-quote.integration.test.ts",
+        "apps/web/test/offline-sale-confirmation.test.ts"
+      ],
+      "evidence": "Venta gratuita online/offline valida sesión/permisos/stock y comprueba snapshot de comprobante.",
+      "gap": null
+    },
+    {
+      "id": "RF-307",
+      "requirement": "Cuando se reciban operaciones legítimas tardías, el sistema debe interpretarlas y aplicarlas con las referencias, moneda, unidad, tipo y control de inventario de la versión verificable bajo la cual fueron creadas, sin reinterpretarlas con la configuración actual ni reasignarlas a otros recursos.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/api/test/historical-sale-snapshot.test.ts",
+        "apps/api/test/historical-ingestion.integration.test.ts"
+      ],
+      "evidence": "Validador histórico rechaza moneda/unidad/type/trackInventory actuales incompatibles; falta ingestión tardía completa variando cada campo y demostrando efecto con versión antigua.",
+      "gap": "Validador histórico rechaza moneda/unidad/type/trackInventory actuales incompatibles; falta ingestión tardía completa variando cada campo y demostrando efecto con versión antigua."
+    },
+    {
+      "id": "RF-308",
+      "requirement": "Cuando una restricción por posible historial offline impida un cambio administrativo, el sistema debe informar el motivo y distinguir historial confirmado, incertidumbre pendiente de sincronización y bloqueo permanente de moneda por dispositivo irrecuperable, sin exponer datos fuera del alcance del actor.",
+      "previousStatus": "PENDIENTE",
+      "status": "PENDIENTE",
+      "tests": [
+        "apps/web/test/organization-settings.test.tsx",
+        "apps/web/test/catalog-item-management.test.tsx"
+      ],
+      "evidence": "Falta verificar separadamente tres motivos de bloqueo y no exposición fuera de scope del actor.",
+      "gap": "Falta verificar separadamente tres motivos de bloqueo y no exposición fuera de scope del actor."
+    },
+    {
+      "id": "RF-313",
+      "requirement": "Cuando se entregue un sobre sin una sesión online vigente del actor original, el servidor debe exigir prueba fresca de posesión de la clave no exportable del dispositivo y validar certificado de dispositivo, firma, grant histórico, secuencia, cadena, configuración y conocimiento de revocación dentro del tenant original.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/device-authorization-http.e2e.test.ts",
+        "apps/web/test/browser/opaque-delivery.mjs"
+      ],
+      "evidence": "HTTP sin sesión usa desafío fresco y firma ECDSA de clave no exportable; replay/expiración rechazados. Matriz derivada de OpenAPI niega capacidades delivery en todas las rutas comerciales protegidas, no usa 404 como prueba; ACK y revocación entre pestañas en navegador real.",
+      "gap": null
+    },
+    {
+      "id": "RF-314",
+      "requirement": "Cuando el canal de entrega funcione después de logout o revocación, el sistema debe limitarlo a sobres ya sellados y respuestas ACK mínimas autenticadas; no debe conceder lectura de datos tenant, recibos, catálogo, estado comercial detallado ni creación de nuevas operaciones.",
+      "previousStatus": "PENDIENTE",
+      "status": "CUBIERTO",
+      "tests": [
+        "apps/api/test/device-authorization-http.e2e.test.ts",
+        "apps/web/test/browser/opaque-delivery.mjs"
+      ],
+      "evidence": "HTTP sin sesión usa desafío fresco y firma ECDSA de clave no exportable; replay/expiración rechazados. Matriz derivada de OpenAPI niega capacidades delivery en todas las rutas comerciales protegidas, no usa 404 como prueba; ACK y revocación entre pestañas en navegador real.",
+      "gap": null
+    }
+  ],
+  "t236i": {
+    "task": "T236I",
+    "date": "2026-10-10T17:48:13.417Z",
+    "status": "COMPLETADO",
+    "evidence": "t236i-catalog-category-evidence.md",
+    "scope": "Delta RF-221; los hashes y resultados base de T236D–T236H se conservan como snapshot anterior.",
+    "logSha256": {
+      "output/t236i-api.log": "d40494d84d581720a1d64329397d89b3b33b6ac785c2c4162f81c82572dd3269",
+      "output/t236i-final-api.log": "6313ebfa96545162ee4abc7e72b140eb2e0fc9d1f4f4507584127b7bbfe3ccbc",
+      "output/t236i-lifecycle.log": "0815a8465857770f4483ad0744e9519ec99aa63b3b47cea9539f2ec40ec44fd3",
+      "output/t236i-related.log": "3cb9b14e5c9cd0ac18b04a79aaece62da47814810a0f809126b84833d5d87cfa",
+      "output/t236i-web.log": "75c73459afe0a42a641b814068112fc699b0c4bdd89c8a50294784db838b033e",
+      "output/t236i-browser.log": "1ef36a17dd7cbe938dbcfbe6b13bcc5e81ed7c048b59adffe26109464eecc45e",
+      "output/t236i-offline-browser.log": "3a750923bdea86e045ddd8897bedab1c6508ece65b958767b450fa1b30ea4f6c",
+      "output/t236i-lint.log": "30b60add82a1c015c9cce881ab5a01dea92c3088d2d252317df8efbbedcbddc0",
+      "output/t236i-typecheck.log": "1151db18ef22c2687bc30223cea1f610604fd8a88550aaf22248b52729e019d9",
+      "output/playwright/t236i-browser-result.json": "95158923169b88ff6cb063361d693162b7f4da1d890ee0c9e4f871f12e05e761"
+    },
+    "sourceSha256": {
+      "apps/api/src/modules/catalog/catalog-category-management.service.ts": "eef521d8981ff4930495e648793463778f87cdc43d425b96615e6429f527dd76",
+      "apps/api/src/modules/catalog/catalog-lifecycle.controller.ts": "d747b457e1264d6e060dbcafbebb25e45f676139949a3544b7608de1f829bb45",
+      "apps/api/src/database/migrations/0108_catalog_category_edit.sql": "2728ca061edc6163b87b07daf065d70e3c7f2f8c30364914c4d10c343521ef81",
+      "apps/api/src/database/migrations/meta/_journal.json": "50073f1deb908aa1f55525469fae1c330783135c9ecc70805463c3ac7510fd3c",
+      "apps/web/src/features/catalog/catalog-category-management.tsx": "9b5c81f31f8737bd871e28f15f88988b445de4fe2fc2272cc6b6edbd6d49303d",
+      "apps/web/src/features/catalog/catalog-category-management.module.css": "7a06666e6f38f73497870012db85d53e73e9518bf9aee2d666ea3274d48174d0",
+      "apps/api/test/catalog-category-management.integration.test.ts": "10148102b33910119b7831621f5a557bf0b7412451dab182c274015ee414cfa5",
+      "apps/api/test/catalog-item-lifecycle.integration.test.ts": "3fc86ad27400558fed95369f17f982a95039bdf2e813ec03e5b582b174f01023",
+      "apps/api/test/catalog-and-invitation-http.e2e.test.ts": "28f97f91232f02535d551b678c5d9ba21092cb8de601a94665f01e21b7a68274",
+      "apps/api/test/catalog-category-browser.e2e.ts": "636a52ce6ff4e7175c9087b90f9febe873810c8fffd483845f8c6bcbebbb8de5",
+      "apps/web/test/browser/offline-restrictions.mjs": "290305cfdc9da87a9353170eb83f49c0aa167b58f0a1fa2e288408f82f04437f",
+      "apps/web/test/catalog-category-management.test.tsx": "87550cd329b134c0a89d8bd9846e42c6c30c415f3c33bd38a02ab5b0face779d",
+      "apps/web/test/api-client.test.ts": "c43fee9e8701401b17bd7f17a92dc544e95d10207452109222dd39ee80cebd11",
+      "apps/web/test/browser/catalog-category.mjs": "0cca6049bef89a3e8d72015a54b1b1599e705e60a49fc0ea003f3949f824e335",
+      "apps/web/test/browser/catalog-category.tsx": "87d5976614b46ea7437955d60b01ac038f69564db3601c4c81b0dc8468acb2bb",
+      "apps/web/test/browser/catalog-category.html": "901f3c4f71dbecf6b0cfb50b8d8da54741642d86aabd8414a1e935495898c848",
+      "apps/web/test/browser/catalog-category.vite.mjs": "db781d1130392795e091b533baddd1aeb17815c0a79f0b2c6cc81700acc8d662",
+      "apps/web/test/browser/offline-restrictions.tsx": "8521dc3737ea9bb0124522fbe5bfb269c6f7b897b3fffd09842f3c38975911da",
+      "apps/api/test/__snapshots__/request-contracts.test.ts.snap": "3437760474de1dbb9d60f9c89fe23ed9fed74ce5def9c686739227d43153001b",
+      "apps/api/vitest.browser.config.mts": "768d41ca8e456af5011ecf90636df159ee0396e48906c3ff0e43a9958499b80f",
+      "package.json": "d031c0fd970196d4b4a7bc14d32081fbaf0b7f1a920a68536009ca6982be00b9",
+      ".github/workflows/ci.yaml": "68d39af60e738865704084566f96a98a354c6d2b37eb22b5bf4217ec6f47a017"
+    },
+    "browser": {
+      "passed": true,
+      "patches": 2,
+      "screenshots": [
+        "output/playwright/t236i-category-1280.png",
+        "output/playwright/t236i-category-390.png"
+      ],
+      "backend": "real NestJS/PostgreSQL runtime"
+    },
+    "finalSkippedTests": 0
+  }
+}

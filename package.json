@@ -10,12 +10,18 @@
   "scripts": {
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test && node --test test/workspace.smoke.test.mjs",
+    "test": "turbo run test && node --test test/*.test.mjs",
+    "test:e2e:critical": "node ops/browser/run.mjs critical",
+    "test:e2e:catalog": "pnpm --filter @uconext/api exec vitest run --config vitest.browser.config.mts",
+    "test:e2e:install": "node ops/browser/install.mjs",
+    "test:e2e:nightly": "node ops/browser/run.mjs nightly",
+    "test:compatibility": "node ops/browser/run.mjs compatibility",
     "build": "turbo run build",
     "build:images": "node infra/deploy/build-images.mjs",
     "test:operations": "pnpm --filter @uconext/api exec vitest run --config vitest.config.mts --maxWorkers=1 operations-alerts.test.ts operations-monitor.integration.test.ts backup.test.ts restore.test.ts recovery-targets.test.ts backup-restore.integration.test.ts delivery-images.test.ts delivery-migration.integration.test.ts delivery-runtime.integration.test.ts worker-health.test.ts"
   },
   "devDependencies": {
+    "@playwright/cli": "0.1.22",
     "@types/node": "^24.10.0",
     "eslint": "^10.10.0",
     "turbo": "^2.6.1",

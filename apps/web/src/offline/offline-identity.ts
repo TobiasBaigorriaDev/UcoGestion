@@ -1,5 +1,6 @@
 import { OfflineDatabase } from './offline-database';
 import { OfflineKeys } from './offline-keys';
+import { announceIdentityRetirement, observeRetirement } from './identity-retirement-events';
 
 /** Retire access while preserving original identity ciphertext and PIN wrapping. */
 export async function retireOfflineIdentity(db: OfflineDatabase): Promise<void> {
@@ -25,8 +26,7 @@ export async function activateOfflineIdentity(db: OfflineDatabase, userId: strin
 export async function retireAllOfflineIdentities(): Promise<void> {
   OfflineKeys.lockAll();
   if (typeof window !== 'undefined') {
-    window.localStorage.setItem('uco:identity-retired', crypto.randomUUID());
-    window.dispatchEvent(new Event('uco:identity-retired'));
+    announceIdentityRetirement();
   }
   if (typeof indexedDB === 'undefined') return;
   for (const name of await OfflineDatabase.getDatabaseNames()) {
@@ -39,9 +39,5 @@ export async function retireAllOfflineIdentities(): Promise<void> {
 }
 
 export function observeIdentityRetirement(target: Window = window): () => void {
-  const lock = () => OfflineKeys.lockAll();
-  const storage = (event: StorageEvent) => { if (event.key === 'uco:identity-retired') lock(); };
-  target.addEventListener('storage', storage);
-  target.addEventListener('uco:identity-retired', lock);
-  return () => { target.removeEventListener('storage', storage); target.removeEventListener('uco:identity-retired', lock); };
+  return observeRetirement(() => OfflineKeys.lockAll(), target);
 }

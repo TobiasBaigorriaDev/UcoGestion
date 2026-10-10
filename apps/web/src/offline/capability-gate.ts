@@ -19,7 +19,11 @@ export async function requireOfflineCapabilities(): Promise<void> {
       !crypto?.subtle || !crypto.getRandomValues) {
     throw new Error('Este navegador no admite las capacidades necesarias para POS offline.');
   }
-  const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
+  // Re-registering while offline can trigger an update fetch in WebKit even
+  // when an active worker already exists. Use the installed worker for POS.
+  const installed = await navigator.serviceWorker.getRegistration('/');
+  const registration = installed?.active ? installed
+    : await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
   if (!registration.active) await navigator.serviceWorker.ready;
   if (!registration.active) throw new Error('El service worker todavía no está activo.');
   const request = indexedDB.open('uconext-capability-check', 1);

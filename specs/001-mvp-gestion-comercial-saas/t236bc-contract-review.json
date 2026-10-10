@@ -1,0 +1,1233 @@
+{
+  "task": "T236C",
+  "reviewedAt": "2026-10-09",
+  "beforePaths": 54,
+  "afterPaths": 108,
+  "removed": [],
+  "changed": [],
+  "topChanged": [],
+  "addedMethods": [
+    {
+      "path": "/api/v1/audit",
+      "operations": [
+        {
+          "method": "get",
+          "id": "AuditController_list",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "actorUserId",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "action",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "branchId",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "limit",
+              "required": false,
+              "schema": {
+                "type": "number"
+              }
+            },
+            {
+              "in": "query",
+              "name": "cursor",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/audit/audit.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/branches/{branchId}/deactivate",
+      "operations": [
+        {
+          "method": "post",
+          "id": "BranchesController_deactivate",
+          "status": [
+            "201"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "branchId",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/branches/branches.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/branches/{branchId}/deactivation-blockers",
+      "operations": [
+        {
+          "method": "get",
+          "id": "BranchesController_blockers",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "branchId",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/branches/branches.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions",
+      "operations": [
+        {
+          "method": "get",
+          "id": "CashController_read",
+          "status": [
+            "200"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions/abort-close",
+      "operations": [
+        {
+          "method": "post",
+          "id": "CashController_abortClose",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions/begin-close",
+      "operations": [
+        {
+          "method": "post",
+          "id": "CashController_beginClose",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions/close",
+      "operations": [
+        {
+          "method": "post",
+          "id": "CashController_close",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions/exceptional-close",
+      "operations": [
+        {
+          "method": "post",
+          "id": "CashController_exceptionalClose",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions/final-sync",
+      "operations": [
+        {
+          "method": "post",
+          "id": "CashController_finalSync",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions/manual-deposits",
+      "operations": [
+        {
+          "method": "post",
+          "id": "CashController_deposit",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions/manual-withdrawals",
+      "operations": [
+        {
+          "method": "post",
+          "id": "CashController_withdraw",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions/open",
+      "operations": [
+        {
+          "method": "post",
+          "id": "CashController_open",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions/reconcile",
+      "operations": [
+        {
+          "method": "post",
+          "id": "CashController_reconcile",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions/review-difference",
+      "operations": [
+        {
+          "method": "post",
+          "id": "CashController_reviewDifference",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions/review-late-data",
+      "operations": [
+        {
+          "method": "post",
+          "id": "CashController_reviewLateData",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/cash-sessions/{sessionId}/checkpoint",
+      "operations": [
+        {
+          "method": "get",
+          "id": "CashController_checkpoint",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/cash/cash.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/dashboard",
+      "operations": [
+        {
+          "method": "get",
+          "id": "DashboardController_get",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "to",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "from",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "branchId",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/dashboard/dashboard.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/devices/authorize-pos",
+      "operations": [
+        {
+          "method": "post",
+          "id": "DeviceAuthorizationController_authorize",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/offline-sync/device-authorization.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/expenses",
+      "operations": [
+        {
+          "method": "post",
+          "id": "ExpensesController_create",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/expenses/expenses.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/expenses/{id}",
+      "operations": [
+        {
+          "method": "get",
+          "id": "ExpensesController_detail",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/expenses/expenses.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/expenses/{id}/cancellations",
+      "operations": [
+        {
+          "method": "post",
+          "id": "ExpensesController_cancel",
+          "status": [
+            "201"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/expenses/expenses.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/inventory/adjustments",
+      "operations": [
+        {
+          "method": "get",
+          "id": "InventoryController_listAdjustments",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "branchId",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "after",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/inventory/inventory.controller.ts"
+        },
+        {
+          "method": "post",
+          "id": "InventoryController_adjust",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/inventory/inventory.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/inventory/adjustments/{id}/compensations",
+      "operations": [
+        {
+          "method": "post",
+          "id": "InventoryController_compensate",
+          "status": [
+            "201"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/inventory/inventory.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/inventory/incidents/{id}/resolve",
+      "operations": [
+        {
+          "method": "post",
+          "id": "InventoryController_resolveIncident",
+          "status": [
+            "201"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/inventory/inventory.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/inventory/stocks",
+      "operations": [
+        {
+          "method": "get",
+          "id": "InventoryController_stocks",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "branchId",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "after",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/inventory/inventory.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/inventory/stocks/{branchId}/{itemId}",
+      "operations": [
+        {
+          "method": "get",
+          "id": "InventoryController_stock",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "branchId",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "path",
+              "name": "itemId",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/inventory/inventory.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/inventory/stocks/{branchId}/{itemId}/threshold",
+      "operations": [
+        {
+          "method": "put",
+          "id": "InventoryController_threshold",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "branchId",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "path",
+              "name": "itemId",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/inventory/inventory.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/inventory/transfers",
+      "operations": [
+        {
+          "method": "get",
+          "id": "InventoryController_listTransfers",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "branchId",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "after",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/inventory/inventory.controller.ts"
+        },
+        {
+          "method": "post",
+          "id": "InventoryController_transfer",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/inventory/inventory.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/inventory/transfers/{id}/compensations",
+      "operations": [
+        {
+          "method": "post",
+          "id": "InventoryController_compensateTransfer",
+          "status": [
+            "201"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/inventory/inventory.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/offline/authorize",
+      "operations": [
+        {
+          "method": "post",
+          "id": "OfflineBootstrapController_authorize",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/offline-sync/offline-bootstrap.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/offline/bootstrap",
+      "operations": [
+        {
+          "method": "post",
+          "id": "OfflineBootstrapController_issue",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/offline-sync/offline-bootstrap.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/offline/configuration-barriers",
+      "operations": [
+        {
+          "method": "post",
+          "id": "ConfigurationBarrierController_begin",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/offline-sync/configuration-barrier.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/offline/configuration-barriers/{id}/checkpoints",
+      "operations": [
+        {
+          "method": "post",
+          "id": "ConfigurationBarrierController_checkpoint",
+          "status": [
+            "201"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/offline-sync/configuration-barrier.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/offline/configuration-barriers/{id}/complete",
+      "operations": [
+        {
+          "method": "post",
+          "id": "ConfigurationBarrierController_complete",
+          "status": [
+            "201"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/offline-sync/configuration-barrier.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/offline/configuration-barriers/{id}/grants",
+      "operations": [
+        {
+          "method": "get",
+          "id": "ConfigurationBarrierController_grants",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "deviceId",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/offline-sync/configuration-barrier.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/offline/delivery/challenge",
+      "operations": [
+        {
+          "method": "post",
+          "id": "OfflineDeliveryController_challenge",
+          "status": [
+            "200"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/offline-sync/offline-delivery.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/offline/delivery/push",
+      "operations": [
+        {
+          "method": "post",
+          "id": "OfflineDeliveryController_push",
+          "status": [
+            "200"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/offline-sync/offline-delivery.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/purchases",
+      "operations": [
+        {
+          "method": "post",
+          "id": "PurchasesController_confirmPending",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/purchases/purchases.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/purchases/paid",
+      "operations": [
+        {
+          "method": "post",
+          "id": "PurchasesController_confirmPaid",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/purchases/purchases.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/purchases/{id}",
+      "operations": [
+        {
+          "method": "get",
+          "id": "PurchasesController_detail",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/purchases/purchases.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/purchases/{id}/cancel",
+      "operations": [
+        {
+          "method": "post",
+          "id": "PurchasesController_cancel",
+          "status": [
+            "201"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/purchases/purchases.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/purchases/{id}/pay",
+      "operations": [
+        {
+          "method": "post",
+          "id": "PurchasesController_pay",
+          "status": [
+            "201"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/purchases/purchases.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/reports/exports/{id}",
+      "operations": [
+        {
+          "method": "get",
+          "id": "ReportsController_exportStatus",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/reports/reports.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/reports/{dataset}",
+      "operations": [
+        {
+          "method": "get",
+          "id": "ReportsController_list",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "dataset",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "lowStock",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "status",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "to",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "from",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "branchId",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "limit",
+              "required": false,
+              "schema": {
+                "type": "number"
+              }
+            },
+            {
+              "in": "query",
+              "name": "cursor",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/reports/reports.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/reports/{dataset}/csv",
+      "operations": [
+        {
+          "method": "get",
+          "id": "ReportsController_csv",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "dataset",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/reports/reports.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/reports/{dataset}/exports",
+      "operations": [
+        {
+          "method": "post",
+          "id": "ReportsController_queueExport",
+          "status": [
+            "201"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "dataset",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/reports/reports.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/sales",
+      "operations": [
+        {
+          "method": "post",
+          "id": "SalesController_confirm",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/sales/sales.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/sales/checkout-context",
+      "operations": [
+        {
+          "method": "get",
+          "id": "SalesController_checkoutContext",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "branchId",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/sales/sales.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/sales/quote",
+      "operations": [
+        {
+          "method": "post",
+          "id": "SalesController_quote",
+          "status": [
+            "201"
+          ],
+          "parameters": [],
+          "controller": "apps/api/src/modules/sales/sales.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/sales/{id}",
+      "operations": [
+        {
+          "method": "get",
+          "id": "SalesController_detail",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/sales/sales.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/sales/{id}/cancel",
+      "operations": [
+        {
+          "method": "post",
+          "id": "SalesController_cancel",
+          "status": [
+            "201"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/sales/sales.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/sales/{id}/receipt",
+      "operations": [
+        {
+          "method": "get",
+          "id": "SalesController_receipt",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/sales/sales.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/sales/{id}/receipt.pdf",
+      "operations": [
+        {
+          "method": "get",
+          "id": "SalesController_receiptPdf",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/sales/sales.controller.ts"
+        }
+      ]
+    },
+    {
+      "path": "/api/v1/sales/{id}/receipt/print",
+      "operations": [
+        {
+          "method": "get",
+          "id": "SalesController_printableReceipt",
+          "status": [
+            "200"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "controller": "apps/api/src/modules/sales/sales.controller.ts"
+        }
+      ]
+    }
+  ],
+  "addedOperations": 56,
+  "unresolved": [],
+  "sourceSha256": {
+    "apps/api/src/modules/audit/audit.controller.ts": "17210b4a9c28f59dbc80f0dd32b58b1f2c7e27b5ead55cee0fd6762db3b69eaa",
+    "apps/api/src/modules/branches/branches.controller.ts": "3f031788e21b0d297806f952c6b2d9330ce196951c844a09152e8bfb43f1d0bd",
+    "apps/api/src/modules/cash/cash.controller.ts": "b8c483b07f01f9761e3530e840dbd49f6da6dcf5d28515ddf76de38a8e610d56",
+    "apps/api/src/modules/dashboard/dashboard.controller.ts": "07c561aa67ac32be7fd1929c8f3da3b2df372a8b5c754085be0e0bccbf6ac1be",
+    "apps/api/src/modules/offline-sync/device-authorization.controller.ts": "dd692142a11feae5166db05e3916fa4eed5d569068edff130a71ac77a3a6affa",
+    "apps/api/src/modules/expenses/expenses.controller.ts": "4b67cb9b84254f377c2eeb179b52ab5390b9ab9405642b11cca378dbacfefb89",
+    "apps/api/src/modules/inventory/inventory.controller.ts": "74fbc03d254c3d646c1de265fa602dfe664fa1c7650f64ed46bef3740a7809c6",
+    "apps/api/src/modules/offline-sync/offline-bootstrap.controller.ts": "9dccf4897723e48688de1b806300d08464e63d45830a07b565cc461f66f54d8f",
+    "apps/api/src/modules/offline-sync/configuration-barrier.controller.ts": "8e3089d043cbc800d2f0c26015c8f776a2616f094388b5c6c2b73f756401679e",
+    "apps/api/src/modules/offline-sync/offline-delivery.controller.ts": "6ec287ac475fb6c32665b9e5964997eff1c61fe5132b7d6456c6f8c8abf199ac",
+    "apps/api/src/modules/purchases/purchases.controller.ts": "207956bf9130769b64f4e063939dc543bfabd60030c66a1166a647eb85874f73",
+    "apps/api/src/modules/reports/reports.controller.ts": "9137bab0c2d78fb56b8fa4fe3030634e72a87b29fa954bdfb2d7b318772b89f0",
+    "apps/api/src/modules/sales/sales.controller.ts": "a703d7630e309435373b5f54d983fc1e56baeaa9d09524f63cbf2421efe6a49a"
+  }
+}

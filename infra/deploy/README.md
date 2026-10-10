@@ -16,7 +16,7 @@ Para comprobar igualdad binaria ejecutar `pnpm run build:images --verify`: recom
 
 Next 16.3.5 genera metadatos aleatorios de preview y Server Actions aunque no se usen. El paso de build normaliza consistentemente esos cuatro manifiestos con HMAC por propósito y release, sin modificar Next ni su criptografía runtime. Rechaza manifiestos con Server Actions. **Producción requiere `WEB_BUILD_KEY`**, 32 bytes base64 desde custodia de build independiente, entregados mediante BuildKit secret y borrados del workspace temporal al terminar. Repetir una release exige la misma versión de esa clave. Rotar la clave entre releases rota los metadatos; nunca usar las claves offline para este propósito. La clave local predeterminada se admite exclusivamente para localhost/127.0.0.1 y no autoriza una imagen de producción.
 
-El test de contenedores ejecuta las imágenes reales con PostgreSQL real, un tenant canario y fixture HTTP de S3 (puerto externo reemplazable). Verifica web/rutas/assets PWA, API/readiness, worker y PDF producido mediante outbox/auditoría. No usa repositorios mock ni envía emails. CI construye las imágenes antes de la suite para que ese test nunca dependa de imágenes preexistentes del runner.
+El test de contenedores ejecuta las imágenes reales con PostgreSQL real, un tenant canario y fixtures HTTP de S3 y email (puertos externos reemplazables). Verifica web/rutas/assets PWA, API/readiness, PDF, recuperación de contraseña, invitaciones y expiración mediante el worker compilado. El gateway de prueba registra entregas sin contactar destinatarios. CI construye las imágenes antes de la suite para que ese test nunca dependa de imágenes preexistentes del runner.
 
 ## Rollout
 
@@ -27,7 +27,19 @@ El test de contenedores ejecuta las imágenes reales con PostgreSQL real, un ten
 | `RUNTIME_ENV_FILE` | Archivo protegido con secretos runtime; fuera de Git y contexto Docker |
 | `SMOKE_FILE_URL` | URL temporal protegida de un PDF generado en el entorno candidato |
 
-El env runtime incluye `DATABASE_URL` (LOGIN miembro de `uco_app`, sin ownership/BYPASSRLS), `WORKER_DISPATCH_DATABASE_URL` (LOGIN miembro de `uco_outbox_dispatcher`), `WORKER_USER_ID` (membresía activa autorizada), `S3_ENDPOINT/BUCKET/REGION/ACCESS_KEY_ID/SECRET_ACCESS_KEY`, custodia `OFFLINE_*`/`DEVICE_CERTIFICATE_KEY`, peppers y orígenes públicos. Configurar `UCONEXT_TRUSTED_PROXY_IPS` con la IP real del reverse proxy **y `127.0.0.1`** para el healthcheck local. El healthcheck local afirma `x-forwarded-proto: https` desde loopback; los requests externos continúan sujetos a la validación de proxy/origen. El probe web consulta un asset público sin seguir redirecciones; el smoke público comprueba las rutas de aplicación.
+El env runtime incluye `DATABASE_URL` (LOGIN miembro de `uco_app`, sin ownership/BYPASSRLS), `WORKER_DISPATCH_DATABASE_URL` (LOGIN miembro de `uco_worker`), `WORKER_USER_ID` (membresía activa autorizada), `EMAIL_GATEWAY_URL/TOKEN`, `S3_ENDPOINT/BUCKET/REGION/ACCESS_KEY_ID/SECRET_ACCESS_KEY`, custodia `OFFLINE_*`/`DEVICE_CERTIFICATE_KEY`, peppers y orígenes públicos. Configurar `UCONEXT_TRUSTED_PROXY_IPS` con la IP real del reverse proxy **y `127.0.0.1`** para el healthcheck local. El healthcheck local afirma `x-forwarded-proto: https` desde loopback; los requests externos continúan sujetos a la validación de proxy/origen. El probe web consulta un asset público sin seguir redirecciones; el smoke público comprueba las rutas de aplicación.
+
+### Gateway de email
+
+`EMAIL_GATEWAY_URL` recibe POST JSON con `template` (`PASSWORD_RESET` o `INVITATION`), `email`, `token` y `jobKey`; las invitaciones incluyen `role` y `branchIds`. La autenticación usa `Authorization: Bearer` con `EMAIL_GATEWAY_TOKEN`. El endpoint exige HTTPS; HTTP solo se admite en loopback para pruebas locales. No sigue redirects y cada envío tiene timeout de 15 segundos.
+
+El gateway debe persistir y deduplicar `Idempotency-Key`, igual a `jobKey`, incluso si pierde la respuesta después de aceptar el mensaje. Un 2xx confirma aceptación durable. El proveedor debe convertir el token en el enlace correspondiente y enviar el mensaje; su elección y provisión siguen diferidas. Un adaptador local hacia Mailpit debe cumplir el mismo contrato. No iniciar el worker sin configurar este puerto.
+
+El worker reclama ambos outboxes con lease y `SKIP LOCKED`. Recuperación usa funciones con privilegios mínimos sobre el outbox global; invitaciones y expiraciones usan la transacción tenant y autorización vigentes. Los fallos reintentan con backoff hasta cinco intentos y luego quedan en dead-letter. Un ACK con lease vencido no completa el job. Las entregas completadas eliminan el token del payload; los errores persistidos usan códigos estables. No enviar cuerpos, tokens ni credenciales a logs. El monitor suma dead-letters globales de recuperación una sola vez por ciclo, además de los tenant.
+
+La migración `0106` crea `uco_identity_dispatcher` como rol sin LOGIN ni BYPASSRLS, propietario de las dos funciones de dispatch global. La restauración provisiona ese rol antes de `pg_restore --no-owner` y repone explícitamente su ownership después de migrar. Esto también admite backups anteriores a `0106`; no iniciar el worker entre restore y verificación.
+
+La migración `0107` habilita el lock de ventas mediante `UPDATE(id)` sin permitir reescribirlas: el trigger de inmutabilidad continúa rechazando cualquier UPDATE. La reversión del stock pasa por `inventory_api.reverse_sale_stock`, que valida contexto tenant, actor, autorización y vínculo con la anulación, bloquea la proyección en orden canónico y registra movimientos compensatorios en la misma transacción.
 
 ```powershell
 pwsh -File infra/deploy/rollout.ps1 -PublicOrigin 'https://gestion.example.com'

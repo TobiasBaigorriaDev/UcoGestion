@@ -296,24 +296,52 @@ describe('catalog item creation', () => {
     )).toEqual(['Oferta 100%']);
   });
 
-  it('does not grant direct structural updates to the runtime role before the lifecycle command exists', async () => {
+  it('allows nonstructural SKU edits while protecting tenant identity and historical structure', async () => {
     const item = await service.create(context(ownerUserId, 'catalog-item-no-direct-update'), {
       name: 'Sin edición estructural',
       type: 'PRODUCT',
       sku: 'NO-DIRECT-UPDATE',
     });
+    const foreignItem = await service.create(
+      { organizationId: organizationB, requestId: randomUUID(), userId: ownerBUserId },
+      { name: 'Ítem ajeno', type: 'PRODUCT', sku: 'FOREIGN-SKU' },
+    );
+    await pool.query(`INSERT INTO resource_history_references
+      (id, organization_id, catalog_item_id, reference_type, source_id)
+      VALUES ($1, $2, $3, 'PURCHASE_SNAPSHOT', $4)`,
+    [randomUUID(), organizationA, item.id, randomUUID()]);
     const client = await runtimePool.connect();
     try {
       await client.query('BEGIN');
       await client.query("SELECT set_config('app.organization_id', $1, true)", [organizationA]);
-      await expect(client.query(
+      expect((await client.query(
         'UPDATE catalog_items SET sku = $1 WHERE id = $2',
-        ['BYPASS-AUDIT', item.id],
-      )).rejects.toMatchObject({ code: '42501' });
+        ['EDITABLE-SKU', item.id],
+      )).rowCount).toBe(1);
+      expect((await client.query(
+        'UPDATE catalog_items SET sku = $1 WHERE id = $2',
+        ['CROSS-TENANT-SKU', foreignItem.id],
+      )).rowCount).toBe(0);
+      for (const column of ['id', 'organization_id']) {
+        await client.query('SAVEPOINT protected_column');
+        await expect(client.query(`UPDATE catalog_items SET ${column} = $1 WHERE id = $2`,
+          [randomUUID(), item.id])).rejects.toMatchObject({ code: '42501' });
+        await client.query('ROLLBACK TO SAVEPOINT protected_column');
+      }
+      for (const assignment of ["type = 'SERVICE'", 'track_inventory = true', "base_unit = 'FRACTIONAL'"]) {
+        await client.query('SAVEPOINT protected_history');
+        await expect(client.query(`UPDATE catalog_items SET ${assignment} WHERE id = $1`,
+          [item.id])).rejects.toMatchObject({ code: '55000' });
+        await client.query('ROLLBACK TO SAVEPOINT protected_history');
+      }
     } finally {
       await client.query('ROLLBACK');
       client.release();
     }
+    expect((await pool.query('SELECT sku, type, track_inventory, base_unit FROM catalog_items WHERE id = $1',
+      [item.id])).rows[0]).toEqual({ sku: 'NO-DIRECT-UPDATE', type: 'PRODUCT', track_inventory: false, base_unit: 'UNIT' });
+    expect((await pool.query('SELECT sku FROM catalog_items WHERE id = $1', [foreignItem.id])).rows[0]?.sku)
+      .toBe('FOREIGN-SKU');
   });
 
   it('requires a name and keeps catalog item creation tenant-scoped', async () => {

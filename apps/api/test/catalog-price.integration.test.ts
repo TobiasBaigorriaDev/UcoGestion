@@ -62,7 +62,7 @@ describe('catalog price history', () => {
   it('changes the current price while retaining immutable versions in the organization currency', async () => {
     const item = await items.create(context('price-item'), { name: 'Artículo', type: 'PRODUCT' });
 
-    expect(await prices.setPrice(context('price-first'), item.id, item.version, '10.005'))
+    expect(await prices.setPrice(context('price-first'), item.id, item.version, '10.01'))
       .toMatchObject({ price: '10.01', currency: 'ARS', priceVersion: 1, version: 2 });
     expect(await prices.setPrice(context('price-second'), item.id, 2, '12.00'))
       .toMatchObject({ price: '12.00', currency: 'ARS', priceVersion: 2, version: 3 });
@@ -99,6 +99,30 @@ describe('catalog price history', () => {
       'SELECT count(*)::integer AS count FROM catalog_price_versions WHERE item_id = $1',
       [item.id],
     )).rows[0]?.count).toBe(1);
+  });
+
+  it('RF-246 rejects raw invalid prices before rounding with no transactional effects', async () => {
+    const item = await items.create(context('raw-price-item'), { name: 'Escala', type: 'PRODUCT' });
+    for (const rawPrice of ['10.005', '10.000', '-0.001', '0.001', '1000000000000000000.00']) {
+      await expect(prices.setPrice(context(randomUUID()), item.id, 1, rawPrice))
+        .rejects.toMatchObject({ code: 'CATALOG_PRICE_INVALID' });
+      await expect(prices.setPriceIdempotent(context(randomUUID()), item.id, 1, rawPrice, randomUUID()))
+        .rejects.toMatchObject({ code: 'CATALOG_PRICE_INVALID' });
+    }
+    expect((await pool.query('SELECT price::text, version::integer, price_version::integer FROM catalog_items WHERE id = $1',
+      [item.id])).rows[0]).toMatchObject({ price: null, version: 1, price_version: 0 });
+    expect((await pool.query('SELECT count(*)::integer AS n FROM catalog_price_versions WHERE item_id = $1',
+      [item.id])).rows[0]?.n).toBe(0);
+    expect((await pool.query("SELECT count(*)::integer AS n FROM audit_events WHERE entity_id = $1 AND action = 'catalog_item.price_changed'",
+      [item.id])).rows[0]?.n).toBe(0);
+    expect((await pool.query("SELECT count(*)::integer AS n FROM idempotency_records WHERE organization_id = $1 AND scope = 'catalog_item.price'",
+      [organizationId])).rows[0]?.n).toBe(0);
+    const key = randomUUID();
+    const zero = await prices.setPriceIdempotent(context(randomUUID()), item.id, 1, '0.00', key);
+    expect(zero).toMatchObject({ price: '0.00', version: 2, priceVersion: 1 });
+    expect(await prices.setPriceIdempotent(context(randomUUID()), item.id, 1, '0.00', key)).toEqual(zero);
+    await expect(prices.setPriceIdempotent(context(randomUUID()), item.id, 1, '0.01', key))
+      .rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
   });
 
   it('serializes competing price changes and keeps the history append-only', async () => {

@@ -70,6 +70,20 @@ describe('customer lifecycle (T083 / RF-211, RF-214, RF-219, RF-220)', () => {
     await container?.stop();
   });
 
+  it.each(['OWNER', 'ADMIN'])('RF-211 permits the complete customer lifecycle to %s under runtime authorization', async role => {
+    const context = { organizationId, requestId: randomUUID(), userId: role === 'OWNER' ? ownerUserId : adminUserId };
+    const created = await service.create(context, { name: `${role} lifecycle ${randomUUID()}` }, randomUUID());
+    expect((await service.findById(context, created.id)).id).toBe(created.id);
+    expect((await service.list(context, { search: created.name })).items.map(row => row.id)).toContain(created.id);
+    const updated = await service.update(context, created.id, created.version, { name: `${created.name} edited` }, randomUUID());
+    const inactive = await service.changeStatus(context, created.id, updated.version, 'INACTIVE', randomUUID());
+    expect(inactive.status).toBe('INACTIVE');
+    const active = await service.changeStatus(context, created.id, inactive.version, 'ACTIVE', randomUUID());
+    expect(active.status).toBe('ACTIVE');
+    await service.deletePhysically(context, created.id, active.version, randomUUID());
+    expect((await pool.query('SELECT id FROM customers WHERE id=$1', [created.id])).rows).toEqual([]);
+  });
+
   it('allows OWNER and ADMIN to consult customer by id and list customers (RF-211)', async () => {
     const ownerContext = {
       organizationId,

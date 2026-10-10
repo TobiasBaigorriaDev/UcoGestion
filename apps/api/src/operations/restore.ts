@@ -44,9 +44,15 @@ export async function checkRecoveredDatabase(client: PoolClient, environment: No
 export async function prepareEmptyRestore(client: PoolClient): Promise<void> {
   const tables = await client.query("SELECT 1 FROM pg_tables WHERE schemaname NOT IN ('pg_catalog','information_schema') LIMIT 1");
   if (tables.rowCount) throw new Error('Restore requires an empty isolated database.');
-  for (const role of ['uco_app','uco_platform','uco_worker','uco_outbox_dispatcher']) {
+  for (const role of ['uco_app','uco_platform','uco_worker','uco_outbox_dispatcher','uco_identity_dispatcher']) {
     if (!(await client.query('SELECT 1 FROM pg_roles WHERE rolname=$1',[role])).rowCount) {
       await client.query(`CREATE ROLE ${role} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`);
     }
   }
+}
+
+/** pg_restore --no-owner must not leave identity dispatch running as the recovery administrator. */
+export async function restoreIdentityDispatcherOwnership(client: PoolClient): Promise<void> {
+  await client.query('ALTER FUNCTION public.claim_identity_email_jobs(integer,integer) OWNER TO uco_identity_dispatcher');
+  await client.query('ALTER FUNCTION public.finish_identity_email_job(uuid,uuid,boolean) OWNER TO uco_identity_dispatcher');
 }

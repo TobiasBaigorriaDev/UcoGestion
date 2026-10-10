@@ -6,6 +6,15 @@ import { TenantTransaction, type TenantTransactionContext } from '../../database
 import { MetricsService } from './metrics.service.js';
 import { createJsonLogger } from './logger.js';
 
+export async function readIdentityDeadLetters(pool: Pool): Promise<number> {
+  const result = await pool.query<{ count: number }>(
+    "SELECT count(*)::int AS count FROM identity_outbox_jobs WHERE status='DEAD_LETTER'",
+  );
+  const row = result.rows[0];
+  if (!row) throw new Error('Identity operational snapshot unavailable.');
+  return row.count;
+}
+
 export async function readOperationalSnapshot(transactions: TenantTransaction, context: TenantTransactionContext) {
   return transactions.read(context, async (client) => {
     const member = await client.query(`SELECT 1 FROM memberships WHERE organization_id=$1 AND user_id=$2
@@ -35,7 +44,8 @@ export class OperationalMonitor implements OnModuleInit, OnModuleDestroy {
     const contexts = z.array(z.strictObject({ organizationId: z.uuid(), userId: z.uuid() })).min(1)
       .parse(JSON.parse(process.env.OPERATIONS_MONITOR_CONTEXTS));
     this.pool = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 3000, query_timeout: 10000 });
-    const transactions = new TenantTransaction(this.pool);
+    const pool = this.pool;
+    const transactions = new TenantTransaction(pool);
     const run = () => {
       if (this.pending) return;
       this.pending = (async () => {
@@ -46,6 +56,7 @@ export class OperationalMonitor implements OnModuleInit, OnModuleDestroy {
           total.conflicts += snapshot.conflicts;
           total.syncPendingAgeSeconds = Math.max(total.syncPendingAgeSeconds, snapshot.syncPendingAgeSeconds);
         }
+        total.deadLetters += await readIdentityDeadLetters(pool);
         this.metrics.recordOperationalSnapshot(total);
       })().catch(() => { createJsonLogger({ component: 'operations-monitor' }).error({ error_code: 'SNAPSHOT_FAILED' }, 'Operational snapshot failed'); })
         .finally(() => { this.pending = undefined; });

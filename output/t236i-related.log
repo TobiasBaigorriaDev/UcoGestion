@@ -1,0 +1,10 @@
+$ vitest run --config vitest.config.mts "catalog-item-creation.integration.test.ts" "catalog-item-edit.integration.test.ts" "catalog-price.integration.test.ts" "catalog-read.integration.test.ts" "inventory-foundation.integration.test.ts"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+
+ Test Files  4 passed (4)
+      Tests  42 passed (42)
+   Start at  14:31:57
+   Duration  40.46s (transform 344ms, setup 0ms, import 9.11s, tests 29.74s, environment 0ms)
+

@@ -1,0 +1,39 @@
+name: Nightly browser and offline regression
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+        env:
+          NEXT_PUBLIC_WEB_ORIGIN: http://localhost:3001
+      - run: pnpm run test:e2e:install ${{ matrix.browser }}
+      - run: pnpm run test:e2e:nightly
+        env:
+          BROWSER: ${{ matrix.browser }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-${{ matrix.browser }}-evidence
+          path: output/playwright
+          if-no-files-found: error

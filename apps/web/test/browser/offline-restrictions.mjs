@@ -14,7 +14,7 @@ async (page) => {
     check(await page.getByRole('button', { name: 'Confirmar compra' }).count() === 0, 'Cached form still usable');
     check(await page.getByText('Reporte privado ya cargado').count() === 0, 'Cached report exposed');
     check(await page.evaluate(() => document.activeElement?.getAttribute('role') === 'alert'), 'Offline notice lacks focus');
-    check((await page.evaluate(() => window.restrictionsHarness.restrictedRequests())).length === 8, 'Forbidden request accepted');
+    check((await page.evaluate(() => window.restrictionsHarness.restrictedRequests())).length === 25, 'Forbidden request accepted');
     check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'Offline notice overflows');
     const file = `output/playwright/offline-restrictions-${viewport.width}.png`;
     await page.screenshot({ path: file, fullPage: true }); screenshots.push(file);

@@ -8,6 +8,20 @@ import { ApiProblemError } from '../src/lib/api/client.js';
 
 afterEach(cleanup);
 
+it('T236I: edits the selected category using its version and reloads after success', async () => {
+  const update = vi.fn().mockResolvedValue({ id: 'active-id', name: 'Bebidas', status: 'ACTIVE', version: 2 });
+  const reload = vi.fn();
+  render(<CatalogCategoryManagement organizationId="org" categories={categories} onUpdate={update} onReload={reload} />);
+  await userEvent.click(screen.getByRole('button', { name: 'Editar Almacén' }));
+  const input = screen.getByRole('textbox', { name: 'Nuevo nombre de Almacén' });
+  await userEvent.clear(input);
+  await userEvent.type(input, 'Bebidas');
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar nombre de Almacén' }));
+  expect(update).toHaveBeenCalledWith('org', 'active-id', 1, 'Bebidas');
+  expect(reload).toHaveBeenCalledOnce();
+  expect((await screen.findByRole('status')).textContent).toBe('Categoría actualizada.');
+});
+
 const categories = [
   { id: 'active-id', name: 'Almacén', status: 'ACTIVE' as const, version: 1 },
   { id: 'inactive-id', name: 'Antigua', status: 'INACTIVE' as const, version: 3 },

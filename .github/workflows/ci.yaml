@@ -16,7 +16,7 @@ jobs:
   validate:
     name: Lint, Typecheck, Test, Migrations and Build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repository
@@ -60,3 +60,17 @@ jobs:
 
       - name: Run build
         run: pnpm run build
+
+      - name: Install the critical browser
+        run: pnpm run test:e2e:install chromium
+
+      - name: Run critical browser and offline scenarios
+        run: pnpm run test:e2e:critical && pnpm run test:e2e:catalog
+
+      - name: Preserve browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: critical-browser-evidence
+          path: output/playwright
+          if-no-files-found: error

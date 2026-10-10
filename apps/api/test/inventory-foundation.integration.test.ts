@@ -431,6 +431,37 @@ describe('inventory foundation', () => {
       assigned.id, item.id)).rejects.toThrow();
   });
 
+  it('RF-244 rejects excessive precision in adjustments and transfers with no ledger or idempotency effects', async () => {
+    const context = { organizationId: organizationA, userId: ownerA, requestId: randomUUID() };
+    const origin = await branches.create(context, { name: 'Precision origin' });
+    const destination = await branches.create(context, { name: 'Precision destination' });
+    const item = await catalog.create(context, { name: 'Precision item', type: 'PRODUCT', baseUnit: 'FRACTIONAL', trackInventory: true });
+    const transactions = new TenantTransaction(runtime);
+    const adjustments = new InventoryAdjustmentService(transactions);
+    const transfers = new InventoryTransferService(transactions);
+    await adjustments.confirm(context, { branchId: origin.id, itemId: item.id, direction: 'INCREASE',
+      quantity: '5', reason: 'INVENTARIO_INICIAL' }, randomUUID());
+    const before = (await admin.query('SELECT * FROM inventory_movements WHERE organization_id=$1 AND item_id=$2 ORDER BY id',
+      [organizationA, item.id])).rows;
+    const keys: string[] = [];
+    for (const quantity of ['1.0001', '0.0001', '-0.0001']) {
+      const adjustmentKey = randomUUID(), transferKey = randomUUID();
+      keys.push(adjustmentKey, transferKey);
+      await expect(adjustments.confirm(context, { branchId: origin.id, itemId: item.id,
+        direction: 'INCREASE', quantity, reason: 'OTRO' }, adjustmentKey)).rejects.toThrow();
+      await expect(transfers.confirm(context, { originBranchId: origin.id, destinationBranchId: destination.id,
+        lines: [{ itemId: item.id, quantity }] }, transferKey)).rejects.toThrow();
+    }
+    expect((await admin.query('SELECT quantity::text FROM branch_stocks WHERE organization_id=$1 AND item_id=$2 AND branch_id=$3',
+      [organizationA, item.id, origin.id])).rows).toEqual([{ quantity: '5.000' }]);
+    expect((await admin.query('SELECT quantity::text FROM branch_stocks WHERE organization_id=$1 AND item_id=$2 AND branch_id=$3',
+      [organizationA, item.id, destination.id])).rows).toEqual([{ quantity: '0.000' }]);
+    expect((await admin.query('SELECT * FROM inventory_movements WHERE organization_id=$1 AND item_id=$2 ORDER BY id',
+      [organizationA, item.id])).rows).toEqual(before);
+    expect((await admin.query('SELECT id FROM idempotency_records WHERE organization_id=$1 AND key=ANY($2::text[])',
+      [organizationA, keys])).rows).toEqual([]);
+  });
+
   it('T108 accepts only distinct active in-scope branches and tenant-owned inventoried items', async () => {
     const origin = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Policy origin' });
     const destination = await branches.create({ organizationId: organizationA, userId: ownerA, requestId: randomUUID() }, { name: 'Policy destination' });

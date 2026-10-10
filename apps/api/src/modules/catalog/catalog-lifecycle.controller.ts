@@ -95,6 +95,21 @@ export class CatalogLifecycleController {
     }
   }
 
+  @Patch('categories/:categoryId')
+  async editCategory(
+    @Req() request: CatalogRequest,
+    @Param('categoryId', ParseUUIDPipe) categoryId: string,
+    @IfMatchVersion() expectedVersion: number,
+    @Body(new ZodValidationPipe(createCategorySchema)) body: z.infer<typeof createCategorySchema>,
+  ) {
+    try {
+      return await this.categories.update(this.context(request), categoryId, expectedVersion,
+        body, this.idempotencyKey(request));
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   @Patch('categories/:categoryId/status')
   async changeCategoryStatus(
     @Req() request: CatalogRequest,

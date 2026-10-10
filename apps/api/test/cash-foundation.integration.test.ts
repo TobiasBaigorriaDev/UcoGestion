@@ -434,7 +434,9 @@ describe('cash foundation', () => {
 
   it('T124 calculates expected cash from the consolidated server ledger', async () => {
     const registerId = randomUUID();
-    const device = await devices.authorizeOnline(context(ownerId), branchId);
+    const signer = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+    const device = await devices.authorizePos(context(ownerId), branchId,
+      signer.publicKey.export({ format: 'pem', type: 'spki' }).toString(), randomUUID(), new DeviceCertificate(randomBytes(32)));
     await admin.query('INSERT INTO cash_registers (id, organization_id, branch_id, name) VALUES ($1, $2, $3, $4)',
       [registerId, organizationId, branchId, 'Expected cash']);
     const service = new CashOperationsService(new TenantTransaction(runtime));
@@ -448,10 +450,26 @@ describe('cash foundation', () => {
       actor_user_id, device_id, delta, currency_code, source_type, source_id, effect_kind)
       VALUES ($1, $2, $3, $4, $5, $6, '4.00', 'ARS', 'SALE', $7, 'IN')`,
     [randomUUID(), organizationId, branchId, session.id, ownerId, device.id, randomUUID()]);
+    for (const [source, delta] of [['SALE_CANCELLATION', '-0.60'], ['EXPENSE', '-1.20'], ['PURCHASE_PAYMENT', '-0.90']]) {
+      await admin.query(`INSERT INTO cash_movements (id,organization_id,branch_id,cash_session_id,
+        actor_user_id,device_id,delta,currency_code,source_type,source_id,effect_kind)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,'ARS',$8,$9,'OUT')`,
+      [randomUUID(), organizationId, branchId, session.id, ownerId, device.id, delta, source, randomUUID()]);
+    }
     expect(await service.calculateExpectedCash(context(ownerId), session.id, device.id))
-      .toMatchObject({ cashSessionId: session.id, expectedCash: '13.65' });
+      .toMatchObject({ cashSessionId: session.id, expectedCash: '10.95' });
     await expect(service.calculateExpectedCash(context(adminId), session.id, randomUUID()))
       .rejects.toMatchObject({ code: 'CASH_SESSION_DEVICE_CONFLICT' });
+    const close = new CashCloseService(new TenantTransaction(runtime));
+    const checkpoint = { version: 1 as const, organizationId, deviceId: device.id, actorUserId: ownerId,
+      sessionId: session.id, sequence: '0', headHash: '0'.repeat(64), sessionSequence: '0', creationFrozen: true as const, pending: 0 as const };
+    const signature = sign('sha256', Buffer.from(JSON.stringify(checkpoint)),
+      { key: signer.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64');
+    const attempt = await close.begin(context(ownerId), { checkpoint, signature }, randomUUID());
+    const input = { cashSessionId: session.id, deviceId: device.id, closeAttemptId: attempt.closeAttemptId };
+    expect(await close.finalSync(context(ownerId), input, randomUUID())).toMatchObject({ expectedCash: '10.95' });
+    expect(await close.close(context(ownerId), { ...input, expectedCash: '10.95', countedCash: '10.95', reason: '' }, randomUUID()))
+      .toMatchObject({ status: 'CLOSED', expectedCash: '10.95', countedCash: '10.95', difference: '0.00' });
   });
 
   it('T214B begins close with a signed complete checkpoint, rejects forgery and replays once', async () => {
@@ -475,6 +493,10 @@ describe('cash foundation', () => {
     const key = randomUUID();
     const result = await service.begin(context(ownerId), input, key);
     expect(result).toMatchObject({ cashSessionId: session.id, status: 'CLOSING' });
+    await expect(cash.open(context(ownerId), { branchId, cashRegisterId: registerId,
+      deviceId: device.id, openingCash: '0.00' }, randomUUID())).rejects.toThrow();
+    expect((await admin.query("SELECT count(*)::integer AS count FROM cash_sessions WHERE cash_register_id=$1 AND status IN ('OPEN','CLOSING')",
+      [registerId])).rows[0]?.count).toBe(1);
     expect(await service.begin(context(ownerId), input, key)).toEqual(result);
     const closingWorkspace=await new CashWorkspaceService(new TenantTransaction(runtime)).read(context(ownerId),branchId);
     expect(closingWorkspace.sessions.find(row=>row.id===session.id)).toMatchObject({closeAttemptId:result.closeAttemptId,
@@ -521,14 +543,27 @@ describe('cash foundation', () => {
     await expect(reviews.review(context(employeeId), reviewId, '', randomUUID())).rejects.toThrow();
     await expect(reviews.review({ ...context(ownerId), organizationId: foreignOrganizationId }, reviewId, '', randomUUID())).rejects.toThrow();
     const reviewKey = randomUUID();
+    const closureBefore = (await admin.query('SELECT * FROM cash_session_closures WHERE cash_session_id=$1', [session.id])).rows;
+    const reviewStartedAt = new Date();
     const reviewed = await reviews.review(context(adminId), reviewId, 'Revisado', reviewKey);
     expect(reviewed).toMatchObject({ id: reviewId, status: 'REVIEWED', mode: 'REVIEW', reviewerUserId: adminId });
     expect(await reviews.review(context(adminId), reviewId, 'Revisado', reviewKey)).toEqual(reviewed);
+    expect((await admin.query('SELECT * FROM cash_session_closures WHERE cash_session_id=$1', [session.id])).rows).toEqual(closureBefore);
+    const reviewEvent = (await admin.query<{ reviewer_user_id: string; reviewed_at: Date }>(
+      'SELECT reviewer_user_id,reviewed_at FROM cash_difference_review_events WHERE review_id=$1', [reviewId])).rows[0];
+    expect(reviewEvent?.reviewer_user_id).toBe(adminId);
+    expect(reviewEvent?.reviewed_at.getTime()).toBeGreaterThanOrEqual(reviewStartedAt.getTime());
+    expect(reviewEvent?.reviewed_at.getTime()).toBeLessThanOrEqual(Date.now());
     expect((await admin.query('SELECT expected_cash,counted_cash,difference FROM cash_session_closures WHERE cash_session_id=$1', [session.id])).rows[0])
       .toMatchObject({ expected_cash: '8.25', counted_cash: '9.25', difference: '1.00' });
     await expect(service.abort(context(ownerId), { cashSessionId: session.id, deviceId: device.id, closeAttemptId: result.closeAttemptId }, randomUUID()))
       .rejects.toThrow('CASH_CLOSE_STATE_INVALID');
     const next = await cash.open(context(ownerId), { branchId, cashRegisterId: registerId, deviceId: device.id, openingCash: '0.00' }, randomUUID());
+    const correction = await cash.deposit(context(ownerId), { cashSessionId: next.id, deviceId: device.id,
+      amount: '1.00', reason: `Corrección de diferencia revisada ${reviewId}` }, randomUUID());
+    expect((await admin.query('SELECT cash_session_id,delta::text AS delta,reason FROM cash_movements WHERE id=$1', [correction.id])).rows[0])
+      .toEqual({ cash_session_id: next.id, delta: '1.00', reason: `Corrección de diferencia revisada ${reviewId}` });
+    expect((await admin.query('SELECT * FROM cash_session_closures WHERE cash_session_id=$1', [session.id])).rows).toEqual(closureBefore);
     const nextCheckpoint = { ...checkpoint, sessionId: next.id };
     const nextInput = { checkpoint: nextCheckpoint,
       signature: sign('sha256', Buffer.from(JSON.stringify(nextCheckpoint)), { key: signer.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64') };
@@ -545,7 +580,7 @@ describe('cash foundation', () => {
     await expect(service.close(context(ownerId), { ...oldInput, expectedCash: '0.00', countedCash: '0.00', reason: '' }, randomUUID()))
       .rejects.toThrow('CASH_CLOSE_STATE_INVALID');
     await service.finalSync(context(ownerId), { ...oldInput, closeAttemptId: renewed.closeAttemptId }, randomUUID());
-    await service.close(context(ownerId), { ...oldInput, closeAttemptId: renewed.closeAttemptId, expectedCash: '0.00', countedCash: '0.00', reason: '' }, randomUUID());
+    await service.close(context(ownerId), { ...oldInput, closeAttemptId: renewed.closeAttemptId, expectedCash: '1.00', countedCash: '1.00', reason: '' }, randomUUID());
     expect((await admin.query('SELECT count(*)::integer AS count FROM cash_difference_reviews WHERE cash_session_id=$1', [next.id])).rows[0]?.count).toBe(0);
     const selfSession = await cash.open(context(ownerId), { branchId, cashRegisterId: registerId, deviceId: device.id, openingCash: '0.00' }, randomUUID());
     const selfCheckpoint = { ...checkpoint, sessionId: selfSession.id };

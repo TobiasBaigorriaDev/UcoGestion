@@ -5,6 +5,8 @@
 **/coverage
 .git
 .impeccable
+output
+.playwright-cli
 **/.env*
 **/*.pem
 **/*.key

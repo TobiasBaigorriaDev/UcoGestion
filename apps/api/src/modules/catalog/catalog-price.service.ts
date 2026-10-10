@@ -36,15 +36,7 @@ export class CatalogPriceService {
     expectedVersion: number,
     rawPrice: string,
   ): Promise<CatalogPriceResult> {
-    let price: string;
-    try {
-      price = Money.from(rawPrice).toString();
-    } catch {
-      throw new CatalogPriceError('CATALOG_PRICE_INVALID', 'El precio debe ser un decimal válido.');
-    }
-    if (validateNonNegativeMoney(price) === undefined || !/^(?:0|[1-9]\d{0,17})\.\d{2}$/.test(price)) {
-      throw new CatalogPriceError('CATALOG_PRICE_INVALID', 'El precio debe ser no negativo y caber en numeric(20,2).');
-    }
+    const price = this.validatePrice(rawPrice);
     if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) {
       throw new CatalogPriceError('VERSION_CONFLICT', 'La versión esperada es inválida.');
     }
@@ -126,12 +118,7 @@ export class CatalogPriceService {
 
   async setPriceIdempotent(context: TenantTransactionContext, itemId: string,
     expectedVersion: number, rawPrice: string, key: string): Promise<CatalogPriceResult> {
-    let price: string;
-    try { price = Money.from(rawPrice).toString(); }
-    catch { throw new CatalogPriceError('CATALOG_PRICE_INVALID', 'El precio debe ser un decimal válido.'); }
-    if (validateNonNegativeMoney(price) === undefined || !/^(?:0|[1-9]\d{0,17})\.\d{2}$/.test(price)) {
-      throw new CatalogPriceError('CATALOG_PRICE_INVALID', 'El precio debe ser no negativo.');
-    }
+    const price = this.validatePrice(rawPrice);
     if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) throw new CatalogPriceError('VERSION_CONFLICT', 'Versión inválida.');
     if (!/^[\x21-\x7e]{1,128}$/.test(key)) throw new CatalogPriceError('IDEMPOTENCY_KEY_REUSED', 'Clave idempotente inválida.');
     try {
@@ -205,5 +192,17 @@ export class CatalogPriceService {
       if (error instanceof IdempotencyReplayForbiddenError) throw new CatalogPriceError('CATALOG_PRICE_FORBIDDEN', error.message);
       throw error;
     }
+  }
+
+  private validatePrice(rawPrice: string): string {
+    const validated = validateNonNegativeMoney(rawPrice);
+    if (validated === undefined) {
+      throw new CatalogPriceError('CATALOG_PRICE_INVALID', 'El precio debe ser no negativo y tener como máximo dos decimales.');
+    }
+    const price = Money.from(validated).toString();
+    if (!/^(?:0|[1-9]\d{0,17})\.\d{2}$/.test(price)) {
+      throw new CatalogPriceError('CATALOG_PRICE_INVALID', 'El precio debe caber en numeric(20,2).');
+    }
+    return price;
   }
 }

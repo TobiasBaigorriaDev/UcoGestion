@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiClient, ApiProblemError } from '../../lib/api/client';
 import styles from '../identity/management.module.css';
+import categoryStyles from './catalog-category-management.module.css';
 
 const categorySchema = z.object({ id: z.string(), name: z.string(), status: z.enum(['ACTIVE', 'INACTIVE']), version: z.number().int().positive() });
 const categoriesSchema = z.object({ categories: z.array(categorySchema) });
@@ -41,6 +42,13 @@ export async function changeCatalogCategoryStatus(organizationId: string, id: st
   return result;
 }
 
+export async function updateCatalogCategory(organizationId: string, id: string, version: number, name: string): Promise<ManagedCategory> {
+  const result = await client.request(`/catalog/categories/${encodeURIComponent(id)}`, { method: 'PATCH', organizationId,
+    csrfToken: await csrfToken(), ifMatch: String(version), idempotencyKey: crypto.randomUUID(), body: { name }, parse: (value) => categorySchema.parse(value) });
+  if (!result) throw new Error('Empty category response');
+  return result;
+}
+
 export async function deleteCatalogCategory(organizationId: string, id: string, version: number): Promise<{ id: string; deleted: true }> {
   const result = await client.request(`/catalog/categories/${encodeURIComponent(id)}`, { method: 'DELETE', organizationId,
     csrfToken: await csrfToken(), ifMatch: String(version), idempotencyKey: crypto.randomUUID(),
@@ -64,12 +72,13 @@ function explainError(cause: unknown): ApiProblemError {
 }
 
 export function CatalogCategoryManagement({ organizationId, categories, onReload,
-  onCreate = createCatalogCategory, onChangeStatus = changeCatalogCategoryStatus, onDelete = deleteCatalogCategory, kind = 'catalog',
+  onCreate = createCatalogCategory, onUpdate = updateCatalogCategory, onChangeStatus = changeCatalogCategoryStatus, onDelete = deleteCatalogCategory, kind = 'catalog',
 }: {
   organizationId: string;
   categories: ManagedCategory[];
   onReload: () => void;
   onCreate?: typeof createCatalogCategory;
+  onUpdate?: typeof updateCatalogCategory;
   onChangeStatus?: typeof changeCatalogCategoryStatus;
   onDelete?: typeof deleteCatalogCategory;
   kind?: 'catalog' | 'expense';
@@ -78,6 +87,8 @@ export function CatalogCategoryManagement({ organizationId, categories, onReload
   const [error, setError] = useState<ApiProblemError | null>(null);
   const [message, setMessage] = useState('');
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editForm = useForm<z.infer<typeof nameSchema>>({ resolver: zodResolver(nameSchema), defaultValues: { name: '' } });
   const { register, handleSubmit, reset, formState: { errors } } = useForm<z.infer<typeof nameSchema>>({
     resolver: zodResolver(nameSchema), defaultValues: { name: '' },
   });
@@ -106,11 +117,24 @@ export function CatalogCategoryManagement({ organizationId, categories, onReload
       {categories.length === 0 ? <p>No hay categorías. Podés crear una arriba.</p> : <ul className={styles.rows}>{categories.map((category) => <li className={styles.row} key={category.id}>
         <div className={styles.memberTitle}><strong>{category.name}</strong><span>{category.status === 'ACTIVE' ? 'Activa' : 'Inactiva'}</span></div>
         <div className={styles.actions}>
+          {!expense ? <button type="button" disabled={busy} onClick={() => { setEditingId(category.id); setConfirmId(null); editForm.reset({ name: category.name }); }}>Editar {category.name}</button> : null}
           <button type="button" disabled={busy} onClick={() => void perform(() => onChangeStatus(organizationId, category.id, category.version, category.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'), category.status === 'ACTIVE' ? 'Categoría desactivada.' : 'Categoría activada.')}>
             {category.status === 'ACTIVE' ? `Desactivar ${category.name}` : `Activar ${category.name}`}
           </button>
           <button type="button" disabled={busy} onClick={() => setConfirmId(category.id)}>Eliminar {category.name}</button>
         </div>
+        {editingId === category.id ? <form className={categoryStyles.editor} onSubmit={editForm.handleSubmit(({ name }) => perform(async () => {
+          await onUpdate(organizationId, category.id, category.version, name.trim()); setEditingId(null);
+        }, 'Categoría actualizada.'))} noValidate>
+          <label htmlFor={`category-edit-${category.id}`}>Nuevo nombre de {category.name}</label>
+          <input id={`category-edit-${category.id}`} autoFocus aria-invalid={!!editForm.formState.errors.name}
+            aria-describedby={editForm.formState.errors.name ? `category-edit-error-${category.id}` : undefined} {...editForm.register('name')} />
+          {editForm.formState.errors.name ? <p id={`category-edit-error-${category.id}`} role="alert">Ingresá un nombre de hasta 255 caracteres.</p> : null}
+          <div className={styles.actions}>
+            <button type="submit" disabled={busy}>Guardar nombre de {category.name}</button>
+            <button type="button" disabled={busy} onClick={() => setEditingId(null)}>Cancelar edición de {category.name}</button>
+          </div>
+        </form> : null}
         {confirmId === category.id ? <div className={styles.actions} role="group" aria-label={`Confirmar eliminación de ${category.name}`}>
           <p>La eliminación es definitiva y solo se permite sin historial ni operaciones offline pendientes.</p>
           <button type="button" disabled={busy} onClick={() => void perform(() => onDelete(organizationId, category.id, category.version), 'Categoría eliminada.')}>Confirmar eliminación de {category.name}</button>

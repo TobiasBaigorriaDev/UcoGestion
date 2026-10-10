@@ -1,4 +1,5 @@
 'use client';
+import { OrganizationTime } from '../../components/organization-time';
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -57,11 +58,10 @@ export function CashExceptional({organizationId,branchId,actorUserId,role,sessio
       <p>{session.exceptionalClosure.countedCash===null?'Contado original: no registrado.':`Contado original: ${session.exceptionalClosure.countedCash} ${session.currencyCode}`}</p>
       <p>{session.exceptionalClosure.differenceObserved===null?'Diferencia original: no registrada.':`Diferencia original: ${session.exceptionalClosure.differenceObserved} ${session.currencyCode}`}</p>
       <p>Motivo original: {session.exceptionalClosure.reason}</p>
-      <p>Último contacto al cerrar: {session.exceptionalClosure.lastContactAt?<time dateTime={session.exceptionalClosure.lastContactAt}>
-        {new Date(session.exceptionalClosure.lastContactAt).toLocaleString('es-AR')}</time>:'sin dato conocido.'}</p>
+      <p>Último contacto al cerrar: {session.exceptionalClosure.lastContactAt?<OrganizationTime value={session.exceptionalClosure.lastContactAt} />:'sin dato conocido.'}</p>
       <details><summary>Operaciones recibidas al cerrar ({session.exceptionalClosure.operationsReceived.length})</summary>
         {session.exceptionalClosure.operationsReceived.length?<ul>{session.exceptionalClosure.operationsReceived.map(row=><li key={row.operationId}>
-          Secuencia {row.sequence} · Operación {row.operationId} · Recibida <time dateTime={row.receivedAt}>{new Date(row.receivedAt).toLocaleString('es-AR')}</time>
+          Secuencia {row.sequence} · Operación {row.operationId} · Recibida <OrganizationTime value={row.receivedAt} />
         </li>)}</ul>:<p>No había operaciones recibidas en el snapshot original.</p>}</details>
     </>:<p>Cargá nuevamente la sesión para consultar el snapshot original.</p>}
     <p>Esperado conocido actualizado: {session.expectedCash} {session.currencyCode}</p>
@@ -148,7 +148,7 @@ function CashLateReview({session,manager,partition,onCommand,onReload}:{session:
   const form=useForm<z.infer<typeof schema>>({resolver:zodResolver(schema),defaultValues:{note:'',confirm:false}});
   if(!late)return null;
   return <><h3>Operaciones recuperadas tardíamente</h3><p>Datos tardíos (LATE_RECOVERED_OPERATIONS): {late.count} operaciones. Última secuencia recibida: {late.sequence}.</p>
-    <p>Recuperación más reciente: <time dateTime={late.receivedAt}>{new Date(late.receivedAt).toLocaleString('es-AR')}</time></p>
+    <p>Recuperación más reciente: <OrganizationTime value={late.receivedAt} /></p>
     {done || late.status==='REVIEWED'?<p role="status">Datos tardíos revisados. La completitud sigue siendo desconocida.</p>:manager?<form noValidate onSubmit={form.handleSubmit(values=>action.command('review-late-data',
       {cashSessionId:session.id,throughOperationId:late.throughOperationId,note:values.note},async response=>{
         const result=z.object({cashSessionId:z.uuid(),throughOperationId:z.uuid(),status:z.literal('REVIEWED'),reviewedAt:z.string()}).parse(response);

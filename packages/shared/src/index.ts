@@ -106,7 +106,8 @@ const parseMoneyInput = (value: unknown): { decimal: Decimal; value: CanonicalDe
     const canonical = parseCanonicalDecimal(value);
     const decimal = new Decimal(canonical);
 
-    return decimal.decimalPlaces() <= 2 ? { decimal, value: canonical } : undefined;
+    const scale = canonical.split('.')[1]?.length ?? 0;
+    return scale <= 2 ? { decimal, value: canonical } : undefined;
   } catch {
     return undefined;
   }

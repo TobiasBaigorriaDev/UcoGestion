@@ -137,6 +137,59 @@ export class CatalogCategoryManagementService {
     }
   }
 
+  async update(
+    context: TenantTransactionContext,
+    categoryId: string,
+    expectedVersion: number,
+    input: CatalogCategoryCreateInput,
+    idempotencyKey: string,
+  ): Promise<CatalogCategoryResult> {
+    this.validateInputs(expectedVersion, idempotencyKey);
+    const name = input.name.trim();
+    if (name.length === 0 || name.length > 255) {
+      throw new CatalogCategoryManagementError('CATALOG_CATEGORY_NAME_INVALID',
+        'Ingresá un nombre de categoría de hasta 255 caracteres.');
+    }
+    try {
+      return await this.transactions.runWithOptionalAudit(context, async (client) => {
+        await this.requireOwnerOrAdmin(client, context);
+        const idempotency = new IdempotencyService(client);
+        const acquired = await idempotency.acquire({
+          actorUserId: context.userId, authorizationClass: 'OWNER_OR_ADMIN', branchId: null,
+          key: idempotencyKey, organizationId: context.organizationId,
+          payload: { categoryId, expectedVersion, name }, scope: 'catalog_category.update',
+        }, async () => { await this.requireOwnerOrAdmin(client, context); });
+        if (acquired.kind === 'replay') return { result: this.readStoredCategoryResult(acquired.response.body) };
+        await this.lockOrganizationEpoch(client, context.organizationId);
+        const category = await this.lockCategory(client, context.organizationId, categoryId);
+        if (category.version !== expectedVersion) {
+          throw new CatalogCategoryManagementError('VERSION_CONFLICT',
+            'La categoría fue modificada por otra operación.', category.version);
+        }
+        const updated = await client.query<CatalogCategoryResult>(
+          `UPDATE catalog_categories SET name = $1, version = version + 1, updated_at = now()
+           WHERE organization_id = $2 AND id = $3
+           RETURNING id, name, status, version::integer AS version`,
+          [name, context.organizationId, categoryId],
+        );
+        const result = updated.rows[0];
+        if (!result) throw new Error('La categoría de catálogo no pudo ser actualizada.');
+        await this.advanceOrganizationEpoch(client, context.organizationId);
+        await idempotency.complete(acquired.record.id, { statusCode: 200, body: {
+          id: result.id, name: result.name, status: result.status, version: result.version,
+        } });
+        return { result, auditEvent: {
+          action: 'catalog_category.updated', before: { name: category.name }, beforeAllowlist: ['name'],
+          after: { name }, afterAllowlist: ['name'], branchId: null,
+          context: { categoryId, version: result.version }, contextAllowlist: ['categoryId', 'version'],
+          entityId: categoryId, entityType: 'catalog_category', operationId: randomUUID(),
+        } };
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   async changeStatus(
     context: TenantTransactionContext,
     categoryId: string,
