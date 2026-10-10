@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
+  check,
   foreignKey,
   integer,
   jsonb,
@@ -294,6 +295,7 @@ export const catalogItems = pgTable(
     name: text().notNull(),
     type: text().notNull(),
     trackInventory: boolean('track_inventory').notNull().default(false),
+    categoryId: uuid('category_id'),
     baseUnit: text('base_unit').notNull().default('UNIT'),
     sku: text(),
     skuNormalized: text('sku_norm'),
@@ -307,6 +309,8 @@ export const catalogItems = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    foreignKey({ columns: [table.organizationId, table.categoryId],
+      foreignColumns: [catalogCategories.organizationId, catalogCategories.id], name: 'catalog_items_category_tenant_fk' }).onDelete('restrict'),
     unique('catalog_items_organization_id_id_key').on(table.organizationId, table.id),
     uniqueIndex('catalog_items_organization_sku_norm_key')
       .on(table.organizationId, table.skuNormalized)
@@ -1131,12 +1135,18 @@ export const purchaseItems = pgTable('purchase_items', {
   unit: text().notNull(),
   categoryId: uuid('category_id'),
   categoryName: text('category_name'),
+  categorySnapshotStatus: text('category_snapshot_status').notNull().default('UNKNOWN'),
   trackInventory: boolean('track_inventory').notNull(),
   quantity: numeric({ precision: 20, scale: 3 }).notNull(),
   unitCost: numeric('unit_cost', { precision: 20, scale: 2 }).notNull(),
   lineTotal: numeric('line_total', { precision: 20, scale: 2 }).notNull(),
   currencyCode: text('currency_code').notNull(),
 }, (table) => [
+  foreignKey({ columns: [table.organizationId, table.categoryId],
+    foreignColumns: [catalogCategories.organizationId, catalogCategories.id], name: 'purchase_items_category_tenant_fk' }).onDelete('restrict'),
+  check('purchase_items_category_snapshot_check', sql`${table.categorySnapshotStatus} = 'UNKNOWN' OR
+    (${table.categorySnapshotStatus} = 'NONE' AND ${table.categoryId} IS NULL AND ${table.categoryName} IS NULL) OR
+    (${table.categorySnapshotStatus} = 'ASSIGNED' AND ${table.categoryId} IS NOT NULL AND ${table.categoryName} IS NOT NULL AND btrim(${table.categoryName}) <> '')`),
   foreignKey({ columns: [table.organizationId, table.purchaseId],
     foreignColumns: [purchases.organizationId, purchases.id], name: 'purchase_items_purchase_tenant_fk' }),
   foreignKey({ columns: [table.organizationId, table.itemId],
@@ -1243,12 +1253,18 @@ export const saleItems = pgTable('sale_items', {
   unit: text().notNull(),
   categoryId: uuid('category_id'),
   categoryName: text('category_name'),
+  categorySnapshotStatus: text('category_snapshot_status').notNull().default('UNKNOWN'),
   quantity: numeric({ precision: 20, scale: 3 }).notNull(),
   unitPrice: numeric('unit_price', { precision: 20, scale: 2 }).notNull(),
   priceVersion: bigint('price_version', { mode: 'number' }).notNull(),
   lineTotal: numeric('line_total', { precision: 20, scale: 2 }).notNull(),
   currencyCode: text('currency_code').notNull(),
 }, (table) => [
+  foreignKey({ columns: [table.organizationId, table.categoryId],
+    foreignColumns: [catalogCategories.organizationId, catalogCategories.id], name: 'sale_items_category_tenant_fk' }).onDelete('restrict'),
+  check('sale_items_category_snapshot_check', sql`${table.categorySnapshotStatus} = 'UNKNOWN' OR
+    (${table.categorySnapshotStatus} = 'NONE' AND ${table.categoryId} IS NULL AND ${table.categoryName} IS NULL) OR
+    (${table.categorySnapshotStatus} = 'ASSIGNED' AND ${table.categoryId} IS NOT NULL AND ${table.categoryName} IS NOT NULL AND btrim(${table.categoryName}) <> '')`),
   foreignKey({ columns: [table.organizationId, table.saleId],
     foreignColumns: [sales.organizationId, sales.id], name: 'sale_items_sale_tenant_fk' }),
   foreignKey({ columns: [table.organizationId, table.itemId],

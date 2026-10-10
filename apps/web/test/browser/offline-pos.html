@@ -45,7 +45,7 @@ async function connect() {
   return authorization;
 }
 window.posHarness = {
-  async initialize() {
+  async initialize(version = 1) {
     sessionStorage.removeItem('pos-test-clock');
     await db.delete(); await db.open(); await keys.create(actor, 'offline-pin');
     const signer = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
@@ -63,6 +63,11 @@ window.posHarness = {
         trackInventory: false, price: '10.00', priceVersion: 1 }], categories: [],
         branches: [{ id: branch, name: 'Main' }], cashRegisters: [{ id: register, name: 'Register', branchId: branch }], paymentMethods: ['CASH'] },
       ingestionKey: publication, ackKey: { algorithm: 'ES256', keyId: 'trusted', publicKeyPem: await pem(signer.publicKey) } };
+    if (version === 2) {
+      bootstrap.version = 2;
+      bootstrap.configuration.schemaVersion = 2;
+      bootstrap.configuration.items[0].category = { id: org, name: 'Original category' };
+    }
     const payload = JSON.stringify(bootstrap);
     const signed = { payload, signature: base64(der(await signing(payload))), signingKeyId: 'trusted' };
     const iat = Math.floor(Date.now() / 1000);

@@ -19,3 +19,18 @@ describe('T207/T208 historical configuration semantics',()=>{
     expect(()=>validateHistoricalSaleSnapshot(configuration,{quote,payments:[{...payments[0],appliedAmount:'19.00'}]})).toThrow();
   });
 });
+
+
+it('T236J validates category and schema version against retained configuration, including explicit absence', () => {
+  for (const category of [null, { id: randomUUID(), name: 'Original category' }]) {
+    const config = { ...configuration, schemaVersion: 2, items: [{ ...item, category }] };
+    const quoted = { ...quote, schemaVersion: 2, lines: [{ ...quote.lines[0], category }] };
+    expect(() => validateHistoricalSaleSnapshot(config, { quote: quoted, payments })).not.toThrow();
+    expect(() => validateHistoricalSaleSnapshot(config, { quote, payments })).toThrow('OFFLINE_SNAPSHOT_INVALID');
+    expect(() => validateHistoricalSaleSnapshot(configuration, { quote: quoted, payments })).toThrow('OFFLINE_SNAPSHOT_INVALID');
+    for (const forged of [{ id: randomUUID(), name: 'Original category' }, { id: category?.id ?? randomUUID(), name: 'Renamed' }]) {
+      expect(() => validateHistoricalSaleSnapshot(config, { quote: { ...quoted,
+        lines: [{ ...quoted.lines[0], category: forged }] }, payments })).toThrow('OFFLINE_SNAPSHOT_INVALID');
+    }
+  }
+});

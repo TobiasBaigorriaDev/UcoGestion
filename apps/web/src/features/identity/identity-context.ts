@@ -14,6 +14,8 @@ export const useIdentityContext = create<IdentityContext>((set, get) => ({
   activeBranchId: null,
   setActiveOrganizationId: (id) => {
     if (typeof window !== 'undefined') {
+      const previous = get().activeOrganizationId;
+      if (previous && previous !== id) window.sessionStorage.removeItem(`uco-active-branch:${previous}`);
       if (id) window.sessionStorage.setItem('uco-active-organization', id);
       else window.sessionStorage.removeItem('uco-active-organization');
     }

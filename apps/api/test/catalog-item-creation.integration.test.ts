@@ -398,6 +398,24 @@ describe('catalog item creation', () => {
     )).resolves.toMatchObject({ rows: [] });
   });
 
+  it('T236J assigns only an active tenant category and preserves idempotent creation', async () => {
+    const categoryId = randomUUID(), inactive = randomUUID(), foreign = randomUUID();
+    await pool.query("INSERT INTO catalog_categories (id, organization_id, name, status) VALUES ($1,$4,'Assigned','ACTIVE'),($2,$4,'Inactive','INACTIVE'),($3,$5,'Foreign','ACTIVE')",
+      [categoryId, inactive, foreign, organizationA, organizationB]);
+    const input = { name: 'Categorized item', type: 'PRODUCT' as const, categoryId };
+    const created = await service.createIdempotent(context(ownerUserId, 'category-create'), input, 'category-create');
+    expect((await pool.query('SELECT category_id FROM catalog_items WHERE id=$1', [created.id])).rows).toEqual([{ category_id: categoryId }]);
+    expect(await service.createIdempotent(context(ownerUserId, 'category-replay'), input, 'category-create')).toEqual(created);
+    await expect(service.createIdempotent(context(ownerUserId, 'category-key'), { ...input, categoryId: null }, 'category-create'))
+      .rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
+    for (const selected of [inactive, foreign, randomUUID()]) {
+      await expect(service.create(context(ownerUserId, 'invalid-category'), { ...input, categoryId: selected }))
+        .rejects.toMatchObject({ code: 'CATALOG_ITEM_CATEGORY_NOT_AVAILABLE' });
+      await expect(service.createIdempotent(context(ownerUserId, 'invalid-category'), { ...input, categoryId: selected }, randomUUID()))
+        .rejects.toMatchObject({ code: 'CATALOG_ITEM_CATEGORY_NOT_AVAILABLE' });
+    }
+  });
+
   function context(userId: string, requestId: string) {
     return { organizationId: organizationA, requestId, userId };
   }

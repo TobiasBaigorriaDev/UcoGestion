@@ -206,4 +206,25 @@ describe('catalog and invitation HTTP contracts', () => {
     expect(accepted.body).toMatchObject({ organizationId });
     expect((await pool.query('SELECT id FROM memberships WHERE organization_id = $1 AND user_id = $2', [organizationId, existing.id])).rowCount).toBe(1);
   });
+  it('T236J accepts the optional category on item creation and validates tenant membership over HTTP', async () => {
+    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin', 'http://localhost:3000')
+      .send({ email: 'contract-owner@example.com', password: 'correct-password' }).expect(204);
+    const cookie = (login.headers['set-cookie'] as string[] | undefined)?.[0]?.split(';')[0] ?? '';
+    const csrf = await request(app.getHttpServer()).get('/api/v1/auth/csrf').set('Cookie', cookie).expect(200);
+    const create = () => request(app.getHttpServer()).post('/api/v1/catalog/items')
+      .set('Origin', 'http://localhost:3000').set('Cookie', cookie).set('X-Organization-Id', organizationId)
+      .set('X-CSRF-Token', csrf.body.csrfToken as string);
+    const categoryId = randomUUID(), foreignCategory = randomUUID(), foreign = randomUUID();
+    await pool.query("INSERT INTO organizations (id,base_currency,timezone) VALUES ($1,'ARS','UTC')", [foreign]);
+    await pool.query("INSERT INTO catalog_categories (id,organization_id,name) VALUES ($1,$3,'Assigned'),($2,$4,'Foreign')",
+      [categoryId, foreignCategory, organizationId, foreign]);
+    const key = randomUUID(), input = { name: 'Categorized HTTP', type: 'PRODUCT', categoryId };
+    const first = await create().set('Idempotency-Key', key).send(input).expect(201);
+    expect((await pool.query('SELECT category_id FROM catalog_items WHERE id=$1', [first.body.id])).rows).toEqual([{ category_id: categoryId }]);
+    expect((await create().set('Idempotency-Key', key).send(input).expect(201)).body).toEqual(first.body);
+    const denied = await create().set('Idempotency-Key', randomUUID()).send({ ...input, categoryId: foreignCategory }).expect(409);
+    expect(denied.body).toMatchObject({ code: 'CATALOG_ITEM_CATEGORY_NOT_AVAILABLE', traceId: expect.any(String) });
+    await create().set('Idempotency-Key', randomUUID()).send({ ...input, categoryId: 'invalid' }).expect(400);
+  });
+
 });

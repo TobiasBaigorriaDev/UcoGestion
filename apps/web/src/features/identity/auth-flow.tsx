@@ -64,6 +64,7 @@ export async function selectOrganization(id: string): Promise<void> {
   } });
   if (!csrf) throw new Error('CSRF unavailable');
   await client.request(`/organizations/${encodeURIComponent(id)}/select`, { method: 'POST', csrfToken: csrf, parse: (value) => value });
+  if (useIdentityContext.getState().activeOrganizationId !== id) await retireAllOfflineIdentities();
 }
 
 export function LoginForm({ login: performLogin = login, onSuccess = () => { window.location.assign('/organizations/select'); } }: {

@@ -5,6 +5,7 @@ import { calculateSaleLine, Quantity, sumMoney, validateNonNegativeMoney,
 import type { PoolClient } from 'pg';
 
 import type { TenantTransactionContext } from '../../database/tenant-transaction.js';
+import { lockCategorySnapshots } from '../catalog/index.js';
 
 export interface PurchaseLineInput {
   readonly itemId: string;
@@ -29,7 +30,7 @@ export class PurchasePersistenceError extends Error {
 
 interface CatalogRow {
   id: string; name: string; type: string; sku: string | null; barcode: string | null;
-  base_unit: QuantityUnit; track_inventory: boolean;
+  base_unit: QuantityUnit; track_inventory: boolean; category_id: string | null;
 }
 
 /** Persists an already authorized purchase inside the caller's tenant transaction. */
@@ -66,12 +67,14 @@ export class PurchasePersistence {
     }
     const ids = [...new Set(input.lines.map((line) => line.itemId))].sort();
     const catalog = await client.query<CatalogRow>(`SELECT id, name, type, sku, barcode, base_unit,
-      track_inventory FROM catalog_items WHERE organization_id = $1 AND id = ANY($2::uuid[])
+      track_inventory, category_id FROM catalog_items WHERE organization_id = $1 AND id = ANY($2::uuid[])
       AND status = 'ACTIVE' AND type = 'PRODUCT' ORDER BY id FOR SHARE`, [context.organizationId, ids]);
     const items = new Map(catalog.rows.map((item) => [item.id, item]));
     if (items.size !== ids.length) {
       throw new PurchasePersistenceError('PURCHASE_ITEM_NOT_AVAILABLE', 'Un producto no está disponible.');
     }
+    const categorySnapshots = await lockCategorySnapshots(client, context.organizationId,
+      catalog.rows.flatMap(item => item.category_id === null ? [] : [item.category_id]));
     const lines = input.lines.map((line) => {
       const item = items.get(line.itemId);
       if (!item) throw new PurchasePersistenceError('PURCHASE_ITEM_NOT_AVAILABLE', 'Un producto no está disponible.');
@@ -99,11 +102,12 @@ export class PurchasePersistence {
     for (const line of lines) {
       await client.query(`INSERT INTO purchase_items (id, organization_id, purchase_id, item_id,
         item_name, item_type, sku, barcode, unit, category_id, category_name, track_inventory,
-        quantity, unit_cost, line_total, currency_code)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULL, NULL, $10, $11, $12, $13, $14)`,
+        quantity, unit_cost, line_total, currency_code, category_snapshot_status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $15, $16, $10, $11, $12, $13, $14, $17)`,
       [randomUUID(), context.organizationId, input.id, line.item.id, line.item.name, line.item.type,
         line.item.sku, line.item.barcode, line.item.base_unit, line.item.track_inventory,
-        line.quantity, line.unitCost, line.lineTotal, currency]);
+        line.quantity, line.unitCost, line.lineTotal, currency, line.item.category_id,
+        categorySnapshots.get(line.item.category_id ?? '')?.name ?? null, line.item.category_id === null ? 'NONE' : 'ASSIGNED']);
     }
     await client.query(`INSERT INTO supplier_history_references
       (id, organization_id, supplier_id, reference_type, source_id)

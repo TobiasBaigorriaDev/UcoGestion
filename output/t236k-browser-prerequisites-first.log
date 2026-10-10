@@ -1,0 +1,59 @@
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+{"level":30,"time":"2026-10-10T21:48:57.495Z","component":"api","duration_ms":9.517299999999523,"method":"GET","path":"/api/v1/organizations","request_id":"3a764763-ebc6-4be9-9774-fa3e4b596db5","status_code":401,"trace_id":"c88ba3e7c7d743e935c51b18c5b75c70","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:48:57.505Z","component":"api","duration_ms":6.894099999997707,"method":"GET","path":"/api/v1/organizations/settings","request_id":"f5dd56e3-2c11-437d-8ca0-a01bda720317","status_code":401,"trace_id":"2095d3b1ea86eaa53e51b7e09fe68673","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:48:57.511Z","component":"api","duration_ms":2.540099999998347,"method":"GET","path":"/api/v1/branches","request_id":"acdf028c-4ba6-4871-8a92-f39e5bf18fcd","status_code":401,"trace_id":"2d1e5f301bab497079925e9eb472c657","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:48:58.071Z","component":"api","duration_ms":425.3790000000008,"method":"POST","path":"/api/v1/auth/login","request_id":"bc040979-4e95-4cd8-8e18-47a0802ca43b","status_code":204,"trace_id":"35da938c51e215f12e5021bb5dbf523f","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:48:59.062Z","component":"api","duration_ms":1.6584000000002561,"method":"GET","path":"/api/v1/organizations","request_id":"9fabfbde-0600-4d08-84cd-4ec480367569","status_code":401,"trace_id":"ea6e6b66be632b079b784933d675bac0","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:48:59.064Z","component":"api","duration_ms":1.0349999999962165,"method":"GET","path":"/api/v1/organizations/settings","request_id":"f7826498-6e43-4b3a-b917-5283e89ee7f8","status_code":401,"trace_id":"7bfef034804c78db1f58407bc7cc9e63","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:48:59.066Z","component":"api","duration_ms":0.8422999999966123,"method":"GET","path":"/api/v1/branches","request_id":"9d8323e2-3eba-4013-ae5b-5853d8344a35","status_code":401,"trace_id":"94bbae1c95ab09b09a3821a78ea2f4bf","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:01.681Z","component":"api","duration_ms":83.97409999999945,"method":"GET","path":"/api/v1/organizations","request_id":"558de132-770a-4d3d-aefc-1b1960919f49","status_code":200,"trace_id":"dc64f0d161521f5cc6d869e7ce41f672","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:01.725Z","component":"api","duration_ms":121.23660000000382,"method":"GET","path":"/api/v1/organizations/settings","request_id":"5fca66d6-dc66-43f0-8cdd-69609866d64b","status_code":200,"trace_id":"e3a02bcdee6f6c2e27d7e02874ef6a6b","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:01.734Z","component":"api","duration_ms":127.56910000000062,"method":"GET","path":"/api/v1/branches","request_id":"d68ee867-4059-4203-a891-62466e485894","status_code":200,"trace_id":"ec8d6476f5d7d31eb985c92b8bca9b77","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:01.923Z","component":"api","duration_ms":134.72490000000107,"method":"GET","path":"/api/v1/dashboard","request_id":"32d6f47a-2dc3-4f96-8182-fd8c1ce9fe7a","status_code":200,"trace_id":"9803e851714282dd1d497d83ebdaac18","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:04.381Z","component":"api","duration_ms":34.48270000000048,"method":"GET","path":"/api/v1/organizations","request_id":"a8dc3d40-d091-4005-80e1-d49f2702ba61","status_code":200,"trace_id":"922972a2c114c0b68b06652d62a9514d","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:04.406Z","component":"api","duration_ms":57.48750000000291,"method":"GET","path":"/api/v1/organizations/settings","request_id":"48173eb8-2596-44a9-b1e0-c3d7f3b9ef22","status_code":200,"trace_id":"afdf06054cf933ec903ba31bddd0555a","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:04.410Z","component":"api","duration_ms":60.6024000000034,"method":"GET","path":"/api/v1/branches","request_id":"18ae4543-0864-4c31-a7bc-2b8e6c3a5eca","status_code":200,"trace_id":"867401bcc0518659645fd786f7fc0f3e","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:04.485Z","component":"api","duration_ms":32.78319999999803,"method":"GET","path":"/api/v1/dashboard","request_id":"66c80b83-5ab7-4176-b15e-9a62dd35fd5d","status_code":200,"trace_id":"71002af7332b83ac0415392a9427b832","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:04.525Z","component":"api","duration_ms":4.554199999998673,"method":"GET","path":"/api/v1/auth/csrf","request_id":"226f9ce0-d5ac-4fd4-b698-a25845a44022","status_code":200,"trace_id":"f42098f9886051a892cfa5643c52a3e1","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:04.549Z","component":"api","duration_ms":13.611400000001595,"method":"POST","path":"/api/v1/organizations/d8ef58fc-46be-4109-96d1-71d3292b6d78/select","request_id":"12b14bff-9092-47eb-a7fd-438bea0e1b02","status_code":201,"trace_id":"81de3b3ec1ab7745495ea544937ee606","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:04.642Z","component":"api","duration_ms":16.995300000002317,"method":"GET","path":"/api/v1/organizations","request_id":"38d58d35-e1b5-4d89-b4bf-de82fad85891","status_code":200,"trace_id":"176be3129285ae421729cda0cb630f04","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:04.652Z","component":"api","duration_ms":24.968400000005204,"method":"GET","path":"/api/v1/organizations/settings","request_id":"0dd4eac1-ec7a-4fea-a0f1-c157bc58b450","status_code":200,"trace_id":"2dd50036d34db0cbf17195896e93f05c","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:04.659Z","component":"api","duration_ms":27.556000000004133,"method":"GET","path":"/api/v1/branches","request_id":"6cfde63a-d590-41d7-af56-be685858c19f","status_code":200,"trace_id":"325d308dfe019ff4ed95f93269a27856","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:49:04.726Z","component":"api","duration_ms":47.790500000002794,"method":"GET","path":"/api/v1/dashboard","request_id":"9ac0b313-a49c-44f0-81f7-2f167498376f","status_code":200,"trace_id":"fa359afecebc3bf60b53a32a48ad396d","msg":"http request completed"}
+ ❯ test/organization-switch-browser.e2e.ts (1 test | 1 failed) 48988ms
+   × RF-03 and RF-116 real browser membership switch, retirement and offline prerequisites 32887ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/organization-switch-browser.e2e.ts > RF-03 and RF-116 real browser membership switch, retirement and offline prerequisites
+Error: {
+  "isError": true,
+  "error": "Error: Previous branch state remains"
+}
+
+ ❯ cli test/organization-switch-browser.e2e.ts:86:119
+     84|         `-s=${session}`, ...args, '--json'], { cwd: root, windowsHide:…
+     85|     } catch (error) {
+     86|       if (typeof error === 'object' && error !== null && 'stdout' in e…
+       |                                                                                                                       ^
+     87|       throw error;
+     88|     }
+ ❯ test/organization-switch-browser.e2e.ts:97:20
+
+Caused by: Error: Command failed: C:\Program Files\nodejs\node.exe C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\node_modules\.pnpm\@playwright+cli@0.1.22\node_modules\@playwright\cli\playwright-cli.js -s=category-398891ba run-code --filename C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\web\test\browser\organization-switch.mjs --json
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 1, killed: false, signal: null, cmd: 'C:\Program Files\nodejs\node.exe C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\node_modules\.pnpm\@playwright+cli@0.1.22\node_modules\@playwright\cli\playwright-cli.js -s=category-398891ba run-code --filename C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\web\test\browser\organization-switch.mjs --json', stdout: '{\n  "isError": true,\n  "error": "Error: Previous branch state remains"\n}\n', stderr: '' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  18:48:03
+   Duration  63.34s (transform 3.66s, setup 0ms, import 13.56s, tests 48.99s, environment 0ms)
+
+undefined
+C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\api:
+[ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL] Command failed with exit code 1: vitest run --config vitest.authorization-browser.config.mts

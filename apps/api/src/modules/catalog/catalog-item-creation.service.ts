@@ -9,6 +9,7 @@ export type CatalogItemType = 'PRODUCT' | 'SERVICE';
 export type CatalogItemBaseUnit = 'UNIT' | 'FRACTIONAL';
 
 export interface CatalogItemCreateInput {
+  readonly categoryId?: string | null;
   readonly barcode?: string | null;
   readonly baseUnit?: CatalogItemBaseUnit;
   readonly name: string;
@@ -30,6 +31,7 @@ export interface CatalogItemResult {
 }
 
 export type CatalogItemCreationErrorCode =
+  | 'CATALOG_ITEM_CATEGORY_NOT_AVAILABLE'
   | 'CATALOG_ITEM_BARCODE_DUPLICATE'
   | 'CATALOG_ITEM_BASE_UNIT_INVALID'
   | 'CATALOG_ITEM_CREATION_FORBIDDEN'
@@ -89,8 +91,8 @@ export class CatalogItemCreationService {
       context,
       {
         action: 'catalog_item.created',
-        after: { barcode, baseUnit, name, sku, status: 'ACTIVE', trackInventory, type: input.type },
-        afterAllowlist: ['barcode', 'baseUnit', 'name', 'sku', 'status', 'trackInventory', 'type'],
+        after: { categoryId: input.categoryId ?? null, barcode, baseUnit, name, sku, status: 'ACTIVE', trackInventory, type: input.type },
+        afterAllowlist: ['categoryId', 'barcode', 'baseUnit', 'name', 'sku', 'status', 'trackInventory', 'type'],
         before: {},
         beforeAllowlist: [],
         branchId: null,
@@ -132,13 +134,14 @@ export class CatalogItemCreationService {
           }
         }
 
+        await this.requireCategory(client, context.organizationId, input.categoryId ?? null);
         try {
           const result = await client.query<CatalogItemResult>(
-            `INSERT INTO catalog_items (id, organization_id, name, type, track_inventory, base_unit, sku, barcode, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'ACTIVE')
+            `INSERT INTO catalog_items (id, organization_id, name, type, track_inventory, base_unit, sku, barcode, category_id, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'ACTIVE')
              RETURNING id, name, status, track_inventory AS "trackInventory", base_unit AS "baseUnit",
                sku, barcode, type, version::integer AS version`,
-            [id, context.organizationId, name, input.type, trackInventory, baseUnit, sku, barcode],
+            [id, context.organizationId, name, input.type, trackInventory, baseUnit, sku, barcode, input.categoryId ?? null],
           );
           const row = result.rows.at(0);
           if (!row) throw new Error('El ítem de catálogo no fue persistido.');
@@ -187,19 +190,21 @@ export class CatalogItemCreationService {
         const acquired = await idempotency.acquire({ actorUserId: context.userId,
           authorizationClass: 'OWNER_OR_ADMIN', branchId: null, key,
           organizationId: context.organizationId,
-          payload: { name, type: input.type, trackInventory, baseUnit, sku, barcode }, scope: 'catalog_item.create',
+          payload: { name, type: input.type, trackInventory, baseUnit, sku, barcode,
+            ...(input.categoryId === undefined ? {} : { categoryId: input.categoryId }) }, scope: 'catalog_item.create',
         }, async () => { await this.requireOwnerOrAdmin(client, context); });
         if (acquired.kind === 'replay') return { result: this.readStored(acquired.response.body) };
         const organization = await client.query('SELECT 1 FROM organizations WHERE id = $1 FOR UPDATE', [context.organizationId]);
         if (organization.rowCount !== 1) throw new CatalogItemCreationError('CATALOG_ITEM_CREATION_FORBIDDEN', 'Organización no disponible.');
+        await this.requireCategory(client, context.organizationId, input.categoryId ?? null);
         let result: CatalogItemResult;
         try {
           const inserted = await client.query<CatalogItemResult>(
-            `INSERT INTO catalog_items (id, organization_id, name, type, track_inventory, base_unit, sku, barcode)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            `INSERT INTO catalog_items (id, organization_id, name, type, track_inventory, base_unit, sku, barcode, category_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING id, name, type, status, track_inventory AS "trackInventory", base_unit AS "baseUnit",
                sku, barcode, version::integer AS version`,
-            [id, context.organizationId, name, input.type, trackInventory, baseUnit, sku, barcode],
+            [id, context.organizationId, name, input.type, trackInventory, baseUnit, sku, barcode, input.categoryId ?? null],
           );
           const row = inserted.rows[0];
           if (!row) throw new Error('El ítem no fue persistido.');
@@ -222,8 +227,8 @@ export class CatalogItemCreationService {
           barcode: result.barcode, version: result.version,
         } });
         return { result, auditEvent: { action: 'catalog_item.created',
-          after: { name, type: input.type, trackInventory, baseUnit, sku, barcode, status: 'ACTIVE' },
-          afterAllowlist: ['name', 'type', 'trackInventory', 'baseUnit', 'sku', 'barcode', 'status'],
+          after: { categoryId: input.categoryId ?? null, name, type: input.type, trackInventory, baseUnit, sku, barcode, status: 'ACTIVE' },
+          afterAllowlist: ['categoryId', 'name', 'type', 'trackInventory', 'baseUnit', 'sku', 'barcode', 'status'],
           before: {}, beforeAllowlist: [], branchId: null, context: {}, contextAllowlist: [],
           entityId: id, entityType: 'catalog_item', operationId: id,
         } };
@@ -268,6 +273,15 @@ export class CatalogItemCreationService {
       );
       return result.rows.map((row) => row.name);
     });
+  }
+
+  private async requireCategory(client: PoolClient, organizationId: string, categoryId: string | null): Promise<void> {
+    if (categoryId === null) return;
+    const category = await client.query(
+      "SELECT id FROM catalog_categories WHERE organization_id=$1 AND id=$2 AND status='ACTIVE' FOR SHARE",
+      [organizationId, categoryId]);
+    if (!category.rowCount) throw new CatalogItemCreationError('CATALOG_ITEM_CATEGORY_NOT_AVAILABLE',
+      'La categoría no está disponible para este ítem.');
   }
 
   private async requireOwnerOrAdmin(

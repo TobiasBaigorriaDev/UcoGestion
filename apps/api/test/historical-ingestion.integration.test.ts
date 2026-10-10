@@ -98,7 +98,7 @@ describe('historical delivery transactions',()=>{
     const payload={id,localReference:'LOCAL-2',reference:null,status:'CONFIRMED',requestHash:sha('request'),actorUserId:actor,
       deviceId:device,organizationId:org,branchId:branch,cashSessionId:operation.sessionId,customerId:null,customerKind:'CONSUMER_FINAL',
       configurationVersion:operation.configVersion,occurredAt,receivedAt:null,
-      quote:{currency:'ARS',lines:[{itemId:item,itemName:'Original',sku:null,barcode:null,type:'PRODUCT',baseUnit:'UNIT',trackInventory:true,quantity:'2',unitPrice:'10.00',priceVersion:1,lineTotal:'20.00'}],subtotal:'20.00',discount:'0.00',total:'20.00',discountEvidence:null},
+      quote:{schemaVersion:2,currency:'ARS',lines:[{category:null,itemId:item,itemName:'Original',sku:null,barcode:null,type:'PRODUCT',baseUnit:'UNIT',trackInventory:true,quantity:'2',unitPrice:'10.00',priceVersion:1,lineTotal:'20.00'}],subtotal:'20.00',discount:'0.00',total:'20.00',discountEvidence:null},
       payments:[{method:'CASH',appliedAmount:'20.00',receivedAmount:'25.00',changeAmount:'5.00'}],
       audit:{action:'sale.confirmed.offline',actorUserId:actor,grantId:JSON.parse(Buffer.from(String(operation.grant).split('.')[1] ?? '', 'base64url').toString()).grantId},
       receipt:{label:'Comprobante no fiscal',branchName:'Main'},result:{id,operationId:id,localReference:'LOCAL-2',total:'20.00',change:'5.00'}};
@@ -117,7 +117,9 @@ describe('historical delivery transactions',()=>{
     expect((await pool.query('SELECT status,max_shortfall FROM inventory_incidents')).rows[0]).toMatchObject({status:'OPEN',max_shortfall:'2.000'});
     expect((await pool.query('SELECT count(*)::integer AS n FROM sale_payments WHERE sale_id=$1',[id])).rows[0]?.n).toBe(1);
     const persisted=(await pool.query('SELECT receipt_snapshot,occurred_at,received_at FROM sales WHERE id=$1',[id])).rows[0];
-    expect(persisted?.receipt_snapshot.items[0]).toMatchObject({name:'Original',unit:'UNIT',unitPrice:'10.00'});
+    expect(persisted?.receipt_snapshot.items[0]).toMatchObject({name:'Original',unit:'UNIT',unitPrice:'10.00',category:null,categorySnapshotStatus:'NONE'});
+    expect((await pool.query('SELECT category_id,category_name,category_snapshot_status FROM sale_items WHERE sale_id=$1',[id])).rows)
+      .toEqual([{category_id:null,category_name:null,category_snapshot_status:'NONE'}]);
     expect(persisted?.occurred_at.toISOString()).toBe(occurredAt);expect(persisted?.received_at).toBeInstanceOf(Date);
     expect((await pool.query(`SELECT context_data FROM audit_events WHERE organization_id=$1 AND operation_id=$2
       AND action='offline.configuration_discrepancy'`,[org,id])).rows).toEqual([{context_data:{configurationVersion:String(operation.configVersion),
@@ -315,6 +317,9 @@ describe('historical delivery transactions',()=>{
     await pool.query("INSERT INTO devices (id,organization_id,branch_id,authorized_by_user_id,authorized_at,status,public_key,public_key_thumbprint) VALUES ($1,$2,$3,$4,now(),'ACTIVE',$5,$6)",
       [lateDevice,lateOrg,lateBranch,lateActor,publicKey,certificates.thumbprint(publicKey)]);
     await pool.query("INSERT INTO catalog_items (id,organization_id,name,type,base_unit,track_inventory,price,price_version) VALUES ($1,$2,'Late product','PRODUCT','UNIT',true,10,1)",[lateItem,lateOrg]);
+    const categoryId=randomUUID();
+    await pool.query("INSERT INTO catalog_categories (id,organization_id,name) VALUES ($1,$2,'Original category')",[categoryId,lateOrg]);
+    await pool.query('UPDATE catalog_items SET category_id=$1 WHERE id=$2',[categoryId,lateItem]);
     const bootstrap=await new OfflineBootstrapService(transactions,signer,custody).issue(lateContext(),{deviceId:lateDevice,branchId:lateBranch},'late-bootstrap');
     const config=JSON.parse(bootstrap.payload);
     const grantProof={grantId:config.grantId as string,bootstrapHash:createHash('sha256').update(bootstrap.payload).digest('hex'),deviceSequence:'0',headHash:null};
@@ -329,11 +334,13 @@ describe('historical delivery transactions',()=>{
     const id=randomUUID(),sale={...opening,id,kind:'sale-confirm',sequence:'2',sessionSequence:'2',previousHash:sha(canonicalEnvelopeJson(opening)),
       payload:{id,localReference:'LATE-2',reference:null,status:'CONFIRMED',requestHash:sha('late-request'),actorUserId:lateActor,deviceId:lateDevice,
         organizationId:lateOrg,branchId:lateBranch,cashSessionId:sessionId,customerId:null,customerKind:'CONSUMER_FINAL',configurationVersion:config.configurationVersion,
-        occurredAt,receivedAt:null,quote:{currency:'ARS',lines:[{itemId:lateItem,itemName:'Late product',sku:null,barcode:null,type:'PRODUCT',baseUnit:'UNIT',
+        occurredAt,receivedAt:null,quote:{schemaVersion:2,currency:'ARS',lines:[{category:{id:categoryId,name:'Original category'},itemId:lateItem,itemName:'Late product',sku:null,barcode:null,type:'PRODUCT',baseUnit:'UNIT',
           trackInventory:true,quantity:'2',unitPrice:'10.00',priceVersion:1,lineTotal:'20.00'}],subtotal:'20.00',discount:'0.00',total:'20.00',discountEvidence:null},
         payments:[{method:'CASH',appliedAmount:'20.00',receivedAmount:'20.00',changeAmount:'0.00'}],audit:{action:'sale.confirmed.offline',actorUserId:lateActor,grantId:config.grantId},
         receipt:{label:'Comprobante no fiscal',branchName:'Late'},result:{id,operationId:id,localReference:'LATE-2',total:'20.00',change:'0.00'}}};
     const pending=seal(sale,lateCertificate);
+    await pool.query("UPDATE catalog_categories SET name='Renamed',status='INACTIVE' WHERE id=$1",[categoryId]);
+    await pool.query('UPDATE catalog_items SET category_id=NULL WHERE id=$1',[lateItem]);
     const nextId=randomUUID(),nextSale={...sale,id:nextId,sequence:'3',sessionSequence:'3',previousHash:sha(canonicalEnvelopeJson(sale)),
       payload:{...sale.payload,id:nextId,localReference:'LATE-3',result:{...sale.payload.result,id:nextId,operationId:nextId,localReference:'LATE-3'}}};
     const nextPending=seal(nextSale,lateCertificate);
@@ -343,8 +350,20 @@ describe('historical delivery transactions',()=>{
     const failing=new HistoricalDeliveryIngestion(transactions,new HistoricalEnvelopeValidator(certificates,custody),()=>{throw new Error('ACK unavailable');});
     await expect(failing.ingest(lateClaims,pending)).rejects.toThrow('ACK unavailable');
     expect((await pool.query('SELECT id FROM sales WHERE id=$1',[id])).rowCount).toBe(0);
+    expect((await pool.query('SELECT id FROM resource_history_references WHERE source_id=$1',[id])).rowCount).toBe(0);
+    expect((await pool.query('SELECT id FROM catalog_category_history_references WHERE source_id=$1',[id])).rowCount).toBe(0);
+    expect((await pool.query('SELECT id FROM cash_movements WHERE source_id=$1',[id])).rowCount).toBe(0);
+    expect((await pool.query('SELECT id FROM audit_events WHERE entity_id=$1',[id])).rowCount).toBe(0);
+    expect((await pool.query('SELECT id FROM sync_operations WHERE id=$1',[id])).rowCount).toBe(0);
+    expect((await pool.query('SELECT id FROM sale_items WHERE sale_id=$1',[id])).rowCount).toBe(0);
+    expect((await pool.query('SELECT id FROM idempotency_records WHERE key=$1',[id])).rowCount).toBe(0);
     const results=await Promise.all([ingestion.ingest(lateClaims,pending),ingestion.ingest(lateClaims,pending)]);
     expect(results[0]?.status).toBe('ACKED');expect(results[1]).toEqual(results[0]);
+    expect((await pool.query('SELECT category_id,category_name,category_snapshot_status FROM sale_items WHERE sale_id=$1',[id])).rows)
+      .toEqual([{category_id:categoryId,category_name:'Original category',category_snapshot_status:'ASSIGNED'}]);
+    expect((await pool.query('SELECT receipt_snapshot FROM sales WHERE id=$1',[id])).rows[0]?.receipt_snapshot.items[0].category)
+      .toEqual({id:categoryId,name:'Original category'});
+    await expect(pool.query('DELETE FROM catalog_categories WHERE id=$1',[categoryId])).rejects.toMatchObject({code:'23503'});
     expect((await pool.query('SELECT snapshot FROM cash_exceptional_closures WHERE cash_session_id=$1',[sessionId])).rows[0]?.snapshot).toEqual(original);
     expect((await pool.query('SELECT status,completeness,expected_cash FROM cash_sessions WHERE id=$1',[sessionId])).rows[0])
       .toMatchObject({status:'CLOSED_WITH_UNRECOVERED_DEVICE',completeness:'UNKNOWN',expected_cash:'30.00'});
@@ -385,4 +404,71 @@ describe('historical delivery transactions',()=>{
       VALUES ($1,$2,$3,$4,$5,$6,'1.00','ARS','MANUAL',$1,'IN')`,[randomUUID(),lateOrg,lateBranch,sessionId,lateActor,lateDevice]))
       .rejects.toThrow('does not accept movements');
   });
+  it('T236J ingests retained v1 bytes as unknown despite a current category, with rollback and exact replay', async () => {
+    const legacyOrg=randomUUID(), legacyActor=randomUUID(), legacyBranch=randomUUID(), legacyDevice=randomUUID(),
+      legacyRegister=randomUUID(), legacyItem=randomUUID(), grantId=randomUUID(), sessionId=randomUUID(), categoryId=randomUUID();
+    const ctx=()=>({organizationId:legacyOrg,userId:legacyActor,requestId:randomUUID()});
+    await pool.query("INSERT INTO users (id,email_normalized,password_hash,password_hash_version) VALUES ($1,'legacy-category@example.com','$argon2id$v=19$test',1)",[legacyActor]);
+    await pool.query("INSERT INTO organizations (id,base_currency,timezone) VALUES ($1,'ARS','UTC')",[legacyOrg]);
+    await pool.query("INSERT INTO memberships (id,organization_id,user_id,role) VALUES ($1,$2,$3,'OWNER')",[randomUUID(),legacyOrg,legacyActor]);
+    await pool.query("INSERT INTO branches (id,organization_id,name) VALUES ($1,$2,'Legacy')",[legacyBranch,legacyOrg]);
+    await pool.query("INSERT INTO cash_registers (id,organization_id,branch_id,name) VALUES ($1,$2,$3,'Legacy')",[legacyRegister,legacyOrg,legacyBranch]);
+    await pool.query("INSERT INTO devices (id,organization_id,branch_id,authorized_by_user_id,authorized_at,status,public_key,public_key_thumbprint) VALUES ($1,$2,$3,$4,now(),'ACTIVE',$5,$6)",
+      [legacyDevice,legacyOrg,legacyBranch,legacyActor,publicKey,certificates.thumbprint(publicKey)]);
+    await pool.query("INSERT INTO catalog_categories (id,organization_id,name) VALUES ($1,$2,'Current category')",[categoryId,legacyOrg]);
+    await pool.query("INSERT INTO catalog_items (id,organization_id,name,type,base_unit,track_inventory,price,price_version,category_id) VALUES ($1,$2,'Legacy item','PRODUCT','UNIT',false,10,1,$3)",[legacyItem,legacyOrg,categoryId]);
+    // Seed the original v1 publication exactly as the previous release stored it.
+    // This is historical fixture creation, not a production conversion of v2 data.
+    const config={currency:'ARS',items:[{id:legacyItem,name:'Legacy item',sku:null,barcode:null,type:'PRODUCT',baseUnit:'UNIT',trackInventory:false,price:'10.00',priceVersion:1}],
+      categories:[{id:categoryId,name:'Current category'}],branches:[{id:legacyBranch,name:'Legacy'}],cashRegisters:[{id:legacyRegister,branchId:legacyBranch,name:'Legacy'}],paymentMethods:['CASH']};
+    const canonical=JSON.stringify({organizationId:legacyOrg,version:1,snapshot:config});
+    const occurredAt=new Date().toISOString();
+    const bootstrapPayload=JSON.stringify({version:1,organizationId:legacyOrg,actorUserId:legacyActor,deviceId:legacyDevice,branchId:legacyBranch,
+      grantId,epoch:'1',configurationVersion:'1',configuration:config,stock:[],timezone:'UTC',role:'OWNER',permissions:{canDiscount:true},serverTime:occurredAt,
+      ingestionKey:custody.publication(),ackKey:{keyId:'trusted',algorithm:'ES256',publicKeyPem:publicKey}});
+    const bootstrap={payload:bootstrapPayload,signature:signer.sign(bootstrapPayload),signingKeyId:'trusted'};
+    await pool.query(`INSERT INTO configuration_versions (id,organization_id,version,snapshot,canonical_payload,signature,signing_key_id,public_key_pem,config_epoch)
+      VALUES ($1,$2,1,$3::jsonb,$4,$5,'trusted',$6,1)`,[randomUUID(),legacyOrg,JSON.stringify(config),canonical,signer.sign(canonical),publicKey]);
+    await pool.query("INSERT INTO offline_grants (id,organization_id,device_id,epoch,configuration_version,expires_at) VALUES ($1,$2,$3,1,1,now()+interval '72 hours')",[grantId,legacyOrg,legacyDevice]);
+    await pool.query(`INSERT INTO idempotency_records (id,organization_id,scope,key,request_hash,status,actor_user_id,branch_id,authorization_class,response_code,response_body,completed_at)
+      VALUES ($1,$2,'offline.bootstrap','retained-v1',$3,'COMPLETED',$4,$5,'OFFLINE_BOOTSTRAP',200,$6::jsonb,now())`,
+      [randomUUID(),legacyOrg,'a'.repeat(64),legacyActor,legacyBranch,JSON.stringify(bootstrap)]);
+    const proof={grantId,bootstrapHash:createHash('sha256').update(bootstrapPayload).digest('hex'),deviceSequence:'0',headHash:null};
+    const grant=(await new OfflineGrantService(transactions,ec.privateKey,'trusted').issue(ctx(),{...proof,
+      proof:sign('sha256',Buffer.from(offlineGrantProofPayload(proof)),{key:ec.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64')},'legacy-grant')).grant;
+    const token=certificates.issue({organizationId:legacyOrg,deviceId:legacyDevice,thumbprint:certificates.thumbprint(publicKey)}), deliveryClaims=certificates.open(token);
+    const opening={id:randomUUID(),actorId:legacyActor,organizationId:legacyOrg,deviceId:legacyDevice,sessionId,sequence:'1',sessionSequence:'1',previousHash:null,
+      kind:'cash-session-open',grant,configVersion:'1',occurredAt,receivedAt:null,payload:{id:sessionId,actorUserId:legacyActor,branchId:legacyBranch,cashRegisterId:legacyRegister,openingCash:'10.00',currency:'ARS',openedAt:occurredAt,status:'OPEN'}};
+    expect((await ingestion.ingest(deliveryClaims,seal(opening,token)))?.status).toBe('ACKED');
+    const id=randomUUID();
+    const sale={...opening,id,sequence:'2',sessionSequence:'2',kind:'sale-confirm',previousHash:sha(canonicalEnvelopeJson(opening)),
+      payload:{id,localReference:'LEGACY-2',reference:null,status:'CONFIRMED',requestHash:sha('legacy-request'),actorUserId:legacyActor,deviceId:legacyDevice,
+        organizationId:legacyOrg,branchId:legacyBranch,cashSessionId:sessionId,customerId:null,customerKind:'CONSUMER_FINAL',configurationVersion:'1',occurredAt,receivedAt:null,
+        quote:{currency:'ARS',lines:[{itemId:legacyItem,itemName:'Legacy item',sku:null,barcode:null,type:'PRODUCT',baseUnit:'UNIT',trackInventory:false,
+          quantity:'1',unitPrice:'10.00',priceVersion:1,lineTotal:'10.00'}],subtotal:'10.00',discount:'0.00',total:'10.00',discountEvidence:null},
+        payments:[{method:'CASH',appliedAmount:'10.00',receivedAmount:'10.00',changeAmount:'0.00'}],audit:{action:'sale.confirmed.offline',actorUserId:legacyActor,grantId},
+        receipt:{label:'Comprobante no fiscal',branchName:'Legacy'},result:{id,operationId:id,localReference:'LEGACY-2',total:'10.00',change:'0.00'}}};
+    const bytes=seal(sale,token), beforeHash=sha(bytes);
+    await pool.query("UPDATE catalog_categories SET name='Changed after sealing' WHERE id=$1",[categoryId]);
+    const failing=new HistoricalDeliveryIngestion(transactions,new HistoricalEnvelopeValidator(certificates,custody),()=>{throw new Error('Legacy ACK failure');});
+    await expect(failing.ingest(deliveryClaims,bytes)).rejects.toThrow('Legacy ACK failure');
+    for (const table of ['sales','sale_items','sale_payments']) {
+      expect((await pool.query(`SELECT 1 FROM ${table} WHERE ${table==='sales' ? 'id':'sale_id'}=$1`,[id])).rowCount).toBe(0);
+    }
+    expect((await pool.query('SELECT 1 FROM sync_operations WHERE id=$1',[id])).rowCount).toBe(0);
+    expect((await pool.query('SELECT 1 FROM idempotency_records WHERE key=$1',[id])).rowCount).toBe(0);
+    const ack=await ingestion.ingest(deliveryClaims,bytes);
+    expect(ack?.status).toBe('ACKED');
+    expect(await ingestion.ingest(deliveryClaims,bytes)).toEqual(ack);
+    expect(sha(bytes)).toBe(beforeHash);
+    expect((await pool.query('SELECT category_id,category_name,category_snapshot_status FROM sale_items WHERE sale_id=$1',[id])).rows)
+      .toEqual([{category_id:null,category_name:null,category_snapshot_status:'UNKNOWN'}]);
+    const receipt=(await pool.query('SELECT receipt_snapshot FROM sales WHERE id=$1',[id])).rows[0]?.receipt_snapshot;
+    expect(receipt.items[0]).not.toHaveProperty('category');
+    expect(receipt.items[0].categorySnapshotStatus).toBe('UNKNOWN');
+    expect((await pool.query('SELECT snapshot,canonical_payload FROM configuration_versions WHERE organization_id=$1',[legacyOrg])).rows)
+      .toEqual([{snapshot:config,canonical_payload:canonical}]);
+    expect((await pool.query('SELECT 1 FROM catalog_category_history_references WHERE source_id=$1',[id])).rowCount).toBe(0);
+  });
+
 });

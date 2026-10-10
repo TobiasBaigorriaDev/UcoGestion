@@ -12,7 +12,7 @@ import { CatalogItemCreationError, CatalogItemCreationService } from './catalog-
 import { CatalogItemEditError, CatalogItemEditService } from './catalog-item-edit.service.js';
 import { CatalogPriceError, CatalogPriceService } from './catalog-price.service.js';
 
-const itemSchema = z.strictObject({ name: z.string().trim().min(1).max(255),
+const itemSchema = z.strictObject({ categoryId: z.uuid().nullable().optional(), name: z.string().trim().min(1).max(255),
   type: z.enum(['PRODUCT', 'SERVICE']), trackInventory: z.boolean().optional(),
   baseUnit: z.enum(['UNIT', 'FRACTIONAL']).optional(),
   sku: z.string().nullable().optional(), barcode: z.string().nullable().optional() });
@@ -31,6 +31,7 @@ export class CatalogItemManagementController {
     @Body(new ZodValidationPipe(itemSchema)) body: z.infer<typeof itemSchema>) {
     try { return await this.creation.createIdempotent(this.context(request), {
       name: body.name, type: body.type,
+      ...(body.categoryId === undefined ? {} : { categoryId: body.categoryId }),
       ...(body.trackInventory === undefined ? {} : { trackInventory: body.trackInventory }),
       ...(body.baseUnit === undefined ? {} : { baseUnit: body.baseUnit }),
       ...(body.sku === undefined ? {} : { sku: body.sku }),

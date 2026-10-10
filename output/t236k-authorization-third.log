@@ -1,0 +1,494 @@
+$ vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+ ❯ test/t236k-authorization.integration.test.ts (56 tests | 37 failed) 30741ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 37 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'catalog-create' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'catalog-create' uses backend membership, scope, tenant and inactive actor
+AssertionError: promise rejected "CatalogItemCreationError: Los servicios n… { code: '…' }" instead of resolving
+ ❯ test/t236k-authorization.integration.test.ts:126:93
+    124|       };
+    125|       // The same input family succeeds with a real allowed actor and …
+    126|       if ((entry.allowed as readonly string[]).includes(entry.role)) a…
+       |                                                                                             ^
+    127|       else await denied(f.org, () => operate(), entry.action === 'purc…
+    128|         : entry.action === 'expense-transfer' ? { code: 'EXPENSE_FORBI…
+
+Caused by: CatalogItemCreationError: Los servicios no pueden configurar control de inventario.
+ ❯ CatalogItemCreationService.create src/modules/catalog/catalog-item-creation.service.ts:69:13
+ ❯ operate test/t236k-authorization.integration.test.ts:115:76
+ ❯ test/t236k-authorization.integration.test.ts:126:83
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'CATALOG_ITEM_SERVICE_TRACK_INVENTORY_NOT_ALLOWED' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'catalog-create' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'catalog-create' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'Los servicios no pueden configurar co…'
+
+- Expected:
+/^$/
+
++ Received:
+"Los servicios no pueden configurar control de inventario."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:127:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'customer-create' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'customer-create' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'customer-create' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'No tenés permisos para gestionar clie…'
+
+- Expected:
+/^$/
+
++ Received:
+"No tenés permisos para gestionar clientes."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:135:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'customer-create' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'No tenés permisos para gestionar clie…'
+
+- Expected:
+/^$/
+
++ Received:
+"No tenés permisos para gestionar clientes."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:127:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'supplier-create' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'supplier-create' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'Solo OWNER o ADMIN pueden realizar es…'
+
+- Expected:
+/^$/
+
++ Received:
+"Solo OWNER o ADMIN pueden realizar esta acción."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:135:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'supplier-create' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'supplier-create' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'Solo OWNER o ADMIN pueden realizar es…'
+
+- Expected:
+/^$/
+
++ Received:
+"Solo OWNER o ADMIN pueden realizar esta acción."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:127:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'adjustment' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'Ajuste de inventario no autorizado.'
+
+- Expected:
+/^$/
+
++ Received:
+"Ajuste de inventario no autorizado."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:135:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'adjustment' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'adjustment' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'threshold' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'threshold' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'Sucursal no autorizada.'
+
+- Expected:
+/^$/
+
++ Received:
+"Sucursal no autorizada."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:133:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'adjustment' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'Ajuste de inventario no autorizado.'
+
+- Expected:
+/^$/
+
++ Received:
+"Ajuste de inventario no autorizado."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:133:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'threshold' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'Stock no autorizado.'
+
+- Expected:
+/^$/
+
++ Received:
+"Stock no autorizado."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:135:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'threshold' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'Stock no autorizado.'
+
+- Expected:
+/^$/
+
++ Received:
+"Stock no autorizado."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:133:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'purchase-receive' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'No tenés permiso para operar esta com…'
+
+- Expected:
+/^$/
+
++ Received:
+"No tenés permiso para operar esta compra."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:135:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'purchase-receive' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'purchase-receive' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'purchase-receive' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'No tenés permiso para operar esta com…'
+
+- Expected:
+/^$/
+
++ Received:
+"No tenés permiso para operar esta compra."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:133:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'expense-transfer' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'No tenés permiso para registrar este …'
+
+- Expected:
+/^$/
+
++ Received:
+"No tenés permiso para registrar este gasto."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:135:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'expense-transfer' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'expense-transfer' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'expense-transfer' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'No tenés permiso para registrar este …'
+
+- Expected:
+/^$/
+
++ Received:
+"No tenés permiso para registrar este gasto."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:133:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'cash-open' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'El usuario no puede abrir esta caja.'
+
+- Expected:
+/^$/
+
++ Received:
+"El usuario no puede abrir esta caja."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:135:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'cash-open' uses backend membership, scope, tenant and inactive actor
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'cash-open' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'La caja queda fuera del alcance del u…'
+
+- Expected:
+/^$/
+
++ Received:
+"La caja queda fuera del alcance del usuario."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:133:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'cash-open' uses backend membership, scope, tenant and inactive actor
+AssertionError: expected [Function] to throw error matching /^$/ but got 'El usuario no puede abrir esta caja.'
+
+- Expected:
+/^$/
+
++ Received:
+"El usuario no puede abrir esta caja."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:133:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 invitation resend cannot mutate a user spanning outside ADMIN scope
+AssertionError: promise resolved "{ …(2) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "expiresAt": "2026-10-17T21:45:16.519Z",
++   "invitationId": "bb54f05e-6871-4d9f-a710-80a2ad8ca399",
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:74:35
+     × RF-21 'OWNER' × 'catalog-create' uses backend membership, scope, tenant and inactive actor 118ms
+     × RF-21 'ADMIN' × 'catalog-create' uses backend membership, scope, tenant and inactive actor 97ms
+     × RF-21 'CASHIER' × 'catalog-create' uses backend membership, scope, tenant and inactive actor 123ms
+     × RF-21 'EMPLOYEE' × 'catalog-create' uses backend membership, scope, tenant and inactive actor 132ms
+     × RF-21 'OWNER' × 'customer-create' uses backend membership, scope, tenant and inactive actor 150ms
+     × RF-21 'ADMIN' × 'customer-create' uses backend membership, scope, tenant and inactive actor 140ms
+     72|     const before = await snapshot(org);
+     × RF-21 'CASHIER' × 'customer-create' uses backend membership, scope, tenant and inactive actor 137ms
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+     × RF-21 'EMPLOYEE' × 'customer-create' uses backend membership, scope, tenant and inactive actor 143ms
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     × RF-21 'OWNER' × 'supplier-create' uses backend membership, scope, tenant and inactive actor 209ms
+       |                                   ^
+     75|     expect(await snapshot(org)).toEqual(before);
+     76|   }
+ ❯ test/t236k-authorization.integration.test.ts:146:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 invitation revoke cannot mutate a user spanning outside ADMIN scope
+     × RF-21 'ADMIN' × 'supplier-create' uses backend membership, scope, tenant and inactive actor 140ms
+     × RF-21 'CASHIER' × 'supplier-create' uses backend membership, scope, tenant and inactive actor 132ms
+     × RF-21 'EMPLOYEE' × 'supplier-create' uses backend membership, scope, tenant and inactive actor 128ms
+     × RF-21 'OWNER' × 'adjustment' uses backend membership, scope, tenant and inactive actor 422ms
+     × RF-21 'ADMIN' × 'adjustment' uses backend membership, scope, tenant and inactive actor 227ms
+     × RF-21 'CASHIER' × 'adjustment' uses backend membership, scope, tenant and inactive actor 176ms
+     × RF-21 'EMPLOYEE' × 'adjustment' uses backend membership, scope, tenant and inactive actor 153ms
+     × RF-21 'OWNER' × 'threshold' uses backend membership, scope, tenant and inactive actor 199ms
+     × RF-21 'ADMIN' × 'threshold' uses backend membership, scope, tenant and inactive actor 143ms
+     × RF-21 'CASHIER' × 'threshold' uses backend membership, scope, tenant and inactive actor 259ms
+     × RF-21 'EMPLOYEE' × 'threshold' uses backend membership, scope, tenant and inactive actor 202ms
+     × RF-21 'OWNER' × 'purchase-receive' uses backend membership, scope, tenant and inactive actor 415ms
+     × RF-21 'ADMIN' × 'purchase-receive' uses backend membership, scope, tenant and inactive actor 192ms
+     × RF-21 'CASHIER' × 'purchase-receive' uses backend membership, scope, tenant and inactive actor 255ms
+     × RF-21 'EMPLOYEE' × 'purchase-receive' uses backend membership, scope, tenant and inactive actor 236ms
+     × RF-21 'OWNER' × 'expense-transfer' uses backend membership, scope, tenant and inactive actor 174ms
+     × RF-21 'ADMIN' × 'expense-transfer' uses backend membership, scope, tenant and inactive actor 186ms
+     × RF-21 'CASHIER' × 'expense-transfer' uses backend membership, scope, tenant and inactive actor 249ms
+     × RF-21 'EMPLOYEE' × 'expense-transfer' uses backend membership, scope, tenant and inactive actor 368ms
+AssertionError: promise resolved "{ …(2) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "invitationId": "0ada93e1-d966-4205-be3e-55454dc23e8b",
++   "status": "REVOKED",
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:74:35
+     × RF-21 'OWNER' × 'cash-open' uses backend membership, scope, tenant and inactive actor 221ms
+     × RF-21 'ADMIN' × 'cash-open' uses backend membership, scope, tenant and inactive actor 220ms
+     × RF-21 'CASHIER' × 'cash-open' uses backend membership, scope, tenant and inactive actor 300ms
+     × RF-21 'EMPLOYEE' × 'cash-open' uses backend membership, scope, tenant and inactive actor 217ms
+     × RF-23 invitation resend cannot mutate a user spanning outside ADMIN scope 305ms
+     × RF-23 invitation revoke cannot mutate a user spanning outside ADMIN scope 290ms
+     × RF-23 ADMIN changeRole only for non-owners entirely within scope 355ms
+     × RF-23 ADMIN setStatus only for non-owners entirely within scope 188ms
+     × RF-23 ADMIN revoke only for non-owners entirely within scope 262ms
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+       |                                   ^
+     75|     expect(await snapshot(org)).toEqual(before);
+     76|   }
+ ❯ test/t236k-authorization.integration.test.ts:146:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/37]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN changeRole only for non-owners entirely within scope
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN setStatus only for non-owners entirely within scope
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN revoke only for non-owners entirely within scope
+AssertionError: expected [Function] to throw error including 'alcance' but got 'La membresía está fuera de tus sucurs…'
+
+Expected: "alcance"
+Received: "La membresía está fuera de tus sucursales asignadas."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:73:61
+     71|   async function denied(org: string, operation: () => Promise<unknown>…
+     72|     const before = await snapshot(org);
+     73|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     74|     else await expect(operation()).rejects.toMatchObject(error);
+     75|     expect(await snapshot(org)).toEqual(before);
+
+ Test Files  1 failed (1)
+      Tests  37 failed | 19 passed (56)
+   Start at  18:44:48
+   Duration  36.10s (transform 937ms, setup 0ms, import 4.91s, tests 30.74s, environment 0ms)
+
+ ❯ test/t236k-authorization.integration.test.ts:161:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/37]⎯
+
+C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\api:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @uconext/api@0.0.0 test: `vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts"`
+Exit status 1

@@ -1,0 +1,4 @@
+$ vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts" "membership-administration.integration.test.ts" "invitation-resend.integration.test.ts" "invitation-revocation.integration.test.ts" "cash-register-management.integration.test.ts" "sales-http.e2e.test.ts" "sales-quote.integration.test.ts"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+

@@ -1,0 +1,10 @@
+$ vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts" "-t" "RF-93"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+
+ Test Files  1 passed (1)
+      Tests  2 passed | 65 skipped (67)
+   Start at  18:55:56
+   Duration  36.95s (transform 2.31s, setup 0ms, import 12.71s, tests 22.80s, environment 0ms)
+

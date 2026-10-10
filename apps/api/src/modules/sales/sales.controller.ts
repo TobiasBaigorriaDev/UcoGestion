@@ -141,7 +141,7 @@ export class SalesController {
     }
     if (error instanceof SalePaymentError || error instanceof SalesQuoteError) {
       const body = { code: error.code, title: 'Venta inválida', detail: error.message };
-      if (error.code === 'SALE_DISCOUNT_FORBIDDEN') throw new ForbiddenException(body);
+      if (error.code === 'SALE_DISCOUNT_FORBIDDEN' || error.code === 'SALE_QUOTE_FORBIDDEN') throw new ForbiddenException(body);
       throw new BadRequestException(body);
     }
     if (error instanceof SaleCustomerError || error instanceof SaleSessionBranchError ||

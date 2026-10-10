@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { AppShell } from '../../components/app-shell';
 import { OrganizationTimezone } from '../../components/organization-time';
@@ -67,6 +67,10 @@ export function Workspace({ page = 'home' }: { page?: WorkspacePage }) {
   const [retired, setRetired] = useState(() => typeof window !== 'undefined' && !!localStorage.getItem('uco:logout-pending'));
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  useEffect(() => useIdentityContext.subscribe((state, previous) => {
+    if (state.activeOrganizationId && state.activeOrganizationId !== previous.activeOrganizationId &&
+      !localStorage.getItem('uco:logout-pending')) setRetired(false);
+  }), []);
   useEffect(() => {
     if (localStorage.getItem('uco:logout-pending')) setRetired(true);
     const retire = () => setRetired(true);
@@ -86,6 +90,7 @@ export function Workspace({ page = 'home' }: { page?: WorkspacePage }) {
 }
 
 function WorkspaceContent({ page }: { page: WorkspacePage }) {
+  const queryClient = useQueryClient();
   const requiresTimezone = ['cash-sessions','sales','purchases','expenses','users'].includes(page);
   const activeId = useIdentityContext((state) => state.activeOrganizationId);
   const setActiveId = useIdentityContext((state) => state.setActiveOrganizationId);
@@ -150,7 +155,11 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
 
   async function changeOrganization(id: string) {
     setSwitchError(null);
-    try { await selectOrganization(id); setActiveId(id); }
+    try {
+      await selectOrganization(id);
+      if (id !== activeId) { await queryClient.cancelQueries(); queryClient.clear(); }
+      setActiveId(id);
+    }
     catch (cause) {
       setSwitchError(cause instanceof ApiProblemError ? cause : new ApiProblemError({ status: 0, code: 'SWITCH_FAILED', message: 'No pudimos cambiar la organización. Intentá nuevamente.' }));
     }

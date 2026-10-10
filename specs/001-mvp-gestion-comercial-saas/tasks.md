@@ -366,8 +366,23 @@ El informe original de T236 se conserva. Este bloque vuelve a `sdd-build`; las p
 - [x] T236G: Registrar discrepancias de configuración histórica en la misma transacción de ingestión, rechazar desactivaciones ya conocidas y cerrar lectura local entre pestañas tras retiro de identidad sin perder sobres sellados [RF-118, RF-122, RF-128, RF-167–RF-170, RF-175, RF-313–RF-314].
 - [x] T236H: Reconciliar los hallazgos pendientes uno por uno con las aserciones y resultados finales; mantener T224/T227/RF-289 abiertos hasta disponer de Safari real y las dos versiones estables exigidas.
 - [x] T236I: Implementar edición de categorías de catálogo por OWNER/ADMIN en servicio, HTTP y UI, con versión, idempotencia, auditoría y negativos de rol/tenant; completar matriz de comandos globales y restricciones offline [RF-221]. Verificado con PostgreSQL runtime, HTTP y UI contra backend real; [evidencia y comandos](t236i-catalog-category-evidence.md). Migración 0108 conserva RLS/FKs históricas y permite limpiar proyecciones cero sin historial al borrar un alta errónea.
-- [ ] T236J: Capturar categoría aplicable en snapshots de ventas online y offline desde la configuración vigente/verificada, preservarla tras cambios del maestro y verificar compras; no completar snapshots históricos faltantes a partir de categorías actuales [RF-269]. Hallazgo confirmado al revisar T236H.
+- [x] T236J: Capturar categoría aplicable en snapshots de ventas online y offline desde la configuración vigente/verificada, preservarla tras cambios del maestro y verificar compras; no completar snapshots históricos faltantes a partir de categorías actuales [RF-269]. Hallazgo confirmado al revisar T236H. Contrato versionado aprobado y [evidencia de implementación y verificación](t236j-category-snapshot-evidence.md).
 
 Evidencia de T236D–T236H: [implementación y verificación](t236-followup-evidence.md), [matriz individual de los 74 hallazgos](t236-followup-matrix.md) y [resultados estructurados](t236-followup-results.json). Se resuelven 50 hallazgos; quedan 22 pendientes de evidencia y 2 incumplimientos de implementación. T236 conserva estado pendiente.
 
 Delta T236I: RF-221 resuelto con [evidencia específica](t236i-catalog-category-evidence.md); el seguimiento actual queda en 51 resueltos, 22 pendientes y 1 incumplimiento. T236/T236J y la matriz de compatibilidad siguen pendientes.
+
+Delta T236J: RF-269 verificado para captura nueva y preservación histórica según el contrato versionado aprobado en plan §11.2. T236J cerrado con [evidencia específica](t236j-category-snapshot-evidence.md). El delta T236I conserva su corte histórico; T236 y la conciliación global de la matriz corresponden a `sdd-check`.
+
+### T236K — pendientes de autorización con membresías reales
+
+Alcance exclusivo autorizado: RF-03, RF-21, RF-23, RF-29, RF-93, RF-116, RF-220 y RF-285. [Pruebas, regresiones, comandos y límites](t236k-authorization-evidence.md). Se conserva la trazabilidad del plan y el estado pendiente de T236.
+
+- [x] T236K1 [RF-03]: cambio de organización mediante API real, retiro de contexto/sucursal/claves/lectura privada y segunda pestaña, cola opaca preservada; tenant/membresías inactivos denegados.
+- [ ] T236K2 [RF-21]: cuatro roles persistidos × ocho familias más cotización POS; corrección precedida de RED. Falta matriz exhaustiva de acciones/lecturas/HTTP.
+- [ ] T236K3 [RF-23]: membresías, invitaciones y cajas con scopes negativos y revalidación; corregidas mutaciones globales sobre scopes mixtos. Faltan operaciones administrativas/comerciales restantes.
+- [ ] T236K4 [RF-29]: diez comandos tras desactivación real, más venta con branch inactiva; historial y rollback comprobados. Falta matriz completa de operaciones nuevas y contratos HTTP.
+- [x] T236K5 [RF-93]: apertura/movimientos/cierre firmado de OWNER/ADMIN permitidos y denegados según membresía real, tenant, scope e inactividad.
+- [x] T236K6 [RF-116]: navegador integrado sin login previo/dispositivo/bootstrap/sync; solo autorización verificada habilita operación offline. Backend añade roles/scopes/tenant/inactividad.
+- [x] T236K7 [RF-220]: ADMIN administra maestros globales y luego es rechazado en compra/venta fuera de scope; rol/tenant/inactividad negativos sin efectos.
+- [ ] T236K8 [RF-285]: IDs cruzados rechazados en ajustes/compras/ventas/transferencias y positivos locales; faltan relaciones y endpoints restantes.

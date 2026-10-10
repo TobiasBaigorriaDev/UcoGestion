@@ -4,17 +4,21 @@ const counter = z.string().regex(/^(?:0|[1-9]\d*)$/);
 const positiveCounter = z.string().regex(/^[1-9]\d*$/);
 const namedResource = z.strictObject({ id: z.uuid(), name: z.string().min(1) });
 export const signedOfflineDocumentSchema = z.strictObject({ payload: z.string(), signature: z.string(), signingKeyId: z.string().min(1) });
-export const offlineConfigurationSchema = z.strictObject({
-  currency: z.string().regex(/^[A-Z]{3}$/),
-  items: z.array(z.strictObject({ id: z.uuid(), name: z.string().min(1), sku: z.string().nullable(), barcode: z.string().nullable(),
-    type: z.enum(['PRODUCT', 'SERVICE']), baseUnit: z.enum(['UNIT', 'FRACTIONAL']), trackInventory: z.boolean(),
-    price: z.string().regex(/^(?:0|[1-9]\d{0,17})\.\d{2}$/).nullable(), priceVersion: z.number().int().nonnegative() })),
+const legacyItemSchema = z.strictObject({ id: z.uuid(), name: z.string().min(1), sku: z.string().nullable(), barcode: z.string().nullable(),
+  type: z.enum(['PRODUCT', 'SERVICE']), baseUnit: z.enum(['UNIT', 'FRACTIONAL']), trackInventory: z.boolean(),
+  price: z.string().regex(/^(?:0|[1-9]\d{0,17})\.\d{2}$/).nullable(), priceVersion: z.number().int().nonnegative() });
+const legacyConfigurationSchema = z.strictObject({
+  currency: z.string().regex(/^[A-Z]{3}$/), items: z.array(legacyItemSchema),
   categories: z.array(namedResource), branches: z.array(namedResource),
   cashRegisters: z.array(namedResource.extend({ branchId: z.uuid() })),
   paymentMethods: z.array(z.enum(['CASH', 'DEBIT_CARD', 'CREDIT_CARD', 'TRANSFER', 'QR'])),
 });
+// Keep the original shape exact: absence in v1 is unknown, never an inferred null.
+export const offlineConfigurationSchema = z.union([legacyConfigurationSchema,
+  legacyConfigurationSchema.extend({ schemaVersion: z.literal(2),
+    items: z.array(legacyItemSchema.extend({ category: namedResource.nullable() })) })]);
 export const offlineBootstrapPayloadSchema = z.strictObject({
-  version: z.literal(1), organizationId: z.uuid(), actorUserId: z.uuid(), deviceId: z.uuid(), branchId: z.uuid(),
+  version: z.union([z.literal(1), z.literal(2)]), organizationId: z.uuid(), actorUserId: z.uuid(), deviceId: z.uuid(), branchId: z.uuid(),
   grantId: z.uuid(), epoch: positiveCounter, configurationVersion: positiveCounter,
   configuration: offlineConfigurationSchema,
   stock: z.array(z.strictObject({ itemId: z.uuid(), quantity: z.string().regex(/^-?(?:0|[1-9]\d{0,16})\.\d{3}$/) })),
@@ -22,7 +26,8 @@ export const offlineBootstrapPayloadSchema = z.strictObject({
   permissions: z.strictObject({ canDiscount: z.boolean() }), serverTime: z.iso.datetime(),
   ingestionKey: signedOfflineDocumentSchema,
   ackKey: z.strictObject({ keyId: z.string().min(1), algorithm: z.literal('ES256'), publicKeyPem: z.string().min(1) }),
-});
+}).refine(value => value.version === ('schemaVersion' in value.configuration ? 2 : 1),
+  { message: 'Bootstrap and configuration schema versions differ.' });
 export type OfflineBootstrapPayload = z.infer<typeof offlineBootstrapPayloadSchema>;
 
 export const offlineGrantProofSchema = z.strictObject({

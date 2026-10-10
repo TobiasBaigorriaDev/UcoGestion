@@ -415,4 +415,44 @@ describe('sales quote', () => {
     expect((await admin.query('SELECT count(*)::integer AS count FROM idempotency_records WHERE key = $1',
       ['sale-runtime-1'])).rows[0]?.count).toBe(1);
   });
+  it('T236J retains category after rename and reassignment', async () => {
+    const categoryId = randomUUID();
+    await admin.query("INSERT INTO catalog_categories (id,organization_id,name,status) VALUES ($1,$2,'Historical category','INACTIVE')", [categoryId, organizationId]);
+    await admin.query('UPDATE catalog_items SET category_id=$1 WHERE id=$2', [categoryId, unitId]);
+
+    const quote = await quotes.quote(context(), branchId, [{ itemId: unitId, quantity: '1' }]);
+    const saleId = randomUUID();
+    const transactions = new TenantTransaction(runtime), operations = new SalesOperationsService(transactions);
+    const input = { branchId, cashSessionId: sessionId, deviceId, clientOperationId: saleId,
+      lines: [{ itemId: unitId, quantity: '1' }], payments: [{ method: 'CASH', appliedAmount: quote.total }],
+      quoteFingerprint: fingerprintSaleQuote(quote) };
+    const key = randomUUID(), original = await operations.confirm(context(), input, key);
+    const before = (await admin.query('SELECT category_id, category_name, category_snapshot_status FROM sale_items WHERE sale_id=$1', [saleId])).rows;
+    expect(before).toEqual([{ category_id: categoryId, category_name: 'Historical category', category_snapshot_status: 'ASSIGNED' }]);
+    expect((await admin.query('SELECT receipt_snapshot FROM sales WHERE id=$1', [saleId])).rows[0]?.receipt_snapshot.items[0])
+      .toMatchObject({ category: { id: categoryId, name: 'Historical category' }, categorySnapshotStatus: 'ASSIGNED' });
+    await admin.query("UPDATE catalog_categories SET name='Renamed' WHERE id=$1", [categoryId]);
+    await admin.query('UPDATE catalog_items SET category_id=NULL WHERE id=$1', [unitId]);
+    expect((await admin.query('SELECT category_id, category_name, category_snapshot_status FROM sale_items WHERE sale_id=$1', [saleId])).rows).toEqual(before);
+    expect(await operations.confirm(context(), input, key)).toEqual(original);
+    const none = await operations.confirm(context(), { ...input, clientOperationId: randomUUID() }, randomUUID());
+    expect((await admin.query('SELECT category_id,category_name,category_snapshot_status FROM sale_items WHERE sale_id=$1', [none.id])).rows)
+      .toEqual([{ category_id: null, category_name: null, category_snapshot_status: 'NONE' }]);
+    await expect(admin.query('DELETE FROM catalog_categories WHERE id=$1', [categoryId])).rejects.toMatchObject({ code: '23503' });
+    await admin.query('UPDATE catalog_items SET category_id=$1 WHERE id=$2', [categoryId, unitId]);
+    const failedId = randomUUID();
+    await expect(transactions.runWithOptionalAudit(context(), async client => {
+      await new SalesPersistence().persist(client, context(), { id: failedId, branchId, cashSessionId: sessionId,
+        deviceId, clientOperationId: failedId, customerId: null, quote, payments: input.payments });
+      throw new Error('T236J rollback');
+    })).rejects.toThrow('T236J rollback');
+    expect((await admin.query('SELECT 1 FROM sales WHERE id=$1', [failedId])).rowCount).toBe(0);
+    expect((await admin.query('SELECT 1 FROM sale_items WHERE sale_id=$1', [failedId])).rowCount).toBe(0);
+    expect((await admin.query('SELECT 1 FROM catalog_category_history_references WHERE source_id=$1', [failedId])).rowCount).toBe(0);
+    expect((await admin.query('SELECT 1 FROM cash_movements WHERE source_id=$1', [failedId])).rowCount).toBe(0);
+    expect((await admin.query('SELECT 1 FROM audit_events WHERE entity_id=$1', [failedId])).rowCount).toBe(0);
+    await admin.query('UPDATE catalog_items SET category_id=NULL WHERE id=$1', [unitId]);
+
+  });
+
 });

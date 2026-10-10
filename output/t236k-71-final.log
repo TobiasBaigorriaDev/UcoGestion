@@ -1,0 +1,10 @@
+$ vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+
+ Test Files  1 passed (1)
+      Tests  71 passed (71)
+   Start at  19:04:29
+   Duration  94.77s (transform 2.85s, setup 0ms, import 16.19s, tests 77.17s, environment 0ms)
+

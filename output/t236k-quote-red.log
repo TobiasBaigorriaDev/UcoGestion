@@ -1,0 +1,108 @@
+$ vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts" "-t" "POS quote"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+ ❯ test/t236k-authorization.integration.test.ts (71 tests | 4 failed | 67 skipped) 16535ms
+     × RF-21 POS quote rejects unauthorized real OWNER membership 575ms
+     × RF-21 POS quote rejects unauthorized real ADMIN membership 231ms
+     × RF-21 POS quote rejects unauthorized real CASHIER membership 180ms
+     × RF-21 POS quote rejects unauthorized real EMPLOYEE membership 163ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 POS quote rejects unauthorized real OWNER membership
+AssertionError: expected SalesQuoteError: La sucursal no está disp… { code: '…' } to match object { code: 'SALE_QUOTE_FORBIDDEN' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "SALE_QUOTE_FORBIDDEN",
++ SalesQuoteError {
++   "code": "SALE_BRANCH_NOT_FOUND",
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:88:35
+     86|     const before = await snapshot(org);
+     87|     if (typeof error === 'string') await expect(operation()).rejects.t…
+     88|     else await expect(operation()).rejects.toMatchObject(error);
+       |                                   ^
+     89|     expect(await snapshot(org)).toEqual(before);
+     90|   }
+ ❯ test/t236k-authorization.integration.test.ts:120:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 POS quote rejects unauthorized real ADMIN membership
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 POS quote rejects unauthorized real CASHIER membership
+AssertionError: expected SalesQuoteError: La sucursal no está disp… { code: '…' } to match object { code: 'SALE_QUOTE_FORBIDDEN' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+- {
+-   "code": "SALE_QUOTE_FORBIDDEN",
++ SalesQuoteError {
++   "code": "SALE_BRANCH_NOT_FOUND",
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:88:35
+     86|     const before = await snapshot(org);
+     87|     if (typeof error === 'string') await expect(operation()).rejects.t…
+     88|     else await expect(operation()).rejects.toMatchObject(error);
+       |                                   ^
+     89|     expect(await snapshot(org)).toEqual(before);
+     90|   }
+ ❯ test/t236k-authorization.integration.test.ts:118:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 POS quote rejects unauthorized real EMPLOYEE membership
+AssertionError: promise resolved "{ …(2) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "quote": {
++     "currency": "ARS",
++     "discount": "0.00",
++     "lines": [
++       {
++         "itemId": "ad7c0fbf-7a19-414c-948b-0ffe873629f7",
++         "lineTotal": "1.00",
++         "priceVersion": 1,
++         "quantity": "1",
++         "unitPrice": "1.00",
++       },
++     ],
++     "subtotal": "1.00",
++     "total": "1.00",
++   },
++   "quoteFingerprint": "1978f0fcbb12f583100a8114f46d89ffb1a0244979e69c8d2929043a4af5605f",
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:88:35
+     86|     const before = await snapshot(org);
+     87|     if (typeof error === 'string') await expect(operation()).rejects.t…
+     88|     else await expect(operation()).rejects.toMatchObject(error);
+       |                                   ^
+     89|     expect(await snapshot(org)).toEqual(before);
+     90|   }
+ ❯ test/t236k-authorization.integration.test.ts:114:30
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 67 skipped (71)
+   Start at  18:59:53
+   Duration  26.82s (transform 1.33s, setup 0ms, import 9.16s, tests 16.54s, environment 0ms)
+
+C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\api:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @uconext/api@0.0.0 test: `vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts" "-t" "POS quote"`
+Exit status 1

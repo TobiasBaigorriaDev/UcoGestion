@@ -1,0 +1,10 @@
+$ vitest run --config vitest.config.mts "auth-flow" "identity-branch-context" "workspace" "offline-identity" "offline-authorization" "offline-keys" "offline-pos" "offline-capability"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/web
+
+
+ Test Files  14 passed (14)
+      Tests  35 passed (35)
+   Start at  18:55:33
+   Duration  94.44s (transform 5.52s, setup 0ms, import 36.90s, tests 33.48s, environment 100.52s)
+

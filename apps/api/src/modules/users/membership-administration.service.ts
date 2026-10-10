@@ -72,7 +72,7 @@ export class MembershipAdministrationService {
         const organizationIsActive = await this.lockOrganization(client, context.organizationId);
         const { actor, target } = await this.loadActorAndTarget(client, context, membershipId);
         this.authorizeOwnerMutation(actor, target, change.role);
-        await this.requireActorTargetScope(client, context.organizationId, actor, target);
+        await this.requireActorTargetScope(client, context.organizationId, actor, target, change.role !== target.role);
         await this.requireRemainingOwner(
           client,
           context.organizationId,
@@ -121,7 +121,7 @@ export class MembershipAdministrationService {
       };
     if (idempotencyKey) {
       return this.transactions.runIdempotent(context, auditEvent, this.idempotencyRequest(context, membershipId, idempotencyKey, 'role', { role: change.role, branchIds: [...change.branchIds], expectedVersion: change.expectedVersion }),
-        (client) => this.authorizeReplay(client, context, membershipId), operation,
+        (client) => this.authorizeReplay(client, context, membershipId, change), operation,
         (body) => z.object({ role: z.enum(['OWNER', 'ADMIN', 'CASHIER', 'EMPLOYEE']), version: z.number().int() }).parse(body));
     }
     return this.transactions.run(context, auditEvent, operation);
@@ -389,7 +389,7 @@ export class MembershipAdministrationService {
     return [];
   }
 
-  private async requireActorTargetScope(client: PoolClient, organizationId: string, actor: MembershipRow, target: MembershipRow): Promise<void> {
+  private async requireActorTargetScope(client: PoolClient, organizationId: string, actor: MembershipRow, target: MembershipRow, requireEntireScope = true): Promise<void> {
     if (actor.role !== 'ADMIN' || actor.id === target.id) return;
     const result = await client.query<{ allowed: boolean }>(
       `SELECT EXISTS (
@@ -400,8 +400,17 @@ export class MembershipAdministrationService {
          WHERE target_scope.organization_id = $1
            AND target_scope.membership_id = $2
            AND actor_scope.membership_id = $3
-       ) AS allowed`,
-      [organizationId, target.id, actor.id],
+       ) AND (NOT $4::boolean OR NOT EXISTS (
+         SELECT 1 FROM membership_branches target_scope
+         WHERE target_scope.organization_id = $1 AND target_scope.membership_id = $2
+           AND NOT EXISTS (
+             SELECT 1 FROM effective_membership_branch_scope actor_scope
+             WHERE actor_scope.organization_id = target_scope.organization_id
+               AND actor_scope.branch_id = target_scope.branch_id
+               AND actor_scope.membership_id = $3
+           )
+       )) AS allowed`,
+      [organizationId, target.id, actor.id, requireEntireScope],
     );
     if (result.rows.at(0)?.allowed !== true) {
       throw new NonOwnerMembershipPolicyError('MEMBERSHIP_BRANCH_SCOPE_FORBIDDEN', 'La membresía está fuera de tus sucursales asignadas.');
@@ -413,10 +422,11 @@ export class MembershipAdministrationService {
       key, organizationId: context.organizationId, payload: { membershipId, value: payload }, scope: `membership.${action}` };
   }
 
-  private async authorizeReplay(client: PoolClient, context: TenantTransactionContext, membershipId: string): Promise<void> {
+  private async authorizeReplay(client: PoolClient, context: TenantTransactionContext, membershipId: string, change?: MembershipRoleChange): Promise<void> {
     const { actor, target } = await this.loadActorAndTarget(client, context, membershipId, ['ACTIVE', 'INACTIVE', 'REVOKED']);
-    this.authorizeOwnerMutation(actor, target, target.role);
-    await this.requireActorTargetScope(client, context.organizationId, actor, target);
+    this.authorizeOwnerMutation(actor, target, change?.role ?? target.role);
+    await this.requireActorTargetScope(client, context.organizationId, actor, target, change === undefined);
+    if (change && change.role !== 'OWNER') await this.prepareNonOwnerScope(client, context.organizationId, actor, target.id, change);
   }
 
   private async prepareNonOwnerScope(

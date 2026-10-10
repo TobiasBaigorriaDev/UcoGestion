@@ -4,7 +4,7 @@ import { calculatePercentageDiscount, calculateSaleLine, Quantity, subtractMoney
   validateFixedDiscount, validatePercentageDiscount, type QuantityUnit } from '@uconext/shared';
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
 
-export type SalesQuoteErrorCode = 'SALE_BRANCH_NOT_FOUND' | 'SALE_ITEM_NOT_AVAILABLE' | 'SALE_QUANTITY_INVALID'
+export type SalesQuoteErrorCode = 'SALE_BRANCH_NOT_FOUND' | 'SALE_QUOTE_FORBIDDEN' | 'SALE_ITEM_NOT_AVAILABLE' | 'SALE_QUANTITY_INVALID'
   | 'SALE_DISCOUNT_INVALID' | 'SALE_DISCOUNT_FORBIDDEN' | 'SALE_AMOUNT_OUT_OF_RANGE';
 
 export class SalesQuoteError extends Error {

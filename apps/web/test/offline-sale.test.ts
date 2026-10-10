@@ -73,3 +73,21 @@ it('T196 records global discount and authority from the current grant', () => {
     })).toThrow();
   }
 });
+
+
+it('T236J snapshots the verified category without mutating a legacy quote', () => {
+  const original = { id: itemId, name: 'Original category' };
+  const config = { ...configuration, schemaVersion: 2 as const, items: [{ ...item, category: original }] };
+  const sale = quoteOfflineSale(config, [{ itemId, quantity: '1' }]);
+  expect(sale).toMatchObject({ schemaVersion: 2, lines: [{ category: original }] });
+  original.name = 'Renamed';
+  const configuredItem = config.items[0];
+  if (!configuredItem) throw new Error('Missing item fixture');
+  configuredItem.category = { id: '22222222-2222-4222-8222-222222222222', name: 'Other' };
+  expect(sale.lines[0]).toMatchObject({ category: { id: itemId, name: 'Original category' } });
+  expect(quoteOfflineSale({ ...config, items: [{ ...item, category: null }] }, [{ itemId, quantity: '1' }]))
+    .toMatchObject({ schemaVersion: 2, lines: [{ category: null }] });
+  const legacy = quoteOfflineSale(configuration, [{ itemId, quantity: '1' }]);
+  expect(legacy).not.toHaveProperty('schemaVersion');
+  expect(legacy.lines[0]).not.toHaveProperty('category');
+});

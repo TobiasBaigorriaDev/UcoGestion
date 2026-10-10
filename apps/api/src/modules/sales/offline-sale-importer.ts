@@ -22,7 +22,8 @@ export class OfflineSaleImporter {
     await lockOfflineSaleStock(client,context.organizationId,operationId,sale.quote.lines.filter(line=>line.trackInventory).map(line=>line.itemId));
     const receipt={label:'Comprobante no fiscal',branch:{name:sale.receipt.branchName},customer:null,currency:sale.quote.currency,
       subtotal:sale.quote.subtotal,discount:sale.quote.discount,total:sale.quote.total,
-      items:sale.quote.lines.map(line=>({...line,name:line.itemName,unit:line.baseUnit})),payments:sale.payments};
+      items:sale.quote.lines.map(line=>({...line,name:line.itemName,unit:line.baseUnit,
+        categorySnapshotStatus:'category' in line ? (line.category===null ? 'NONE':'ASSIGNED'):'UNKNOWN'})),payments:sale.payments};
     const received=(await client.query<{received_at:Date}>('SELECT received_at FROM sync_operations WHERE organization_id=$1 AND id=$2',[context.organizationId,operationId])).rows[0];
     if (!received) throw new Error('OFFLINE_SALE_RECEIPT_MISSING');
     await client.query(`INSERT INTO sales (id,organization_id,branch_id,cash_session_id,device_id,actor_user_id,session_owner_user_id,
@@ -38,8 +39,10 @@ export class OfflineSaleImporter {
     const incidents:string[]=[];
     for (const line of sale.quote.lines) {
       const id=randomUUID();
-      await client.query(`INSERT INTO sale_items (id,organization_id,sale_id,item_id,item_name,item_type,sku,barcode,unit,quantity,unit_price,price_version,line_total,currency_code,track_inventory)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,[id,context.organizationId,sale.id,line.itemId,line.itemName,line.type,line.sku,line.barcode,line.baseUnit,line.quantity,line.unitPrice,line.priceVersion,line.lineTotal,sale.quote.currency,line.trackInventory]);
+      await client.query(`INSERT INTO sale_items (id,organization_id,sale_id,item_id,item_name,item_type,sku,barcode,unit,quantity,unit_price,price_version,line_total,currency_code,track_inventory,category_id,category_name,category_snapshot_status)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,[id,context.organizationId,sale.id,line.itemId,line.itemName,line.type,line.sku,line.barcode,line.baseUnit,line.quantity,line.unitPrice,line.priceVersion,line.lineTotal,sale.quote.currency,line.trackInventory,
+          'category' in line ? line.category?.id ?? null : null, 'category' in line ? line.category?.name ?? null : null,
+          'category' in line ? (line.category===null ? 'NONE':'ASSIGNED'):'UNKNOWN']);
       if (line.trackInventory) {const incident=await applyOfflineSaleStock(client,context.organizationId,sale.id,id);if (incident) incidents.push(incident);}
     }
     for (const payment of sale.payments) await client.query(`INSERT INTO sale_payments (id,organization_id,sale_id,method,applied_amount,received_amount,change_amount,currency_code)

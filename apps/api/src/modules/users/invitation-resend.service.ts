@@ -66,7 +66,7 @@ export class InvitationResendService {
         operationId,
       };
     const operation = async (client: PoolClient) => {
-        await this.requireManager(client, context);
+        await this.requireAuthorizedInvitation(client, context, invitationId);
         const invitation = await client.query<ResendableInvitation>(
           `SELECT email_normalized AS email, role, status
            FROM invitations
@@ -142,17 +142,36 @@ export class InvitationResendService {
       actorUserId: context.userId, authorizationClass: 'MEMBERSHIP_ADMINISTRATION', branchId: null,
       key: idempotencyKey, organizationId: context.organizationId,
       payload: { invitationId }, scope: 'invitation.resend',
-    }, async (client) => { await this.requireManager(client, context); }, operation,
+    }, async (client) => { await this.requireAuthorizedInvitation(client, context, invitationId); }, operation,
     (body) => z.object({ invitationId: z.string(), expiresAt: z.string() }).parse(body));
     return this.transactions.run(context, auditEvent, operation);
+  }
+
+  private async requireAuthorizedInvitation(client: PoolClient, context: TenantTransactionContext, invitationId: string): Promise<void> {
+    const actor = await this.requireManager(client, context);
+    const invitation = await client.query<{ role: string }>(
+      'SELECT role FROM invitations WHERE organization_id=$1 AND id=$2 FOR UPDATE',
+      [context.organizationId, invitationId]);
+    if (!invitation.rows[0]) throw new InvitationResendError('INVITATION_NOT_RESENDABLE', 'La invitación no está disponible para reenvío.');
+    if (actor.role === 'OWNER') return;
+    const scope = await client.query<{ allowed: boolean }>(
+      `SELECT EXISTS (SELECT 1 FROM invitation_branches WHERE organization_id=$1 AND invitation_id=$2)
+        AND NOT EXISTS (
+          SELECT 1 FROM invitation_branches ib WHERE ib.organization_id=$1 AND ib.invitation_id=$2
+            AND NOT EXISTS (SELECT 1 FROM effective_membership_branch_scope s
+              WHERE s.organization_id=ib.organization_id AND s.branch_id=ib.branch_id AND s.membership_id=$3)
+        ) AS allowed`, [context.organizationId, invitationId, actor.id]);
+    if (invitation.rows[0].role === 'OWNER' || !scope.rows[0]?.allowed) {
+      throw new InvitationResendError('INVITATION_RESEND_FORBIDDEN', 'La invitación está fuera de tu alcance.');
+    }
   }
 
   private async requireManager(
     client: PoolClient,
     context: TenantTransactionContext,
-  ): Promise<void> {
-    const membership = await client.query<{ role: string }>(
-      `SELECT role
+  ): Promise<{ id: string; role: string }> {
+    const membership = await client.query<{ id: string; role: string }>(
+      `SELECT id, role
        FROM memberships
        WHERE organization_id = $1
          AND user_id = $2
@@ -160,12 +179,13 @@ export class InvitationResendService {
          AND revoked_at IS NULL`,
       [context.organizationId, context.userId],
     );
-    const role = membership.rows.at(0)?.role;
-    if (role !== 'OWNER' && role !== 'ADMIN') {
+    const actor = membership.rows.at(0);
+    if (!actor || (actor.role !== 'OWNER' && actor.role !== 'ADMIN')) {
       throw new InvitationResendError(
         'INVITATION_RESEND_FORBIDDEN',
         'Solo OWNER o ADMIN pueden reenviar invitaciones.',
       );
     }
+    return actor;
   }
 }

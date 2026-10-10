@@ -32,8 +32,14 @@ it('T196 rejects cashier discounts and item price overrides without writing', as
   } finally { setup.db.close(); }
 });
 
-it('T197 confirms sale, payments and sealed operation atomically with stable identity and replay', async () => {
-  const setup = await posFixture();
+it.each([1, 2] as const)('T197 confirms sale, payments and sealed operation atomically with stable identity and replay (schema %s)', async version => {
+  const setup = await posFixture(bootstrap => {
+    if (version === 2) {
+      bootstrap.version = 2;
+      bootstrap.configuration = { ...bootstrap.configuration, schemaVersion: 2,
+        items: bootstrap.configuration.items.map(item => ({ ...item, category: { id: org, name: 'Original category' } })) };
+    }
+  });
   try {
     const opened = await setup.pos.open(actor, { cashRegisterId: register, openingCash: '0.00' });
     const draft = await setup.pos.prepareSale(actor, { sessionId: opened.sessionId, lines: [{ itemId: org, quantity: '2' }] });
@@ -51,6 +57,9 @@ it('T197 confirms sale, payments and sealed operation atomically with stable ide
       })) } } });
     const pending = await setup.db.deliveryBytes();
     expect(pending).toHaveLength(2);
+    expect(await setup.plaintext('sale', sale.id)).toMatchObject({ quote: version === 2
+      ? { schemaVersion: 2, lines: [{ category: { id: org, name: 'Original category' } }] }
+      : { lines: [{ itemId: org }] } });
     setup.db.close(); await setup.db.open();
     expect(await setup.pos.confirmSale(actor, request)).toEqual(sale);
     expect(await setup.db.deliveryBytes()).toEqual(pending);
@@ -60,8 +69,14 @@ it('T197 confirms sale, payments and sealed operation atomically with stable ide
   } finally { setup.db.close(); }
 });
 
-it('T197 rolls back all sale effects and preserves retry identity when the envelope write fails', async () => {
-  const setup = await posFixture();
+it.each([1, 2] as const)('T197 rolls back all sale effects and preserves retry identity when the envelope write fails (schema %s)', async version => {
+  const setup = await posFixture(bootstrap => {
+    if (version === 2) {
+      bootstrap.version = 2;
+      bootstrap.configuration = { ...bootstrap.configuration, schemaVersion: 2,
+        items: bootstrap.configuration.items.map(item => ({ ...item, category: { id: org, name: 'Original category' } })) };
+    }
+  });
   try {
     const opened = await setup.pos.open(actor, { cashRegisterId: register, openingCash: '0.00' });
     const draft = await setup.pos.prepareSale(actor, { sessionId: opened.sessionId, lines: [{ itemId: org, quantity: '1' }] });

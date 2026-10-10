@@ -103,7 +103,9 @@ describe('catalog category management', () => {
     const category = await service.create(ctx, { name: `Original ${role}` }, randomUUID());
     const epoch = (await pool.query('SELECT config_epoch FROM organizations WHERE id=$1', [organizationA])).rows[0];
     const key = randomUUID();
-    const startedAt = Date.now();
+    // Compare audit timestamps with their source clock, not the host/container clock offset.
+    const startedAt = (await pool.query<{ time: Date }>('SELECT clock_timestamp() AS time')).rows[0]?.time.getTime();
+    if (startedAt === undefined) throw new Error('Database clock unavailable');
     const edited = await service.update(ctx, category.id, 1, { name: '  Renombrada  ' }, key);
     expect(edited).toEqual({ ...category, name: 'Renombrada', version: 2 });
     expect(await service.update(ctx, category.id, 1, { name: 'Renombrada' }, key)).toEqual(edited);
@@ -116,7 +118,9 @@ describe('catalog category management', () => {
       before_data: { name: category.name }, after_data: { name: 'Renombrada' },
       context_data: { categoryId: category.id, version: 2 }, operation_id: expect.any(String), occurred_at: expect.any(Date) });
     expect(audits.rows[0]?.occurred_at.getTime()).toBeGreaterThanOrEqual(startedAt);
-    expect(audits.rows[0]?.occurred_at.getTime()).toBeLessThanOrEqual(Date.now());
+    const finishedAt = (await pool.query<{ time: Date }>('SELECT clock_timestamp() AS time')).rows[0]?.time.getTime();
+    if (finishedAt === undefined) throw new Error('Database clock unavailable');
+    expect(audits.rows[0]?.occurred_at.getTime()).toBeLessThanOrEqual(finishedAt);
     await expect(service.update(ctx, category.id, 1, { name: 'Otro' }, key)).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
     await expect(service.update(ctx, category.id, 1, { name: 'Otro' }, randomUUID())).rejects.toMatchObject({ code: 'VERSION_CONFLICT', currentVersion: 2 });
     await expect(service.update(ctx, category.id, 2, { name: ' ' }, randomUUID())).rejects.toMatchObject({ code: 'CATALOG_CATEGORY_NAME_INVALID' });

@@ -1,0 +1,26 @@
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+{"level":30,"time":"2026-10-10T21:42:58.038Z","component":"api","duration_ms":9.432600000000093,"method":"GET","path":"/api/v1/organizations","request_id":"49f73376-0e0a-4fee-8dc4-380592bf9b62","status_code":401,"trace_id":"9e9b42692f40ac4b82f96355282348b3","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:42:58.042Z","component":"api","duration_ms":2.140900000005786,"method":"GET","path":"/api/v1/organizations/settings","request_id":"01d7fa5a-6f9e-4f5f-976f-b09d14fc6b9f","status_code":401,"trace_id":"73d5ffe6f1524f41bf7430dc87d3ee3d","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:42:58.056Z","component":"api","duration_ms":14.052599999995437,"method":"GET","path":"/api/v1/branches","request_id":"47017d08-17f4-489c-8244-d58bbd085fc8","status_code":401,"trace_id":"2f3b914b71a3d0f3d16b31e81e2a9a6d","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:42:58.676Z","component":"api","duration_ms":480.0984000000026,"method":"POST","path":"/api/v1/auth/login","request_id":"81755ce1-ab15-4654-b123-a761e6c4cad2","status_code":204,"trace_id":"6e7eae5dc0a9cd9024bbdc5e9c624a6f","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:42:59.650Z","component":"api","duration_ms":3.534800000001269,"method":"GET","path":"/api/v1/organizations","request_id":"f18f8de5-27f0-4be1-b043-74682d9f1980","status_code":401,"trace_id":"ed7c67901325911438df5c62db52c968","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:42:59.660Z","component":"api","duration_ms":2.0826000000015483,"method":"GET","path":"/api/v1/organizations/settings","request_id":"9ed9d2a3-c8cc-4c48-a170-ce9e723a4e5d","status_code":401,"trace_id":"3f98a08cfb82209a7b7a413699d6b1a0","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:42:59.662Z","component":"api","duration_ms":0.8541000000041095,"method":"GET","path":"/api/v1/branches","request_id":"29f76dda-afe3-46f5-9419-f02361dcd2e5","status_code":401,"trace_id":"9c4674fc1a813aaedca1280e9a048919","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:43:01.033Z","component":"api","duration_ms":88.73169999999664,"method":"GET","path":"/api/v1/organizations","request_id":"0a62d995-3a21-48fc-99a9-767dc7a9faf0","status_code":200,"trace_id":"2cab5f5ec4989724669eace0ada03dbc","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:43:01.080Z","component":"api","duration_ms":131.31810000000405,"method":"GET","path":"/api/v1/organizations/settings","request_id":"e837ce6d-3bca-4275-a156-19c07c5f23ca","status_code":200,"trace_id":"84572cdd8e95d5d8639f2e3e67fb4ff4","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:43:01.157Z","component":"api","duration_ms":206.22810000000027,"method":"GET","path":"/api/v1/branches","request_id":"943d0e4c-ece1-434d-8b3e-d87c76d79f12","status_code":200,"trace_id":"97a898424be8f131dd78052ea7ecf6f3","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:43:01.326Z","component":"api","duration_ms":221.1356999999989,"method":"GET","path":"/api/v1/dashboard","request_id":"f58503c2-dec3-4657-b082-bc23d3ce475a","status_code":200,"trace_id":"989d84d321598cdf4a73ecd8452b9459","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:43:02.720Z","component":"api","duration_ms":9.101300000002084,"method":"GET","path":"/api/v1/auth/csrf","request_id":"8dd7f2b6-fa19-48d1-b22b-5106657dfbc8","status_code":200,"trace_id":"351873832e2234a71189cc058a408805","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:43:02.816Z","component":"api","duration_ms":71.34260000000359,"method":"POST","path":"/api/v1/organizations/0b5f446e-bf94-4352-bc35-cfc508e4db3a/select","request_id":"7595a486-8b06-4b20-9774-2d2e8f0c66db","status_code":201,"trace_id":"b6033ea619fce18aa9a725e646230604","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:43:02.936Z","component":"api","duration_ms":19.979200000001583,"method":"GET","path":"/api/v1/organizations","request_id":"1e4d7a03-dc64-4151-81c1-a27aad3d7370","status_code":200,"trace_id":"1e63bb5c4edd1ad05a76f81c6943c20e","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:43:02.963Z","component":"api","duration_ms":43.690300000002026,"method":"GET","path":"/api/v1/organizations/settings","request_id":"4ace8c67-1011-4bd9-af67-cf51b3842d54","status_code":200,"trace_id":"70d4c173ca6194929b56713617c202bc","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:43:02.967Z","component":"api","duration_ms":46.34909999999945,"method":"GET","path":"/api/v1/branches","request_id":"e5ca6b9e-4b8f-433e-9ba8-36d6db27bc28","status_code":200,"trace_id":"858153f150dc655b7373edd0f7996b7d","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T21:43:03.013Z","component":"api","duration_ms":30.549599999998463,"method":"GET","path":"/api/v1/dashboard","request_id":"88083116-7dc7-41bc-8ea4-61998692f274","status_code":200,"trace_id":"bec25208216a6ed1e7e7028f5c205890","msg":"http request completed"}
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  18:42:09
+   Duration  56.60s (transform 2.78s, setup 0ms, import 10.85s, tests 45.26s, environment 0ms)
+

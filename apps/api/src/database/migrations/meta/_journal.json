@@ -110,6 +110,7 @@
     {"idx": 105, "version": "7", "when": 105, "tag": "0105_branch_deactivation", "breakpoints": true},
     { "idx": 106, "version": "7", "when": 106, "tag": "0106_identity_email_worker", "breakpoints": true },
     { "idx": 107, "version": "7", "when": 107, "tag": "0107_sale_cancellation_lock", "breakpoints": true },
-    { "idx": 108, "version": "7", "when": 108, "tag": "0108_catalog_category_edit", "breakpoints": true }
+    { "idx": 108, "version": "7", "when": 108, "tag": "0108_catalog_category_edit", "breakpoints": true },
+    { "idx": 109, "version": "7", "when": 109, "tag": "0109_document_category_snapshots", "breakpoints": true }
   ]
 }

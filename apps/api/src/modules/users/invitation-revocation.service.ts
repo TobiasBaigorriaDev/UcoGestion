@@ -73,6 +73,14 @@ export class InvitationRevocationService {
                JOIN effective_membership_branch_scope actor_scope
                  ON actor_scope.organization_id = ib.organization_id AND actor_scope.branch_id = ib.branch_id
                WHERE ib.organization_id = $1 AND ib.invitation_id = $2 AND actor_scope.membership_id = $3
+             ) AND NOT EXISTS (
+               SELECT 1 FROM invitation_branches ib
+               WHERE ib.organization_id = $1 AND ib.invitation_id = $2
+                 AND NOT EXISTS (
+                   SELECT 1 FROM effective_membership_branch_scope actor_scope
+                   WHERE actor_scope.organization_id = ib.organization_id
+                     AND actor_scope.branch_id = ib.branch_id AND actor_scope.membership_id = $3
+                 )
              ) AS allowed`,
             [context.organizationId, invitationId, manager.id],
           );

@@ -24,3 +24,18 @@ it('excludes private master data and noncanonical monetary values from the publi
   expect(offlineConfigurationSchema.safeParse({ ...configuration, items: [{ ...item, price: 1 }] }).success).toBe(false);
   expect(offlineConfigurationSchema.safeParse({ ...configuration, items: [item] }).success).toBe(true);
 });
+
+
+it('T236J keeps legacy configuration exact and requires explicit category in v2', () => {
+  const item = { id, name: 'Item', sku: null, barcode: null, type: 'PRODUCT', baseUnit: 'UNIT',
+    trackInventory: true, price: '1.00', priceVersion: 1 };
+  const legacy = { currency: 'ARS', items: [item], categories: [], branches: [], cashRegisters: [], paymentMethods: [] };
+  expect(offlineConfigurationSchema.parse(legacy)).toEqual(legacy);
+  for (const category of [null, { id, name: 'Original' }]) {
+    const current = { ...legacy, schemaVersion: 2, items: [{ ...item, category }] };
+    expect(offlineConfigurationSchema.parse(current)).toEqual(current);
+    expect(offlineConfigurationSchema.safeParse({ ...legacy, items: [{ ...item, category }] }).success).toBe(false);
+  }
+  expect(offlineConfigurationSchema.safeParse({ ...legacy, schemaVersion: 2 }).success).toBe(false);
+  expect(offlineConfigurationSchema.safeParse({ ...legacy, schemaVersion: 3 }).success).toBe(false);
+});

@@ -544,16 +544,20 @@ describe('cash foundation', () => {
     await expect(reviews.review({ ...context(ownerId), organizationId: foreignOrganizationId }, reviewId, '', randomUUID())).rejects.toThrow();
     const reviewKey = randomUUID();
     const closureBefore = (await admin.query('SELECT * FROM cash_session_closures WHERE cash_session_id=$1', [session.id])).rows;
-    const reviewStartedAt = new Date();
+    const reviewStartedAt = (await admin.query<{ timestamp: Date }>(
+      'SELECT clock_timestamp() AS timestamp')).rows[0]?.timestamp;
+    if (!reviewStartedAt) throw new Error('Missing database clock');
     const reviewed = await reviews.review(context(adminId), reviewId, 'Revisado', reviewKey);
     expect(reviewed).toMatchObject({ id: reviewId, status: 'REVIEWED', mode: 'REVIEW', reviewerUserId: adminId });
     expect(await reviews.review(context(adminId), reviewId, 'Revisado', reviewKey)).toEqual(reviewed);
     expect((await admin.query('SELECT * FROM cash_session_closures WHERE cash_session_id=$1', [session.id])).rows).toEqual(closureBefore);
-    const reviewEvent = (await admin.query<{ reviewer_user_id: string; reviewed_at: Date }>(
-      'SELECT reviewer_user_id,reviewed_at FROM cash_difference_review_events WHERE review_id=$1', [reviewId])).rows[0];
+    const reviewEvent = (await admin.query<{ reviewer_user_id: string; reviewed_at: Date; observed_at: Date }>(
+      'SELECT reviewer_user_id,reviewed_at,clock_timestamp() AS observed_at FROM cash_difference_review_events WHERE review_id=$1', [reviewId])).rows[0];
+    if (!reviewEvent) throw new Error('Missing difference review event');
     expect(reviewEvent?.reviewer_user_id).toBe(adminId);
     expect(reviewEvent?.reviewed_at.getTime()).toBeGreaterThanOrEqual(reviewStartedAt.getTime());
-    expect(reviewEvent?.reviewed_at.getTime()).toBeLessThanOrEqual(Date.now());
+    expect(reviewEvent.reviewed_at.getTime()).toBeLessThanOrEqual(reviewEvent.observed_at.getTime());
+    expect(reviewed.reviewedAt).toBe(reviewEvent.reviewed_at.toISOString());
     expect((await admin.query('SELECT expected_cash,counted_cash,difference FROM cash_session_closures WHERE cash_session_id=$1', [session.id])).rows[0])
       .toMatchObject({ expected_cash: '8.25', counted_cash: '9.25', difference: '1.00' });
     await expect(service.abort(context(ownerId), { cashSessionId: session.id, deviceId: device.id, closeAttemptId: result.closeAttemptId }, randomUUID()))

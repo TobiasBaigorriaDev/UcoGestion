@@ -238,8 +238,9 @@ export class CashRegisterManagementService {
     }
     const branch = await client.query<{ id: string }>(
       `SELECT id FROM branches
-       WHERE organization_id = $1 AND id = $2`,
-      [context.organizationId, branchId],
+       WHERE organization_id = $1 AND id = $2 AND (NOT $3 OR status = 'ACTIVE')
+       ${forUpdate ? 'FOR SHARE' : ''}`,
+      [context.organizationId, branchId, forUpdate],
     );
     if (!branch.rows.at(0)) {
       throw new CashRegisterManagementError(

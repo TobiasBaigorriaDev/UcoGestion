@@ -46,11 +46,15 @@ export class OfflineBootstrapService {
       if (barrier.rowCount) throw new OfflineBootstrapError('OFFLINE_BARRIER_ACTIVE', 'La configuración está congelada.');
       const items = await client.query<ConfigurationSnapshot['items'][number] & {
         name: string; sku: string | null; barcode: string | null;
-      }>(`SELECT id, name, sku, barcode, type, base_unit AS "baseUnit",
-          track_inventory AS "trackInventory", price::text AS price, price_version::integer AS "priceVersion"
-          FROM catalog_items WHERE organization_id = $1 AND status = 'ACTIVE' ORDER BY id`, [context.organizationId]);
+      }>(`SELECT i.id, i.name, i.sku, i.barcode, i.type, i.base_unit AS "baseUnit",
+          i.track_inventory AS "trackInventory", i.price::text AS price, i.price_version::integer AS "priceVersion",
+          CASE WHEN c.id IS NULL THEN NULL ELSE jsonb_build_object('id', c.id, 'name', c.name) END AS category
+          FROM catalog_items i LEFT JOIN catalog_categories c ON c.organization_id=i.organization_id AND c.id=i.category_id
+          WHERE i.organization_id = $1 AND i.status = 'ACTIVE' ORDER BY i.id`, [context.organizationId]);
       const categories = await client.query<{ id: string; name: string }>(
-        "SELECT id, name FROM catalog_categories WHERE organization_id = $1 AND status = 'ACTIVE' ORDER BY id", [context.organizationId]);
+        `SELECT c.id, c.name FROM catalog_categories c WHERE c.organization_id=$1 AND
+          (c.status='ACTIVE' OR EXISTS (SELECT 1 FROM catalog_items i WHERE i.organization_id=c.organization_id
+            AND i.category_id=c.id AND i.status='ACTIVE')) ORDER BY c.id`, [context.organizationId]);
       const branches = await client.query<{ id: string; name: string }>(
         'SELECT id, name FROM branches WHERE organization_id = $1 AND id = $2', [context.organizationId, input.branchId]);
       const registers = await client.query<{ id: string; name: string; branchId: string }>(
@@ -62,7 +66,7 @@ export class OfflineBootstrapService {
         `SELECT s.item_id AS "itemId", s.quantity::text AS quantity FROM branch_stocks s
          JOIN catalog_items i ON i.organization_id = s.organization_id AND i.id = s.item_id
          WHERE s.organization_id = $1 AND s.branch_id = $2 AND i.status = 'ACTIVE' ORDER BY s.item_id`, [context.organizationId, input.branchId]);
-      const snapshot: ConfigurationSnapshot = { currency: organization.base_currency, items: items.rows,
+      const snapshot: ConfigurationSnapshot = { schemaVersion: 2, currency: organization.base_currency, items: items.rows,
         categories: categories.rows, branches: branches.rows, cashRegisters: registers.rows,
         paymentMethods: methods.rows.map(row => row.method) };
       const version = (await client.query<{ version: number }>(
@@ -82,7 +86,7 @@ export class OfflineBootstrapService {
         organization.config_epoch, version]);
       await recordConfigurationExposure(client, context.organizationId, grantId);
       const serverTime = (await client.query<{ time: string }>("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"') AS time")).rows[0]?.time;
-      const payload = JSON.stringify(offlineBootstrapPayloadSchema.parse({ version: 1, organizationId: context.organizationId, actorUserId: context.userId,
+      const payload = JSON.stringify(offlineBootstrapPayloadSchema.parse({ version: 2, organizationId: context.organizationId, actorUserId: context.userId,
         deviceId: input.deviceId, branchId: input.branchId, grantId, epoch: organization.config_epoch,
         configurationVersion: String(version), configuration: snapshot, stock: stocks.rows, timezone: organization.timezone,
         role: actor.role, permissions: { canDiscount: ['OWNER', 'ADMIN'].includes(actor.role) },

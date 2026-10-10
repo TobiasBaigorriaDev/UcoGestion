@@ -1,0 +1,168 @@
+$ vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+ ❯ test/t236k-authorization.integration.test.ts (12 tests | 8 failed) 17131ms
+     × RF-21 authorizes inventory adjustment using actual OWNER membership and revalidates role changes 139ms
+     × RF-21 authorizes inventory adjustment using actual ADMIN membership and revalidates role changes 90ms
+     × RF-23 ADMIN changeRole only for non-owners entirely within scope 228ms
+     × RF-23 ADMIN setStatus only for non-owners entirely within scope 236ms
+     × RF-23 ADMIN revoke only for non-owners entirely within scope 222ms
+     × RF-23 invitations validate assigned, outside, foreign and inactive branches with persisted ADMIN 235ms
+     × RF-220 ADMIN edits global customer/supplier then is denied a real purchase outside scope 105ms
+     × RF-285 backend rejects foreign item, supplier and transfer branch without any effects 129ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 authorizes inventory adjustment using actual OWNER membership and revalidates role changes
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 authorizes inventory adjustment using actual ADMIN membership and revalidates role changes
+error: new row for relation "inventory_adjustments" violates check constraint "inventory_adjustments_reason_allowed_check"
+ ❯ ../../node_modules/.pnpm/pg@8.23.0/node_modules/pg/lib/client.js:694:17
+ ❯ src/modules/inventory/inventory-increase.service.ts:81:7
+     79|       if (!unit) throw new Error('Producto inventariable no disponible…
+     80|       const quantity = Quantity.from(canonicalQuantity, unit).toString…
+     81|       await client.query(
+       |       ^
+     82|         `SELECT inventory_api.apply_increase($1, $2, $3, $4, $5, $6::n…
+     83|         [id, context.organizationId, input.branchId, input.itemId, con…
+ ❯ src/database/tenant-transaction.ts:89:22
+ ❯ TenantTransaction.runWithOptionalAudit src/database/tenant-transaction.ts:111:38
+ ❯ TenantTransaction.runIdempotent src/database/tenant-transaction.ts:82:12
+ ❯ retryInventoryTransaction src/modules/inventory/inventory-transaction-retry.ts:8:18
+ ❯ test/t236k-authorization.integration.test.ts:74:42
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN changeRole only for non-owners entirely within scope
+AssertionError: promise resolved "{ role: 'CASHIER', version: 2 }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "role": "CASHIER",
++   "version": 2,
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:65:61
+     63|   async function denied(org: string, operation: () => Promise<unknown>…
+     64|     const before = await snapshot(org);
+     65|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     66|     else await expect(operation()).rejects.toMatchObject(error);
+     67|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:95:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN setStatus only for non-owners entirely within scope
+AssertionError: promise resolved "{ status: 'INACTIVE', version: 2 }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "status": "INACTIVE",
++   "version": 2,
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:65:61
+     63|   async function denied(org: string, operation: () => Promise<unknown>…
+     64|     const before = await snapshot(org);
+     65|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     66|     else await expect(operation()).rejects.toMatchObject(error);
+     67|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:95:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN revoke only for non-owners entirely within scope
+AssertionError: promise resolved "{ …(2) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "revokedAt": "2026-10-10T21:41:25.754Z",
++   "version": 2,
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:65:61
+     63|   async function denied(org: string, operation: () => Promise<unknown>…
+     64|     const before = await snapshot(org);
+     65|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     66|     else await expect(operation()).rejects.toMatchObject(error);
+     67|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:95:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 invitations validate assigned, outside, foreign and inactive branches with persisted ADMIN
+AssertionError: expected [Function] to throw error including 'administrar' but got 'Solo OWNER o ADMIN pueden preparar un…'
+
+Expected: "administrar"
+Received: "Solo OWNER o ADMIN pueden preparar una membresía no propietaria."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:65:61
+     63|   async function denied(org: string, operation: () => Promise<unknown>…
+     64|     const before = await snapshot(org);
+     65|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     66|     else await expect(operation()).rejects.toMatchObject(error);
+     67|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:108:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-220 ADMIN edits global customer/supplier then is denied a real purchase outside scope
+AssertionError: expected [Function] to throw error including 'alcance' but got 'No tenés permiso para operar esta com…'
+
+Expected: "alcance"
+Received: "No tenés permiso para operar esta compra."
+
+ ❯ denied test/t236k-authorization.integration.test.ts:65:61
+     63|   async function denied(org: string, operation: () => Promise<unknown>…
+     64|     const before = await snapshot(org);
+     65|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     66|     else await expect(operation()).rejects.toMatchObject(error);
+     67|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:153:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-285 backend rejects foreign item, supplier and transfer branch without any effects
+error: new row for relation "inventory_adjustments" violates check constraint "inventory_adjustments_reason_allowed_check"
+ ❯ ../../node_modules/.pnpm/pg@8.23.0/node_modules/pg/lib/client.js:694:17
+ ❯ src/modules/inventory/inventory-increase.service.ts:81:7
+     79|       if (!unit) throw new Error('Producto inventariable no disponible…
+     80|       const quantity = Quantity.from(canonicalQuantity, unit).toString…
+     81|       await client.query(
+       |       ^
+     82|         `SELECT inventory_api.apply_increase($1, $2, $3, $4, $5, $6::n…
+     83|         [id, context.organizationId, input.branchId, input.itemId, con…
+ ❯ src/database/tenant-transaction.ts:89:22
+ ❯ TenantTransaction.runWithOptionalAudit src/database/tenant-transaction.ts:111:38
+ ❯ TenantTransaction.runIdempotent src/database/tenant-transaction.ts:82:12
+ ❯ retryInventoryTransaction src/modules/inventory/inventory-transaction-retry.ts:8:18
+ ❯ test/t236k-authorization.integration.test.ts:166:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 4 passed (12)
+   Start at  18:41:06
+   Duration  22.10s (transform 594ms, setup 0ms, import 4.52s, tests 17.13s, environment 0ms)
+
+C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\api:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @uconext/api@0.0.0 test: `vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts"`
+Exit status 1

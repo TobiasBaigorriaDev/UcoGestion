@@ -85,11 +85,12 @@ export class SalesOperationsService {
       const allowed = await client.query<{ allowed: boolean }>(`SELECT EXISTS (
         SELECT 1 FROM memberships m WHERE m.organization_id = $1 AND m.user_id = $2
           AND m.status = 'ACTIVE' AND m.revoked_at IS NULL
+          AND m.role IN ('OWNER', 'ADMIN', 'CASHIER')
           AND (m.role = 'OWNER' OR EXISTS (SELECT 1 FROM effective_membership_branch_scope s
             WHERE s.organization_id = m.organization_id AND s.membership_id = m.id AND s.branch_id = $3))
       ) AS allowed`, [context.organizationId, context.userId, branchId]);
       if (!allowed.rows[0]?.allowed) {
-        throw new SalesQuoteError('SALE_BRANCH_NOT_FOUND', 'La sucursal no está disponible.');
+        throw new SalesQuoteError('SALE_QUOTE_FORBIDDEN', 'No tienes acceso al POS de esta sucursal.');
       }
       const quote = await this.quotes.quoteInTransaction(client, context.organizationId, branchId,
         lines, discount, context.userId);

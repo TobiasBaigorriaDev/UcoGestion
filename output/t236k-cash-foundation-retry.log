@@ -1,0 +1,10 @@
+$ vitest run --config vitest.config.mts "cash-foundation.integration.test.ts"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+
+ Test Files  1 passed (1)
+      Tests  15 passed (15)
+   Start at  19:13:49
+   Duration  24.31s (transform 790ms, setup 0ms, import 5.98s, tests 17.49s, environment 0ms)
+

@@ -1,0 +1,120 @@
+$ vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+ ❯ test/t236k-authorization.integration.test.ts (22 tests | 4 failed) 18303ms
+     × RF-23 ADMIN changeRole only for non-owners entirely within scope 236ms
+     × RF-23 ADMIN setStatus only for non-owners entirely within scope 166ms
+     × RF-23 ADMIN revoke only for non-owners entirely within scope 194ms
+     × RF-29 rejects new cash-register after real deactivation and preserves history 174ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN changeRole only for non-owners entirely within scope
+AssertionError: promise resolved "{ role: 'CASHIER', version: 2 }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "role": "CASHIER",
++   "version": 2,
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:71:61
+     69|   async function denied(org: string, operation: () => Promise<unknown>…
+     70|     const before = await snapshot(org);
+     71|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     72|     else await expect(operation()).rejects.toMatchObject(error);
+     73|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:102:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN setStatus only for non-owners entirely within scope
+AssertionError: promise resolved "{ status: 'INACTIVE', version: 2 }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "status": "INACTIVE",
++   "version": 2,
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:71:61
+     69|   async function denied(org: string, operation: () => Promise<unknown>…
+     70|     const before = await snapshot(org);
+     71|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     72|     else await expect(operation()).rejects.toMatchObject(error);
+     73|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:102:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN revoke only for non-owners entirely within scope
+AssertionError: promise resolved "{ …(2) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "revokedAt": "2026-10-10T21:43:25.604Z",
++   "version": 2,
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:71:61
+     69|   async function denied(org: string, operation: () => Promise<unknown>…
+     70|     const before = await snapshot(org);
+     71|     if (typeof error === 'string') await expect(operation()).rejects.t…
+       |                                                             ^
+     72|     else await expect(operation()).rejects.toMatchObject(error);
+     73|     expect(await snapshot(org)).toEqual(before);
+ ❯ test/t236k-authorization.integration.test.ts:102:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-29 rejects new cash-register after real deactivation and preserves history
+AssertionError: promise resolved "{ …(5) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "branchId": "e0081e39-d9b8-469d-8d83-29ab7d432348",
++   "id": "f96592de-033f-4bf2-a599-e344e27d8b05",
++   "name": "aa951492-6efe-4281-a152-5fa3cb3cd059",
++   "status": "ACTIVE",
++   "version": 1,
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:72:35
+     70|     const before = await snapshot(org);
+     71|     if (typeof error === 'string') await expect(operation()).rejects.t…
+     72|     else await expect(operation()).rejects.toMatchObject(error);
+       |                                   ^
+     73|     expect(await snapshot(org)).toEqual(before);
+     74|   }
+ ❯ test/t236k-authorization.integration.test.ts:192:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 18 passed (22)
+   Start at  18:43:08
+   Duration  23.12s (transform 827ms, setup 0ms, import 4.34s, tests 18.30s, environment 0ms)
+
+C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\api:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @uconext/api@0.0.0 test: `vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts"`
+Exit status 1

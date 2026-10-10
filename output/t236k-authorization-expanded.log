@@ -1,0 +1,40 @@
+$ vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+ ❯ test/t236k-authorization.integration.test.ts (60 tests | 2 failed) 46618ms
+     × RF-116 bootstrap revalidates ADMIN membership, branch scope, tenant and inactive device 551ms
+     × RF-116 bootstrap revalidates CASHIER membership, branch scope, tenant and inactive device 408ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-116 bootstrap revalidates ADMIN membership, branch scope, tenant and inactive device
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-116 bootstrap revalidates CASHIER membership, branch scope, tenant and inactive device
+AssertionError: promise rejected "Error: Historical ingestion key unavailab…" instead of resolving
+ ❯ test/t236k-authorization.integration.test.ts:303:75
+    301|     const rejected = { code: 'OFFLINE_BOOTSTRAP_FORBIDDEN' };
+    302|     if (role === 'EMPLOYEE') await denied(f.org, () => service.issue(f…
+    303|     else await expect(service.issue(f.context(role), input, randomUUID…
+       |                                                                           ^
+    304|     await denied(f.org, () => service.issue(f.context(role, f.foreign)…
+    305|     if (role !== 'OWNER') {
+
+Caused by: Error: Historical ingestion key unavailable.
+ ❯ preserveIngestionKeys src/modules/offline-sync/ingestion-key-retention.ts:17:13
+ ❯ src/modules/offline-sync/offline-bootstrap.service.ts:40:7
+ ❯ src/database/tenant-transaction.ts:89:22
+ ❯ TenantTransaction.runWithOptionalAudit src/database/tenant-transaction.ts:111:38
+ ❯ TenantTransaction.runIdempotent src/database/tenant-transaction.ts:82:12
+ ❯ test/t236k-authorization.integration.test.ts:303:10
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 58 passed (60)
+   Start at  18:50:11
+   Duration  55.76s (transform 2.20s, setup 0ms, import 8.59s, tests 46.62s, environment 0ms)
+
+C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\api:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @uconext/api@0.0.0 test: `vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts"`
+Exit status 1

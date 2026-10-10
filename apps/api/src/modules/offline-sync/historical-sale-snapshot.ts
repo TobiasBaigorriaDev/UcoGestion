@@ -7,7 +7,14 @@ const saleSchema=z.object({quote:offlineConfirmedSaleSchema.shape.quote,payments
 export function validateHistoricalSaleSnapshot(configuration:unknown,input:unknown):void {
   try {
     const snapshot=offlineConfigurationSchema.parse(configuration),sale=saleSchema.parse(input),quote=sale.quote;
+    if (('schemaVersion' in quote)!==('schemaVersion' in snapshot)) throw new Error();
     if (quote.currency!==snapshot.currency) throw new Error();
+    if ('schemaVersion' in snapshot && 'schemaVersion' in quote) {
+      for (const line of quote.lines) {
+        const item=snapshot.items.find(row=>row.id===line.itemId);
+        if (!item || item.category?.id!==line.category?.id || item.category?.name!==line.category?.name) throw new Error();
+      }
+    }
     for (const line of quote.lines) {
       const item=snapshot.items.find(row=>row.id===line.itemId);
       if (!item || line.itemName!==item.name || line.sku!==item.sku || line.barcode!==item.barcode ||

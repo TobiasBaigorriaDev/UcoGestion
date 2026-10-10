@@ -389,6 +389,18 @@ Pruebas obligatorias: logout antes/durante push; usuario B activa sync sin obser
 
 ### 11.2 Operación local
 
+#### T236J — Contrato de categoría histórica (aprobado el 2026-10-10)
+
+Por autorización explícita del usuario al retomar T236J, se amplía el contrato sin reinterpretar RF-269. Nuevos bootstraps usan `version=2`, configuración `schemaVersion=2` y cada ítem incluye `category: { id, name } | null`, incluida una categoría asignada desactivada. Nuevas líneas offline usan cotización `schemaVersion=2` y conservan ese mismo valor, validado contra la configuración firmada original. El contador `configurationVersion` sigue identificando la publicación; no sustituye la versión del schema. Grant y sobre criptográfico exterior conservan su versión: no cambia su formato.
+
+Lectores y validadores mantienen el contrato anterior exacto: bootstrap v1, configuración y cotización sin `schemaVersion` ni `category`. Esos datos no prueban ausencia de categoría. La versión de cotización debe corresponder a la configuración histórica y no puede degradarse de v2 a v1. No se añaden defaults al payload antiguo ni se reescriben bytes, hashes, firmas, ACKs o configuraciones persistidas. Una configuración v1 ya verificada puede seguir generando operaciones con semántica v1 durante la vigencia de su grant; solo una nueva preparación online aporta la categoría conocida.
+
+El catálogo incorpora `catalog_items.category_id` opcional con FK tenant `RESTRICT`, sin completar asignaciones anteriores. El alta existente acepta `categoryId` opcional, valida categoría activa de la misma organización, conserva autorización OWNER/ADMIN, auditoría y el hash idempotente previo cuando el campo no se envía. No se incorpora una pantalla ni un comando nuevo de reasignación en T236J.
+
+En PostgreSQL las líneas distinguen `category_snapshot_status`: `UNKNOWN` para documentos previos o ingestión v1; `NONE` para categoría explícitamente ausente; `ASSIGNED` para ID/nombre capturados. La migración no consulta maestros ni completa valores históricos. Ventas online y compras capturan la asignación y nombre bajo locks en la misma transacción del documento. La categoría histórica se referencia con FK tenant `RESTRICT` y referencia append-only; no se elimina aunque cambie la asignación del ítem. Los comprobantes nuevos conservan objeto/null y estado; los anteriores conservan sus datos sin inventar categorías. Si se presenta la categoría, `UNKNOWN` corresponde a «Categoría histórica desconocida», nunca a «Sin categoría». T236J conserva esa distinción en los datos; no agrega una columna visual nueva.
+
+RF-269 se verifica con operaciones seguidas de cambio de asignación/nombre, categoría ausente y desactivada, versiones antiguas y nuevas, negativos de falsificación/degradación y tenant, replay estable y rollback PostgreSQL completo. Pendientes cifrados y almacenamiento local deben preservar lectura de ambos contratos sin migrar ni volver a sellar operaciones.
+
 Dexie contiene `meta`, `catalog`, `stock_snapshot`, `cash_sessions`, `operations`, `sync_attempts` y `key_envelopes`. Una transacción local confirma sesión/venta y agrega un envelope append-only con UUID, secuencia de dispositivo, secuencia de sesión, `prev_hash`, payload canónico, hash, actor, grant/config versions y timestamps. ECDSA firma el hash. La operación confirmada no se edita; una corrección espera conexión y usa el flujo de anulación online.
 
 El POS valida localmente unidad, precisión, precios sincronizados, rol, caja/dispositivo y stock conocido. Aun así, el servidor es la autoridad. Se usa `navigator.storage.persist()` cuando está disponible y la UI muestra última sincronización, vigencia del grant, operaciones pendientes y riesgo de operar con stock desactualizado.

@@ -1,0 +1,43 @@
+$ vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+ ❯ test/t236k-authorization.integration.test.ts (60 tests | 2 failed) 44940ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-93 OWNER opens, moves cash and completes signed close only with current scope
+ FAIL  test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-93 ADMIN opens, moves cash and completes signed close only with current scope
+AssertionError: expected Error: CASH_CHECKPOINT_INVALID { …(1) } to match object { Object (code) }
+
+- Expected
++ Received
+
+- {
+-   "code": "CASH_SESSION_ACTOR_FORBIDDEN",
++ CashCloseError {
++   "code": "CASH_CHECKPOINT_INVALID",
+  }
+
+ ❯ denied test/t236k-authorization.integration.test.ts:88:35
+     86|     const before = await snapshot(org);
+     87|     if (typeof error === 'string') await expect(operation()).rejects.t…
+     88|     else await expect(operation()).rejects.toMatchObject(error);
+       |                                   ^
+     89|     expect(await snapshot(org)).toEqual(before);
+     90|   }
+ ❯ test/t236k-authorization.integration.test.ts:231:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+     × RF-93 OWNER opens, moves cash and completes signed close only with current scope 896ms
+     × RF-93 ADMIN opens, moves cash and completes signed close only with current scope 1064ms
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 58 passed (60)
+   Start at  18:52:23
+   Duration  50.25s (transform 1.03s, setup 0ms, import 4.83s, tests 44.94s, environment 0ms)
+
+C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\api:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @uconext/api@0.0.0 test: `vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts"`
+Exit status 1

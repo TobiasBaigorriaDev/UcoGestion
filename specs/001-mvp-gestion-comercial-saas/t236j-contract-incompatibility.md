@@ -1,6 +1,8 @@
 # T236J — Incompatibilidad del contrato offline con RF-269
 
-Fecha: 2026-10-10. Estado: implementación detenida; T236J sigue pendiente.
+Fecha: 2026-10-10. Estado de la revisión inicial: implementación detenida, pendiente de decisión de contrato.
+
+Actualización del 2026-10-10: el usuario autorizó continuar con «hazlo» tras explicar la decisión necesaria. El versionado y su convivencia quedaron documentados en plan §11.2; T236J se implementó y verificó en la [evidencia final](t236j-category-snapshot-evidence.md). El contenido siguiente conserva el diagnóstico y los resultados anteriores a esa aprobación; no describe el estado final.
 
 Este documento registra un bloqueo, no evidencia de cumplimiento de RF-269. No se modificaron contratos, lógica de negocio, sobres, migraciones ni documentos históricos durante esta revisión. Se preservaron los cambios previos del workspace.
 

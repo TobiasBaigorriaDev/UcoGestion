@@ -1,0 +1,145 @@
+$ vitest run --config vitest.config.mts "t236k-authorization.integration.test.ts" "organization-discovery.integration.test.ts" "membership-administration.integration.test.ts" "invitation-create.integration.test.ts" "invitation-revocation.integration.test.ts" "invitation-resend.integration.test.ts" "branch-management.integration.test.ts" "cash-register-management.integration.test.ts" "cash-foundation.integration.test.ts" "sales-quote.integration.test.ts" "--reporter=verbose"
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T115 authorizes an online device with tenant, branch, authorizer and contact timestamps 73ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T185 provisions a POS key and opaque certificate, with scoped authorization and idempotent replay 69ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T116 preserves a conflicting offline session while one normal session blocks online opening 846ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T117 keeps cash movements immutable and expected cash atomic 293ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T118 prepares an online opening with nonnegative cash and matching active register and device 88ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T116 rejects online opening when a conflicted offline session remains 46ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T119 permits scoped OWNER, ADMIN and CASHIER opening while rejecting EMPLOYEE 135ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T120 rejects an operation from another device even for OWNER or ADMIN 54ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T121 keeps the session device while recording the authenticated replacement actor 77ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T121A opens once under concurrent requests and replays the original audited result 276ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T122 records a positive manual deposit with reason, real actor and one atomic effect 259ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T123 rejects an excessive withdrawal completely after the session lock 166ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T124 calculates expected cash from the consolidated server ledger 261ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T214B begins close with a signed complete checkpoint, rejects forgery and replays once 1270ms
+ ✓ test/cash-foundation.integration.test.ts > cash foundation > T218A reads an explicit cash projection under runtime RLS, branch scope and cashier ownership 262ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 authorizes inventory adjustment using actual OWNER membership and revalidates role changes 469ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 authorizes inventory adjustment using actual ADMIN membership and revalidates role changes 369ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 authorizes inventory adjustment using actual CASHIER membership and revalidates role changes 461ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 authorizes inventory adjustment using actual EMPLOYEE membership and revalidates role changes 334ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 POS quote rejects unauthorized real OWNER membership 298ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 POS quote rejects unauthorized real ADMIN membership 350ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 POS quote rejects unauthorized real CASHIER membership 464ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 POS quote rejects unauthorized real EMPLOYEE membership 514ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'catalog-create' uses backend membership, scope, tenant and inactive actor 348ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'catalog-create' uses backend membership, scope, tenant and inactive actor 300ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'catalog-create' uses backend membership, scope, tenant and inactive actor 363ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'catalog-create' uses backend membership, scope, tenant and inactive actor 391ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'customer-create' uses backend membership, scope, tenant and inactive actor 335ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'customer-create' uses backend membership, scope, tenant and inactive actor 374ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'customer-create' uses backend membership, scope, tenant and inactive actor 316ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'customer-create' uses backend membership, scope, tenant and inactive actor 392ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'supplier-create' uses backend membership, scope, tenant and inactive actor 295ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'supplier-create' uses backend membership, scope, tenant and inactive actor 306ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'supplier-create' uses backend membership, scope, tenant and inactive actor 387ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'supplier-create' uses backend membership, scope, tenant and inactive actor 478ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'adjustment' uses backend membership, scope, tenant and inactive actor 319ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'adjustment' uses backend membership, scope, tenant and inactive actor 479ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'adjustment' uses backend membership, scope, tenant and inactive actor 801ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'adjustment' uses backend membership, scope, tenant and inactive actor 399ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'threshold' uses backend membership, scope, tenant and inactive actor 367ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'threshold' uses backend membership, scope, tenant and inactive actor 499ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'threshold' uses backend membership, scope, tenant and inactive actor 515ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'threshold' uses backend membership, scope, tenant and inactive actor 428ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'purchase-receive' uses backend membership, scope, tenant and inactive actor 335ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'purchase-receive' uses backend membership, scope, tenant and inactive actor 390ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'purchase-receive' uses backend membership, scope, tenant and inactive actor 562ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'purchase-receive' uses backend membership, scope, tenant and inactive actor 404ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'expense-transfer' uses backend membership, scope, tenant and inactive actor 302ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'expense-transfer' uses backend membership, scope, tenant and inactive actor 386ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'expense-transfer' uses backend membership, scope, tenant and inactive actor 533ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'expense-transfer' uses backend membership, scope, tenant and inactive actor 577ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'OWNER' × 'cash-open' uses backend membership, scope, tenant and inactive actor 330ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'ADMIN' × 'cash-open' uses backend membership, scope, tenant and inactive actor 414ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'CASHIER' × 'cash-open' uses backend membership, scope, tenant and inactive actor 414ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-21 'EMPLOYEE' × 'cash-open' uses backend membership, scope, tenant and inactive actor 485ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 invitation resend cannot mutate a user spanning outside ADMIN scope 338ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 invitation revoke cannot mutate a user spanning outside ADMIN scope 338ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 invitation resend revalidates authorization on replay and denies OWNER targets 550ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 invitation revoke revalidates authorization on replay and denies OWNER targets 548ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN cash-register create enforces real scope, role, tenant and active branch 843ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN cash-register rename enforces real scope, role, tenant and active branch 469ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN cash-register deactivate enforces real scope, role, tenant and active branch 440ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN changeRole only for non-owners entirely within scope 692ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN setStatus only for non-owners entirely within scope 686ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 ADMIN revoke only for non-owners entirely within scope 561ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-23 invitations validate assigned, outside, foreign and inactive branches with persisted ADMIN 491ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-93 OWNER opens, moves cash and completes signed close only with current scope 1651ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-93 ADMIN opens, moves cash and completes signed close only with current scope 1743ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-29 rejects new inventory-increase after real deactivation and preserves history 347ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-29 rejects new inventory-decrease after real deactivation and preserves history 363ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-29 rejects new transfer-out after real deactivation and preserves history 448ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-29 rejects new transfer-in after real deactivation and preserves history 425ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-29 rejects new threshold after real deactivation and preserves history 389ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-29 rejects new purchase after real deactivation and preserves history 447ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-29 rejects new expense after real deactivation and preserves history 607ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-29 rejects new cash-register after real deactivation and preserves history 500ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-29 rejects new device after real deactivation and preserves history 353ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-29 rejects new cash-open after real deactivation and preserves history 482ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-220 ADMIN edits global customer/supplier then is denied a real purchase outside scope 1145ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-116 bootstrap revalidates OWNER membership, branch scope, tenant and inactive device 699ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-116 bootstrap revalidates ADMIN membership, branch scope, tenant and inactive device 770ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-116 bootstrap revalidates CASHIER membership, branch scope, tenant and inactive device 782ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-116 bootstrap revalidates EMPLOYEE membership, branch scope, tenant and inactive device 740ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-285 backend rejects foreign item, supplier and transfer branch without any effects 1231ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-29 new sale revalidates inactive branch while preserving confirmed sale and ledger 312ms
+ ✓ test/t236k-authorization.integration.test.ts > T236K real persisted membership authorization > RF-285 a foreign customer cannot be attached to a sale with otherwise valid tenant session/items 671ms
+ ✓ test/branch-management.integration.test.ts > branch management > reads only active assigned branches for an operational member and stays inside the tenant 62ms
+ ✓ test/branch-management.integration.test.ts > branch management > replays branch creation once without duplicate audit effects 58ms
+ ✓ test/branch-management.integration.test.ts > branch management > normalizes branch names and enforces uniqueness only inside the tenant 41ms
+ ✓ test/branch-management.integration.test.ts > branch management > T221 deactivates only OWNER tenant branches, with atomic audit, version and idempotent replay 127ms
+ ✓ test/branch-management.integration.test.ts > branch management > T221 denies ADMIN, CASHIER and EMPLOYEE even with branch assignment 86ms
+ ✓ test/branch-management.integration.test.ts > branch management > T221 retains uncertainty for expired/revoked grants and never clears exposure to permit deactivation 141ms
+ ✓ test/branch-management.integration.test.ts > branch management > T221 audit failure rolls back branch status and idempotency; retry commits once 93ms
+ ✓ test/branch-management.integration.test.ts > branch management > T221 a real concurrent opening and branch deactivation cannot both commit 111ms
+ ✓ test/branch-management.integration.test.ts > branch management > allows new operations only on active branches without exposing a state-change command 25ms
+ ✓ test/branch-management.integration.test.ts > branch management > T221 blocks inventory conflicts and preserves their historical projection 92ms
+ ✓ test/branch-management.integration.test.ts > branch management > T221 prevents a new inventory write that waits behind committed deactivation 63ms
+ ✓ test/organization-discovery.integration.test.ts > global membership discovery > lists and selects only active memberships of the authenticated user 571ms
+ ✓ test/organization-discovery.integration.test.ts > global membership discovery > does not expose tenant rows to the global runtime role without an authenticated user context 9ms
+ ✓ test/membership-administration.integration.test.ts > membership administration > returns only administrable members and assigned branches to ADMIN 29ms
+ ✓ test/membership-administration.integration.test.ts > membership administration > prevents ADMIN from changing a member assigned only outside their branch scope 67ms
+ ✓ test/membership-administration.integration.test.ts > membership administration > replays a role change with the same version and key without a second write 62ms
+ ✓ test/membership-administration.integration.test.ts > membership administration > does not mistake a targeted membership for an actor without membership 12ms
+ ✓ test/membership-administration.integration.test.ts > membership administration > prevents non-OWNER actors from creating, promoting, degrading or revoking OWNER 46ms
+ ✓ test/membership-administration.integration.test.ts > membership administration > serializes concurrent OWNER removals and ignores pending OWNER invitations 49ms
+ ✓ test/membership-administration.integration.test.ts > membership administration > allows an OWNER to degrade or deactivate another OWNER only while one remains active 93ms
+ ✓ test/membership-administration.integration.test.ts > membership administration > lets ADMIN manage only non-owner branch assignments inside its own scope 66ms
+ ✓ test/membership-administration.integration.test.ts > membership administration > revokes online access immediately and records when each device learned the revocation 86ms
+ ✓ test/cash-register-management.integration.test.ts > cash register management > creates and renames registers with normalized uniqueness per branch 152ms
+ ✓ test/cash-register-management.integration.test.ts > cash register management > rejects a foreign branch and unauthorized actor without leaking cross-tenant data 20ms
+ ✓ test/cash-register-management.integration.test.ts > cash register management > deactivates a register without deleting it and blocks future openings 72ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T132 computes each line HALF_UP and validates quantities under tenant RLS 96ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T133 accepts one global discount and rejects excess or unauthorized discounts 62ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T135 persists a confirmed sale with immutable item and receipt snapshots 284ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T136 snapshots an active optional customer and rejects an inactive one 79ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T137 locks and validates OPEN session, branch and operational device before insertion 35ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T138 applies sale actor role, branch scope and cashier ownership 132ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T139 preserves the sale actor and session owner and audits an intervention 76ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T140 serializes competing sales and rolls back every line when stock is insufficient 123ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T141 leaves stock and inventory ledger untouched for untracked PRODUCT (RF-76) 47ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T141 leaves stock and inventory ledger untouched for untracked SERVICE (RF-76) 36ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T142 requires positive enabled payment lines summing exactly to a positive sale 128ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T143 records cash received and change while projecting only the applied amount 46ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T144 confirms a zero-total sale without payment or cash movement while enforcing stock and session 119ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T145 confirms and replays through the tenant runtime without crossing organizations 175ms
+ ✓ test/sales-quote.integration.test.ts > sales quote > T236J retains category after rename and reassignment 299ms
+ ✓ test/invitation-create.integration.test.ts > invitation creation > stores only the token hash and atomically queues the role and branches for email 45ms
+ ✓ test/invitation-create.integration.test.ts > invitation creation > limits ADMIN to assigned branches and rejects cross-tenant branch identifiers 37ms
+ ✓ test/invitation-create.integration.test.ts > invitation creation > replays an identical invitation without duplicate outbox or audit effects 63ms
+ ✓ test/invitation-create.integration.test.ts > invitation creation > rolls back invitation, branches and audit when the email outbox insert fails 25ms
+ ✓ test/invitation-revocation.integration.test.ts > invitation revocation > lets OWNER revoke a pending invitation once and prevents its later acceptance 298ms
+ ✓ test/invitation-revocation.integration.test.ts > invitation revocation > allows ADMIN but denies operational roles and cross-tenant invitation ids 114ms
+ ✓ test/invitation-resend.integration.test.ts > invitation resend > reissues an expired invitation with a new token and creates only one membership 132ms
+ ✓ test/invitation-resend.integration.test.ts > invitation resend > denies operational roles and cross-tenant invitation identifiers 42ms
+ ✓ test/invitation-resend.integration.test.ts > invitation resend > keeps the previous token valid when queuing the resend email fails 36ms
+
+ Test Files  10 passed (10)
+      Tests  135 passed (135)
+   Start at  19:26:47
+   Duration  175.19s (transform 1.72s, setup 0ms, import 30.39s, tests 139.01s, environment 1ms)
+

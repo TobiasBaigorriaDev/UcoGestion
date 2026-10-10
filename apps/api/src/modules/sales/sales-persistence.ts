@@ -6,6 +6,7 @@ import { arePaymentsValidForSale, subtractMoney, sumMoney, validatePositiveMoney
 import { AuditEventWriter } from '../../core/audit/audit-event-writer.js';
 import type { TenantTransactionContext } from '../../database/tenant-transaction.js';
 import { CashSessionDevicePolicy } from '../cash/index.js';
+import { lockCategorySnapshots } from '../catalog/index.js';
 import type { SalesQuote } from './sales-quote.service.js';
 
 export interface ConfirmedSaleInput {
@@ -96,12 +97,15 @@ export class SalesPersistence {
 
     const itemIds = [...new Set(input.quote.lines.map((line) => line.itemId))].sort();
     const catalog = await client.query<{ id: string; name: string; type: string; sku: string | null;
-      barcode: string | null; base_unit: string; track_inventory: boolean }>(
-      `SELECT id, name, type, sku, barcode, base_unit, track_inventory FROM catalog_items
+      barcode: string | null; base_unit: string; track_inventory: boolean; category_id: string | null }>(
+      `SELECT id, name, type, sku, barcode, base_unit, track_inventory, category_id FROM catalog_items
        WHERE organization_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR SHARE`,
       [context.organizationId, itemIds]);
     const items = new Map(catalog.rows.map((row) => [row.id, row]));
     if (items.size !== itemIds.length) throw new Error('Sale item unavailable');
+    const categorySnapshots = await lockCategorySnapshots(client, context.organizationId,
+      catalog.rows.flatMap(item => item.category_id === null ? [] : [item.category_id]));
+
     for (const itemId of itemIds) {
       if (!items.get(itemId)?.track_inventory) continue;
       const stock = await client.query<{ enough: boolean }>(
@@ -118,7 +122,9 @@ export class SalesPersistence {
       currency: input.quote.currency, subtotal: input.quote.subtotal, discount: input.quote.discount,
       total: input.quote.total,
       items: input.quote.lines.map((line) => ({ ...line, name: items.get(line.itemId)?.name,
-        unit: items.get(line.itemId)?.base_unit })),
+        unit: items.get(line.itemId)?.base_unit,
+        category: categorySnapshots.get(items.get(line.itemId)?.category_id ?? '') ?? null,
+        categorySnapshotStatus: items.get(line.itemId)?.category_id === null ? 'NONE' : 'ASSIGNED' })),
       payments: preparedPayments };
     await client.query(`INSERT INTO sales (id, organization_id, branch_id, cash_session_id, device_id, customer_id,
       actor_user_id, session_owner_user_id, client_operation_id, currency_code, subtotal, discount, total, receipt_snapshot)
@@ -135,11 +141,12 @@ export class SalesPersistence {
       if (!snapshotItem) throw new Error('Sale item unavailable');
       const saleItemId = randomUUID();
       await client.query(`INSERT INTO sale_items (id, organization_id, sale_id, item_id, item_name, item_type,
-        sku, barcode, unit, quantity, unit_price, price_version, line_total, currency_code, track_inventory)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        sku, barcode, unit, quantity, unit_price, price_version, line_total, currency_code, track_inventory, category_id, category_name, category_snapshot_status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
       [saleItemId, context.organizationId, input.id, line.itemId, snapshotItem.name, snapshotItem.type,
         snapshotItem.sku, snapshotItem.barcode, snapshotItem.base_unit, line.quantity,
-        line.unitPrice, line.priceVersion, line.lineTotal, input.quote.currency,snapshotItem.track_inventory]);
+        line.unitPrice, line.priceVersion, line.lineTotal, input.quote.currency,snapshotItem.track_inventory, snapshotItem.category_id,
+        categorySnapshots.get(snapshotItem.category_id ?? '')?.name ?? null, snapshotItem.category_id === null ? 'NONE' : 'ASSIGNED']);
       if (snapshotItem.track_inventory) {
         await client.query('SELECT inventory_api.apply_sale_stock($1, $2, $3, $4)',
           [context.organizationId, input.id, saleItemId, context.userId]);

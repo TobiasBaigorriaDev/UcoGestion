@@ -15,6 +15,7 @@ interface ConfiguredResource {
 }
 
 export interface ConfigurationSnapshot {
+  readonly schemaVersion?: 2;
   readonly currency: string;
   readonly items: readonly (ConfiguredResource & {
     readonly type: string;
@@ -22,6 +23,7 @@ export interface ConfigurationSnapshot {
     readonly trackInventory: boolean;
     readonly price: string | null;
     readonly priceVersion: number;
+    readonly category?: { readonly id: string; readonly name: string } | null;
   })[];
   readonly categories: readonly ConfiguredResource[];
   readonly branches: readonly ConfiguredResource[];
@@ -92,23 +94,27 @@ export class ConfigurationVersionService {
       const version = (latest.rows[0]?.version ?? 0) + 1;
       const items = await client.query<{
         id: string; type: string; baseUnit: string; trackInventory: boolean;
-        price: string | null; priceVersion: number;
+        price: string | null; priceVersion: number; category: { id: string; name: string } | null;
       }>(
-          `SELECT id, type, base_unit AS "baseUnit", track_inventory AS "trackInventory",
-                  price::text AS price, price_version::integer AS "priceVersion"
-           FROM catalog_items WHERE organization_id = $1 AND status = 'ACTIVE' ORDER BY id`,
+          `SELECT i.id, i.name, i.sku, i.barcode, i.type, i.base_unit AS "baseUnit", i.track_inventory AS "trackInventory",
+                  i.price::text AS price, i.price_version::integer AS "priceVersion",
+                  CASE WHEN c.id IS NULL THEN NULL ELSE jsonb_build_object('id', c.id, 'name', c.name) END AS category
+           FROM catalog_items i LEFT JOIN catalog_categories c ON c.organization_id=i.organization_id AND c.id=i.category_id
+           WHERE i.organization_id = $1 AND i.status = 'ACTIVE' ORDER BY i.id`,
           [context.organizationId],
         );
       const categories = await client.query<ConfiguredResource>(
-          `SELECT id FROM catalog_categories WHERE organization_id = $1 AND status = 'ACTIVE' ORDER BY id`,
+          `SELECT c.id, c.name FROM catalog_categories c WHERE c.organization_id=$1 AND
+            (c.status='ACTIVE' OR EXISTS (SELECT 1 FROM catalog_items i WHERE i.organization_id=c.organization_id
+              AND i.category_id=c.id AND i.status='ACTIVE')) ORDER BY c.id`,
           [context.organizationId],
         );
       const branches = await client.query<ConfiguredResource>(
-          `SELECT id FROM branches WHERE organization_id = $1 AND status = 'ACTIVE' ORDER BY id`,
+          `SELECT id, name FROM branches WHERE organization_id = $1 AND status = 'ACTIVE' ORDER BY id`,
           [context.organizationId],
         );
       const cashRegisters = await client.query<ConfiguredResource & { branchId: string }>(
-          `SELECT r.id, r.branch_id AS "branchId" FROM cash_registers r
+          `SELECT r.id, r.name, r.branch_id AS "branchId" FROM cash_registers r
            JOIN branches b ON b.organization_id = r.organization_id AND b.id = r.branch_id
            WHERE r.organization_id = $1 AND r.status = 'ACTIVE' AND b.status = 'ACTIVE' ORDER BY r.id`,
           [context.organizationId],
@@ -118,7 +124,7 @@ export class ConfigurationVersionService {
           [context.organizationId],
         );
       const snapshot: ConfigurationSnapshot = {
-        currency,
+        schemaVersion: 2, currency,
         items: items.rows,
         categories: categories.rows,
         branches: branches.rows,

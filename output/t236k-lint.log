@@ -1,0 +1,37 @@
+$ turbo run lint
+• turbo 2.10.13
+
+   • Packages in scope: @uconext/api, @uconext/config, @uconext/shared, @uconext/ui, @uconext/web
+   • Running lint in 5 packages
+   • Remote caching disabled
+
+@uconext/api:lint: cache miss, executing 0fc5ea56867162bb
+@uconext/ui:lint: cache hit, replaying logs 9e43ba88456c812a
+@uconext/web:lint: cache miss, executing b27ddc7fd8826a7a
+@uconext/ui:lint: $ eslint --config ../../eslint.config.mjs src
+@uconext/shared:lint: cache hit, replaying logs 30ee3a468a57dc09
+@uconext/shared:lint: $ eslint --config ../../eslint.config.mjs src
+@uconext/api:lint: $ eslint --config ../../eslint.config.mjs src test
+@uconext/web:lint: $ eslint --config ../../eslint.config.mjs app src test
+@uconext/web:lint: 
+@uconext/web:lint: C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\web\test\browser\offline-prerequisites.mjs
+@uconext/web:lint:    2:1   error  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+@uconext/web:lint:   14:22  error  'URL' is not defined                                                   no-undef
+@uconext/web:lint: 
+@uconext/web:lint: C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\web\test\browser\organization-switch.mjs
+@uconext/web:lint:    2:1   error  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+@uconext/web:lint:    4:22  error  'URL' is not defined                                                   no-undef
+@uconext/web:lint:   22:39  error  'document' is not defined                                              no-undef
+@uconext/web:lint: 
+@uconext/web:lint: ✖ 5 problems (5 errors, 0 warnings)
+@uconext/web:lint: 
+@uconext/web:lint: [ELIFECYCLE] Command failed with exit code 1.
+@uconext/web#lint:  ERROR  command (C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\web) C:\Users\tobib\AppData\Roaming\npm\pnpm.cmd run lint exited (1)
+
+ Tasks:    2 successful, 4 total
+Cached:    2 cached, 4 total
+  Time:    23.275s 
+Failed:    @uconext/web#lint
+
+ ERROR  run failed: command  exited (1)
+[ELIFECYCLE] Command failed with exit code 1.
