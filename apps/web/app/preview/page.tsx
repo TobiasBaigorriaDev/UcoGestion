@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import styles from './preview.module.css';
+
 import { CustomerManagement, type ManagedCustomer } from '../../src/features/customers/customer-management';
 import { SupplierManagement, type ManagedSupplier } from '../../src/features/suppliers/supplier-management';
 import { CashRegisterManagement, type ManagedCashRegister } from '../../src/features/cash/cash-register-management';
@@ -145,45 +147,45 @@ export default function VisualPreviewPage() {
   const [items, setItems] = useState<ManagedItem[]>(initialItems);
 
   const tabs: Array<{ key: TabKey; label: string }> = [
-    { key: 'customers', label: 'Clientes (T095B)' },
-    { key: 'suppliers', label: 'Proveedores (T095G)' },
-    { key: 'cash-registers', label: 'Cajas (T095C)' },
-    { key: 'payment-methods', label: 'Medios de Pago (T095H)' },
-    { key: 'settings', label: 'Moneda Base / Config (T095D)' },
-    { key: 'catalog-items', label: 'Ítems Catálogo (T095F)' },
+    { key: 'customers', label: 'Clientes' },
+    { key: 'suppliers', label: 'Proveedores' },
+    { key: 'cash-registers', label: 'Cajas' },
+    { key: 'payment-methods', label: 'Medios de pago' },
+    { key: 'settings', label: 'Configuración' },
+    { key: 'catalog-items', label: 'Catálogo' },
   ];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif' }}>
+    <div className={styles.page}>
       {/* Top Banner */}
-      <header style={{ backgroundColor: '#1e293b', color: '#f8fafc', padding: '1rem 1.5rem', borderBottom: '1px solid #334155' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <header className={styles.header}>
+        <div className={styles.headerContent}>
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#38bdf8' }}>
-              UcoGestión — Visual Showcase & Preview
-            </h1>
-            <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: '#94a3b8' }}>
-              Vista previa interactiva sin necesidad de base de datos ni credenciales.
+            <a href="/" className={styles.brand}>
+              UcoNext · Vista previa
+            </a>
+            <p className={styles.description}>
+              Explorá la gestión de tu negocio con datos de ejemplo. Los cambios no se guardan al salir.
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#0f172a', padding: '0.4rem 0.8rem', borderRadius: '0.5rem' }}>
-            <label htmlFor="role-select" style={{ fontSize: '0.8125rem', color: '#cbd5e1' }}>Rol simulado:</label>
+          <div className={styles.roleControl}>
+            <label htmlFor="role-select" className={styles.roleLabel}>Rol simulado:</label>
             <select
               id="role-select"
               value={role}
               onChange={(e) => setRole(e.target.value as typeof role)}
-              style={{ backgroundColor: '#1e293b', color: '#f8fafc', border: '1px solid #475569', borderRadius: '0.375rem', padding: '0.25rem 0.5rem', fontSize: '0.8125rem' }}
+              className={styles.roleSelect}
             >
-              <option value="OWNER">OWNER (Propietario)</option>
-              <option value="ADMIN">ADMIN (Administrador)</option>
-              <option value="CASHIER">CASHIER (Cajero)</option>
-              <option value="EMPLOYEE">EMPLOYEE (Empleado)</option>
+              <option value="OWNER">Propietario</option>
+              <option value="ADMIN">Administrador</option>
+              <option value="CASHIER">Cajero</option>
+              <option value="EMPLOYEE">Empleado</option>
             </select>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <nav style={{ maxWidth: '1200px', margin: '1rem auto 0', display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
+        <nav className={styles.navigation} aria-label="Secciones de la vista previa">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.key;
             return (
@@ -191,17 +193,7 @@ export default function VisualPreviewPage() {
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  fontSize: '0.875rem',
-                  fontWeight: isActive ? 600 : 400,
-                  color: isActive ? '#0f172a' : '#cbd5e1',
-                  backgroundColor: isActive ? '#ffffff' : 'transparent',
-                  border: 'none',
-                  borderRadius: '0.375rem 0.375rem 0 0',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.15s',
-                }}
+                className={styles.tab} aria-pressed={isActive}
               >
                 {tab.label}
               </button>
@@ -211,8 +203,8 @@ export default function VisualPreviewPage() {
       </header>
 
       {/* Main Content Area */}
-      <main style={{ maxWidth: '1200px', margin: '2rem auto', padding: '0 1rem' }}>
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+      <main className={styles.main}>
+        <div className={styles.content}>
           {activeTab === 'customers' ? (
             <CustomerManagement
               organizationId="org-demo"

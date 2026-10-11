@@ -1,0 +1,48 @@
+$ node ops/browser/run.mjs nightly
+Error: C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\node_modules\.pnpm\playwright-core@1.64.0-alpha-1790635538000\node_modules\playwright-core\lib\tools\cli-client\session.js:172
+    const rejectWithPid = (reject, message) => reject(Object.assign(new Error(`Daemon pid=${child.pid}: ${message}`), { daemonPid: child.pid }));
+                                                                    ^
+
+Error: Daemon pid=37540: Daemon process exited with code 1
+[TargetClosedError2: Target page, context or browser has been closed
+Browser logs:
+
+<launching> C:\Users\tobib\AppData\Local\ms-playwright\webkit-2368\Playwright.exe --inspector-pipe --disable-accelerated-compositing --headless --no-startup-window
+<launched> pid=42196
+Call log:
+  - <launching> C:\Users\tobib\AppData\Local\ms-playwright\webkit-2368\Playwright.exe --inspector-pipe --disable-accelerated-compositing --headless --no-startup-window
+  - <launched> pid=42196
+  - [pid=42196] <gracefully close start>
+  - [pid=42196] <kill>
+  - [pid=42196] <will force kill>
+  - [pid=42196] <process did exit: exitCode=3236495362, signal=null>
+  - [pid=42196] starting temporary directories cleanup
+  - [pid=42196] finished temporary directories cleanup
+  - [pid=42196] <gracefully close end>
+] {
+  log: [
+    '  - <launching> C:\\Users\\tobib\\AppData\\Local\\ms-playwright\\webkit-2368\\Playwright.exe --inspector-pipe --disable-accelerated-compositing --headless --no-startup-window',
+    '  - <launched> pid=42196',
+    '  - [pid=42196] <gracefully close start>',
+    '  - [pid=42196] <kill>',
+    '  - [pid=42196] <will force kill>',
+    '  - [pid=42196] <process did exit: exitCode=3236495362, signal=null>',
+    '  - [pid=42196] starting temporary directories cleanup',
+    '  - [pid=42196] finished temporary directories cleanup',
+    '  - [pid=42196] <gracefully close end>'
+  ]
+}
+
+    at rejectWithPid (C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\node_modules\.pnpm\playwright-core@1.64.0-alpha-1790635538000\node_modules\playwright-core\lib\tools\cli-client\session.js:172:69)
+    at ChildProcess.<anonymous> (C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\node_modules\.pnpm\playwright-core@1.64.0-alpha-1790635538000\node_modules\playwright-core\lib\tools\cli-client\session.js:182:11)
+    at ChildProcess.emit (node:events:509:28)
+    at maybeClose (node:internal/child_process:1124:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:306:5) {
+  daemonPid: 37540
+}
+
+Node.js v24.15.0
+    at cli (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/ops/browser/run.mjs:89:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async run (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/ops/browser/run.mjs:111:9)
+[ELIFECYCLE] Command failed with exit code 1.

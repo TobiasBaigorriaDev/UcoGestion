@@ -86,7 +86,7 @@ export function Workspace({ page = 'home' }: { page?: WorkspacePage }) {
     {failed || localStorage.getItem('uco:logout-pending') ? <p role="alert">Falta confirmar el cierre de sesión con el servidor. Recuperá la conexión y reintentá.</p> : null}
     <button type="button" disabled={busy} onClick={() => void exit()}>Confirmar cierre de sesión</button><a href="/login">Iniciar sesión</a></section>;
   const content = <RemoteProvider><WorkspaceContent page={page} /></RemoteProvider>;
-  return <><div className={styles.page}><button type="button" onClick={() => void exit()}>Cerrar sesión</button></div>{page === 'offline' ? content : <OnlineOnlyBoundary>{content}</OnlineOnlyBoundary>}</>;
+  return <><div className={styles.sessionBar} role="region" aria-label="Cuenta"><button type="button" onClick={() => void exit()}>Cerrar sesión</button></div>{page === 'offline' ? content : <OnlineOnlyBoundary>{content}</OnlineOnlyBoundary>}</>;
 }
 
 function WorkspaceContent({ page }: { page: WorkspacePage }) {
@@ -106,7 +106,7 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
   const users = useQuery({ queryKey: ['user-management', activeId], queryFn: () => loadUserManagement(activeId ?? ''), enabled: page === 'users' && !!activeId });
   const branches = useQuery({ queryKey: ['branches', activeId], queryFn: () => loadBranches(activeId ?? ''), enabled: !!activeId });
   const catalog = useQuery({ queryKey: ['catalog', activeId], queryFn: () => loadCatalog(activeId ?? ''), enabled: (page === 'catalog' || page === 'pos') && !!activeId });
-  const managedCategories = useQuery({ queryKey: ['managed-categories', activeId], queryFn: () => loadManagedCategories(activeId ?? ''), enabled: page === 'catalog-categories' && !!activeId });
+  const managedCategories = useQuery({ queryKey: ['managed-categories', activeId], queryFn: () => loadManagedCategories(activeId ?? ''), enabled: (page === 'catalog-categories' || page === 'catalog-items') && !!activeId });
   const expenseCategories = useQuery({ queryKey: ['expense-categories', activeId], queryFn: () => loadExpenseCategories(activeId ?? ''), enabled: page === 'expense-categories' && !!activeId });
   const managedItems = useQuery({ queryKey: ['managed-items', activeId], queryFn: () => loadManagedItems(activeId ?? ''), enabled: page === 'catalog-items' && !!activeId });
   const customers = useQuery({ queryKey: ['customers', activeId], queryFn: () => loadCustomers(activeId ?? ''), enabled: page === 'customers' && !!activeId });
@@ -247,9 +247,9 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
             : <p role="status">Cargando productos…</p>
       : page === 'catalog-items' ? current?.role !== 'OWNER' && current?.role !== 'ADMIN'
         ? <p role="alert">No tenés permiso para administrar ítems.</p>
-        : managedItems.error
-          ? <><ErrorSummary error={managedItems.error instanceof ApiProblemError ? managedItems.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar los ítems.' })} /><button type="button" onClick={() => void managedItems.refetch()}>Reintentar</button></>
-          : managedItems.data ? <CatalogItemManagement organizationId={activeId} items={managedItems.data} onReload={() => void managedItems.refetch()} /> : <p role="status">Cargando ítems…</p>
+        : managedItems.error || managedCategories.error
+          ? <><ErrorSummary error={new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar los ítems y sus categorías.' })} /><button type="button" onClick={() => { void managedItems.refetch(); void managedCategories.refetch(); }}>Reintentar</button></>
+          : managedItems.data && managedCategories.data ? <CatalogItemManagement organizationId={activeId} items={managedItems.data} categories={managedCategories.data} onReload={() => { void managedItems.refetch(); void managedCategories.refetch(); }} /> : <p role="status">Cargando ítems y categorías…</p>
       : page === 'inventory-transfers' ? !activeBranchId || !current || !branches.data
         ? <p>Seleccioná una sucursal para transferir stock.</p>
         : stocks.error || transfers.error ? <><ErrorSummary error={(stocks.error ?? transfers.error) instanceof ApiProblemError ? (stocks.error ?? transfers.error) as ApiProblemError : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar las transferencias.' })} /><button type="button" onClick={() => { void stocks.refetch(); void transfers.refetch(); }}>Reintentar</button></>
@@ -335,7 +335,7 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
         : page === 'home' && current ? settings.error
           ? <><ErrorSummary error={settings.error instanceof ApiProblemError ? settings.error : new ApiProblemError({ status: 0, code: 'SETTINGS_LOAD_FAILED', message: 'No pudimos cargar la zona horaria de la organización.' })} /><button type="button" onClick={() => void settings.refetch()}>Reintentar</button></>
           : settings.data ? <DashboardWorkspace key={activeId} organizationId={activeId}
-          role={current.role} timezone={settings.data.timezone} branches={branches.data?.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => ({ id: branch.id, name: branch.name })) ?? []} />
+          role={current.role} timezone={settings.data.timezone} currency={settings.data.currency} branches={branches.data?.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => ({ id: branch.id, name: branch.name })) ?? []} />
           : <p role="status">Cargando zona horaria…</p>
         : <section><h1>{current?.organizationName}</h1><p>Organización activa.</p></section>}
     </AppShell></OrganizationTimezone.Provider>;

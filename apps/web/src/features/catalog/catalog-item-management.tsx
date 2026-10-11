@@ -4,10 +4,13 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { Money } from '@uconext/shared';
 
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiClient, ApiProblemError } from '../../lib/api/client';
 import { SimilarNameWarning } from './components/similar-name-warning';
+import type { ManagedCategory } from './catalog-category-management';
+import { CatalogSearch, filterCatalogItems } from './components/catalog-search';
 import styles from '../identity/management.module.css';
 
 const itemSchema = z.object({
@@ -21,11 +24,14 @@ const itemSchema = z.object({
   priceVersion: z.number().int(),
   sku: z.string().nullable(),
   barcode: z.string().nullable(),
+  categoryId: z.string().nullable().optional(),
   version: z.number().int().positive(),
 });
 
-const createResultSchema = itemSchema.omit({ price: true, priceVersion: true });
-const editResultSchema = itemSchema.pick({ id: true, name: true, sku: true, barcode: true, version: true });
+const createResultSchema = itemSchema.omit({ price: true, priceVersion: true }).extend({
+  price: z.string().optional(), priceVersion: z.number().int().positive().optional(),
+});
+const editResultSchema = itemSchema.pick({ id: true, name: true, sku: true, barcode: true, categoryId: true, version: true });
 const priceResultSchema = z.object({ itemId: z.string(), price: z.string(), priceVersion: z.number().int(), version: z.number().int(), currency: z.string() });
 const createSchema = z.object({
   name: z.string().trim().min(1).max(255),
@@ -34,8 +40,10 @@ const createSchema = z.object({
   baseUnit: z.enum(['UNIT', 'FRACTIONAL']),
   sku: z.string(),
   barcode: z.string(),
+  categoryId: z.string(),
+  price: z.string().trim().refine(value => value === '' || /^(?:0|[1-9]\d{0,17})(?:[.,]\d{1,2})?$/.test(value)),
 });
-const editSchema = z.object({ name: z.string().trim().min(1).max(255), sku: z.string(), barcode: z.string() });
+const editSchema = z.object({ name: z.string().trim().min(1).max(255), sku: z.string(), barcode: z.string(), categoryId: z.string() });
 const priceSchema = z.object({ price: z.string().regex(/^(?:0|[1-9]\d{0,17})\.\d{2}$/) });
 const structuralSchema = z.object({
   type: z.enum(['PRODUCT', 'SERVICE']),
@@ -72,7 +80,7 @@ export async function loadManagedItems(organizationId: string): Promise<ManagedI
 
 export async function createCatalogItem(organizationId: string, input: {
   name: string; type: 'PRODUCT' | 'SERVICE'; trackInventory?: boolean; baseUnit: 'UNIT' | 'FRACTIONAL';
-  sku: string | null; barcode: string | null;
+  sku: string | null; barcode: string | null; categoryId?: string | null; price?: string;
 }) {
   const result = await client.request('/catalog/items', {
     method: 'POST',
@@ -87,7 +95,7 @@ export async function createCatalogItem(organizationId: string, input: {
 }
 
 export async function editCatalogItem(organizationId: string, id: string, version: number,
-  input: { name: string; sku: string | null; barcode: string | null }) {
+  input: { name: string; sku: string | null; barcode: string | null; categoryId?: string | null }) {
   const result = await client.request(`/catalog/items/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     organizationId,
@@ -194,6 +202,8 @@ export function explainCatalogError(cause: unknown): ApiProblemError {
       message = 'El ítem posee referencias históricas y no permite cambios estructurales. Creá un nuevo ítem si necesitás otra configuración.';
     } else if (code === 'CATALOG_ITEM_STRUCTURAL_CHANGE_BLOCKED_BY_OFFLINE_UNCERTAINTY') {
       message = 'El ítem puede tener operaciones offline pendientes bajo la configuración actual. Sincronizá los dispositivos antes de intentar el cambio.';
+    } else if (code === 'CATALOG_ITEM_CATEGORY_NOT_AVAILABLE') {
+      message = 'La categoría no está disponible. Recargá las categorías y elegí una activa o Sin categoría.';
     } else if (code === 'VERSION_CONFLICT') {
       message = 'El ítem cambió desde que lo cargaste. Volvé a cargar antes de guardar.';
     } else if (code === 'CATALOG_ITEM_STATUS_UNCHANGED') {
@@ -209,6 +219,7 @@ export function explainCatalogError(cause: unknown): ApiProblemError {
 export function CatalogItemManagement({
   organizationId,
   items,
+  categories = [],
   onReload,
   onCreate = createCatalogItem,
   onEdit = editCatalogItem,
@@ -220,6 +231,7 @@ export function CatalogItemManagement({
 }: {
   organizationId: string;
   items: ManagedItem[];
+  categories?: ManagedCategory[];
   onReload: () => void;
   onCreate?: typeof createCatalogItem;
   onEdit?: typeof editCatalogItem;
@@ -233,10 +245,12 @@ export function CatalogItemManagement({
   const [error, setError] = useState<ApiProblemError | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState('');
+  const visibleItems = filterCatalogItems(items, query);
   const form = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
     defaultValues: {
-      name: '', type: 'PRODUCT', trackInventory: false, baseUnit: 'UNIT', sku: '', barcode: '',
+      name: '', type: 'PRODUCT', trackInventory: false, baseUnit: 'UNIT', sku: '', barcode: '', categoryId: '', price: '',
     },
   });
   const type = form.watch('type');
@@ -253,10 +267,12 @@ export function CatalogItemManagement({
         ...(values.type === 'PRODUCT' ? { trackInventory: values.trackInventory } : {}),
         sku: values.sku.trim() || null,
         barcode: values.barcode.trim() || null,
+        categoryId: values.categoryId || null,
+        ...(values.price === '' ? {} : { price: Money.from(values.price.replace(',', '.')).toString() }),
       });
       form.reset();
       setSimilar([]);
-      setMessage('Ítem creado. Podés definir su precio desde el listado.');
+      setMessage(values.price === '' ? 'Ítem creado. Podés definir su precio desde el listado.' : 'Ítem creado con precio de venta.');
       onReload();
     } catch (cause) {
       setError(explainCatalogError(cause));
@@ -282,7 +298,7 @@ export function CatalogItemManagement({
       {message ? <p role="status">{message}</p> : null}
       <form className={styles.panel} onSubmit={form.handleSubmit(submit)} noValidate>
         <h2>Ítem nuevo</h2>
-        <div className={styles.fields}>
+        <div className={`${styles.fields} ${styles.itemCreateFields}`}>
           <div>
             <label htmlFor="item-new-name">Nombre del ítem nuevo</label>
             <input
@@ -305,6 +321,22 @@ export function CatalogItemManagement({
               <option value="UNIT">Unidad</option>
               <option value="FRACTIONAL">Fraccionable</option>
             </select>
+          </div>
+        </div>
+        <div className={`${styles.fields} ${styles.itemCreateFields}`}>
+          <div>
+            <label htmlFor="item-new-category">Categoría del ítem nuevo</label>
+            <select id="item-new-category" {...form.register('categoryId')}>
+              <CategoryOptions categories={categories} />
+            </select>
+            {!categories.some(category => category.status === 'ACTIVE') ? <p>No hay categorías activas. Podés crearlas en Categorías de catálogo.</p> : null}
+          </div>
+          <div>
+            <label htmlFor="item-new-price">Precio de venta opcional</label>
+            <input id="item-new-price" inputMode="decimal" aria-invalid={!!form.formState.errors.price}
+              aria-describedby={form.formState.errors.price ? 'item-new-price-hint item-new-price-error' : 'item-new-price-hint'} {...form.register('price')} />
+            <p id="item-new-price-hint">Usá hasta dos decimales, por ejemplo 1500,50. Si lo dejás vacío, podés definirlo después.</p>
+            {form.formState.errors.price ? <p id="item-new-price-error" role="alert">Ingresá un precio igual o mayor a cero, con hasta dos decimales.</p> : null}
           </div>
           <div>
             <label htmlFor="item-new-sku">SKU opcional</label>
@@ -330,20 +362,23 @@ export function CatalogItemManagement({
       </form>
       <section className={styles.panel} aria-labelledby="items-list-heading">
         <h2 id="items-list-heading">Ítems de la organización</h2>
-        {items.length === 0 ? (
-          <p>No hay ítems registrados.</p>
+        <CatalogSearch query={query} onQueryChange={setQuery} total={items.length} matched={visibleItems.length} />
+        {visibleItems.length === 0 ? (
+          <p>{items.length && query.trim() ? 'No encontramos ítems con esa búsqueda. Probá con otro nombre, SKU o código de barras.' : 'No hay ítems registrados.'}</p>
         ) : (
           <ul className={styles.rows}>
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <li className={styles.row} key={item.id}>
                 <strong>{item.name}</strong>
                 <span>
                   {item.status === 'ACTIVE' ? 'Activo' : 'Inactivo'} · {item.type === 'PRODUCT' ? 'Producto' : 'Servicio'} · {item.baseUnit === 'UNIT' ? 'Unidad' : 'Fraccionable'} · {item.trackInventory ? 'Control de inventario' : 'Sin control de inventario'}
                 </span>
                 <span>{item.price === null ? 'Sin precio' : `Precio: ${item.price}`}</span>
+                <span>Categoría: {categories.find(category => category.id === item.categoryId)?.name ?? (item.categoryId ? 'No disponible' : 'Sin categoría')}</span>
                 <ItemEditor
                   organizationId={organizationId}
                   item={item}
+                  categories={categories}
                   onReload={onReload}
                   onEdit={onEdit}
                   onPrice={onPrice}
@@ -363,6 +398,7 @@ export function CatalogItemManagement({
 function ItemEditor({
   organizationId,
   item,
+  categories,
   onReload,
   onEdit,
   onPrice,
@@ -372,6 +408,7 @@ function ItemEditor({
 }: {
   organizationId: string;
   item: ManagedItem;
+  categories: ManagedCategory[];
   onReload: () => void;
   onEdit: typeof editCatalogItem;
   onPrice: typeof setCatalogPrice;
@@ -385,7 +422,7 @@ function ItemEditor({
   const edit = useForm<EditValues>({
     resolver: zodResolver(editSchema),
     defaultValues: {
-      name: item.name, sku: item.sku ?? '', barcode: item.barcode ?? '',
+      name: item.name, sku: item.sku ?? '', barcode: item.barcode ?? '', categoryId: item.categoryId ?? '',
     },
   });
   const price = useForm<PriceValues>({ resolver: zodResolver(priceSchema), defaultValues: { price: item.price ?? '' } });
@@ -407,6 +444,7 @@ function ItemEditor({
         name: values.name.trim(),
         sku: values.sku.trim() || null,
         barcode: values.barcode.trim() || null,
+        categoryId: values.categoryId || null,
       });
       setMode('closed');
       onReload();
@@ -481,7 +519,10 @@ function ItemEditor({
     <div>
       <ErrorSummary error={error} />
       <div className={styles.actions}>
-        <button type="button" onClick={() => setMode(mode === 'edit' ? 'closed' : 'edit')}>
+        <button type="button" onClick={() => {
+          edit.reset({ name: item.name, sku: item.sku ?? '', barcode: item.barcode ?? '', categoryId: item.categoryId ?? '' });
+          setMode(mode === 'edit' ? 'closed' : 'edit');
+        }}>
           Editar {item.name}
         </button>
         <button type="button" onClick={() => setMode(mode === 'price' ? 'closed' : 'price')}>
@@ -507,6 +548,12 @@ function ItemEditor({
               <label htmlFor={`edit-name-${item.id}`}>Nombre de {item.name}</label>
               <input id={`edit-name-${item.id}`} aria-invalid={!!edit.formState.errors.name} {...edit.register('name')} />
               {edit.formState.errors.name ? <p role="alert">Ingresá un nombre válido.</p> : null}
+            </div>
+            <div>
+              <label htmlFor={`edit-category-${item.id}`}>Categoría de {item.name}</label>
+              <select id={`edit-category-${item.id}`} {...edit.register('categoryId')}>
+                <CategoryOptions categories={categories} currentId={item.categoryId} />
+              </select>
             </div>
             <div>
               <label htmlFor={`edit-sku-${item.id}`}>SKU de {item.name}</label>
@@ -581,4 +628,16 @@ function ItemEditor({
       ) : null}
     </div>
   );
+}
+
+function CategoryOptions({ categories, currentId }: { categories: ManagedCategory[]; currentId?: string | null | undefined }) {
+  return <>
+    <option value="">Sin categoría</option>
+    {currentId && !categories.some(category => category.id === currentId)
+      ? <option value={currentId} disabled>Categoría actual (no disponible)</option> : null}
+    {categories.filter(category => category.status === 'ACTIVE' || category.id === currentId).map(category =>
+      <option key={category.id} value={category.id} disabled={category.status === 'INACTIVE'}>
+        {category.name}{category.status === 'INACTIVE' ? ' (inactiva)' : ''}
+      </option>)}
+  </>;
 }

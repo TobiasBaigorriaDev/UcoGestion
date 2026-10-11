@@ -101,10 +101,10 @@ async page => {
         if (route === '/workspace') {
           for (const label of ['Ventas netas', 'Cantidad de ventas', 'Ticket promedio', 'Gastos netos', 'Compras netas', 'Resultado operativo'])
             check(await page.locator('dt').filter({ hasText: label }).count() === 1, `Missing textual metric ${label}`);
-          for (const [title, text] of [['Medios de pago', 'Efectivo125.00'], ['Más vendidos', 'Manzanas2.000 unidades · 125.00'],
-            ['Stock bajo', 'Manzanas2.000 de mínimo 3.000'], ['Resumen de cajas', 'Centro · OPEN1 sesiones · 125.00']]) {
+          for (const [title, text] of [['Medios de pago', 'Efectivo125,00'], ['Más vendidos', 'ManzanasCantidad: 2.000125,00'],
+            ['Stock bajo', 'Manzanas2.000 de mínimo 3.000'], ['Resumen de cajas', 'Centro · OPEN1 sesiones · 125,00']]) {
             const section = page.locator('section').filter({ has: page.getByRole('heading', { name: title, exact: true }) });
-            check((await section.innerText()).replace(/\s+/g, '') === `${title}${text}`.replace(/\s+/g, ''), `Text alternative differs: ${title}`);
+            check((await section.locator('dl, ul').first().innerText()).replace(/\s+/g, '') === text.replace(/\s+/g, ''), `Text alternative differs: ${title}`);
           }
         }
         if (route === '/workspace/reports' || route === '/workspace/audit') {

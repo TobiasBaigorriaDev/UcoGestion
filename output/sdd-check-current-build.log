@@ -1,0 +1,81 @@
+$ turbo run build
+• turbo 2.10.13
+
+   • Packages in scope: @uconext/api, @uconext/config, @uconext/shared, @uconext/ui, @uconext/web
+   • Running build in 5 packages
+   • Remote caching disabled
+
+@uconext/shared:build: cache miss, executing 7f5174507f45901a
+@uconext/shared:build: $ tsc --project tsconfig.build.json
+@uconext/web:build: cache miss, executing fc7bc87d02aa81eb
+@uconext/api:build: cache miss, executing ed76e8ad878121b9
+@uconext/web:build: $ next build
+@uconext/api:build: $ tsc --project tsconfig.build.json && node scripts/copy-migrations.mjs
+@uconext/web:build: ▲ Next.js 16.3.5 (Turbopack)
+@uconext/web:build: ✓ Running next.config.ts took 2.4s
+@uconext/web:build: 
+@uconext/web:build: ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+@uconext/web:build: 
+@uconext/web:build:   To migrate automatically, run:
+@uconext/web:build:   npx @next/codemod@canary middleware-to-proxy .
+@uconext/web:build: 
+@uconext/web:build:   Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+@uconext/web:build:   Creating an optimized production build ...
+@uconext/web:build: ✓ Compiled successfully in 7.7s
+@uconext/web:build:   Running TypeScript ...
+@uconext/web:build:   Finished TypeScript in 14.3s ...
+@uconext/web:build:   Collecting page data using 21 workers ...
+@uconext/web:build:   Generating static pages using 21 workers (0/35) ...
+@uconext/web:build:   Generating static pages using 21 workers (8/35) 
+@uconext/web:build:   Generating static pages using 21 workers (17/35) 
+@uconext/web:build:   Generating static pages using 21 workers (26/35) 
+@uconext/web:build: ✓ Generating static pages using 21 workers (35/35) in 539ms
+@uconext/web:build:   Finalizing page optimization ...
+@uconext/web:build: 
+@uconext/web:build: Route (app)
+@uconext/web:build: ┌ ƒ /
+@uconext/web:build: ├ ƒ /_not-found
+@uconext/web:build: ├ ƒ /accept-invitation
+@uconext/web:build: ├ ƒ /forgot-password
+@uconext/web:build: ├ ○ /icon.svg
+@uconext/web:build: ├ ƒ /login
+@uconext/web:build: ├ ○ /manifest.webmanifest
+@uconext/web:build: ├ ƒ /organizations/select
+@uconext/web:build: ├ ƒ /platform/organizations/new
+@uconext/web:build: ├ ƒ /preview
+@uconext/web:build: ├ ƒ /reset-password
+@uconext/web:build: ├ ƒ /workspace
+@uconext/web:build: ├ ƒ /workspace/audit
+@uconext/web:build: ├ ƒ /workspace/branches
+@uconext/web:build: ├ ƒ /workspace/cash-registers
+@uconext/web:build: ├ ƒ /workspace/cash-sessions
+@uconext/web:build: ├ ƒ /workspace/catalog
+@uconext/web:build: ├ ƒ /workspace/catalog/categories
+@uconext/web:build: ├ ƒ /workspace/catalog/items
+@uconext/web:build: ├ ƒ /workspace/customers
+@uconext/web:build: ├ ƒ /workspace/expense-categories
+@uconext/web:build: ├ ƒ /workspace/expenses
+@uconext/web:build: ├ ƒ /workspace/inventory
+@uconext/web:build: ├ ƒ /workspace/inventory/adjustments
+@uconext/web:build: ├ ƒ /workspace/inventory/transfers
+@uconext/web:build: ├ ƒ /workspace/offline
+@uconext/web:build: ├ ƒ /workspace/payment-methods
+@uconext/web:build: ├ ƒ /workspace/pos
+@uconext/web:build: ├ ƒ /workspace/purchases
+@uconext/web:build: ├ ƒ /workspace/reports
+@uconext/web:build: ├ ƒ /workspace/sales
+@uconext/web:build: ├ ƒ /workspace/settings
+@uconext/web:build: ├ ƒ /workspace/suppliers
+@uconext/web:build: └ ƒ /workspace/users
+@uconext/web:build: 
+@uconext/web:build: 
+@uconext/web:build: ƒ Proxy (Middleware)
+@uconext/web:build: 
+@uconext/web:build: ○  (Static)   prerendered as static content
+@uconext/web:build: ƒ  (Dynamic)  server-rendered on demand
+@uconext/web:build: 
+
+ Tasks:    3 successful, 3 total
+Cached:    0 cached, 3 total
+  Time:    46.723s 
+

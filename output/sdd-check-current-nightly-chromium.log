@@ -1,0 +1,18 @@
+$ node ops/browser/run.mjs nightly "--browser=chromium"
+chromium: ui-critical passed
+chromium: pwa-capability passed
+chromium: cash-operations passed
+chromium: cash-closing passed
+chromium: offline-resilience passed
+chromium: offline-update passed
+chromium: offline-pos passed
+chromium: offline-expiry passed
+chromium: offline-close passed
+chromium: offline-barrier passed
+chromium: offline-sealing passed
+chromium: opaque-delivery passed
+chromium: offline-settings passed
+chromium: offline-restrictions passed
+chromium: cash-exceptional passed
+chromium: branch-deactivation passed
+chromium: receipt-safety passed

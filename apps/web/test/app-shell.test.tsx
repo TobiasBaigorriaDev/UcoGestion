@@ -13,6 +13,21 @@ const organizations = [
 afterEach(cleanup);
 
 describe('AppShell', () => {
+  it('lets users expand and collapse navigation without losing the current page', async () => {
+    const user = userEvent.setup();
+    render(<AppShell organizations={organizations} activeOrganizationId="org-a" activeBranchId="branch-a"
+      onOrganizationChange={vi.fn()} onBranchChange={vi.fn()}
+      navigation={[{ href: '/catalog', label: 'Catálogo' }]} currentPath="/catalog"><h1>Catálogo</h1></AppShell>);
+    const menu = screen.getByRole('button', { name: /secciones/i });
+    const nav = screen.getByRole('navigation', { name: 'Navegación principal' });
+    expect(menu.getAttribute('aria-expanded')).toBe('false');
+    expect(menu.getAttribute('aria-controls')).toBe(nav.id);
+    await user.click(menu);
+    expect(menu.getAttribute('aria-expanded')).toBe('true');
+    await user.click(menu);
+    expect(menu.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.getByRole('link', { name: 'Catálogo' }).getAttribute('aria-current')).toBe('page');
+  });
   it('keeps the current navigation item visible in the horizontal menu', () => {
     const scroll = vi.fn();
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scroll });

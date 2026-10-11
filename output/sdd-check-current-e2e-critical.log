@@ -1,0 +1,7 @@
+$ node ops/browser/run.mjs critical
+chromium: ui-critical passed
+chromium: pwa-capability passed
+chromium: cash-operations passed
+chromium: cash-closing passed
+chromium: offline-resilience passed
+chromium: offline-update passed

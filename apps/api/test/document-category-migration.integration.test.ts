@@ -4,6 +4,8 @@ import { readFile, readdir } from 'node:fs/promises';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { Pool } from 'pg';
 import { expect, it } from 'vitest';
+import { TenantTransaction } from '../src/database/tenant-transaction.js';
+import { CatalogItemEditService } from '../src/modules/catalog/catalog-item-edit.service.js';
 
 it('T236J upgrades the previous schema without inferring old document categories and enforces tenant FKs', async () => {
   const container = await new PostgreSqlContainer('postgres:16-alpine').start();
@@ -38,7 +40,19 @@ it('T236J upgrades the previous schema without inferring old document categories
       VALUES ($1,$2,$3,$4,'Old item','PRODUCT','UNIT',1,1,1,'ARS',false)`, [randomUUID(), org, purchase, item]);
     const before = (await pool.query('SELECT receipt_snapshot FROM sales WHERE id=$1', [sale])).rows;
     await pool.query(await readFile(new URL('0109_document_category_snapshots.sql', folder), 'utf8'));
-    await pool.query('UPDATE catalog_items SET category_id=$1 WHERE id=$2', [category, item]);
+    await pool.query(await readFile(new URL('0110_catalog_item_category_edit.sql', folder), 'utf8'));
+    await pool.query("INSERT INTO memberships(id,organization_id,user_id,role) VALUES ($1,$2,$3,'OWNER')", [randomUUID(), org, actor]);
+    await pool.query("CREATE ROLE category_edit_runtime LOGIN PASSWORD 'runtime-password' IN ROLE uco_app");
+    const editUrl = new URL(container.getConnectionUri()); editUrl.username = 'category_edit_runtime'; editUrl.password = 'runtime-password';
+    const editPool = new Pool({ connectionString: editUrl.toString() });
+    try {
+      const service = new CatalogItemEditService(new TenantTransaction(editPool));
+      const context = { organizationId: org, userId: actor, requestId: randomUUID() };
+      expect(await service.update(context, item, 1, { name: 'Old item', sku: null, barcode: null, categoryId: category }, randomUUID()))
+        .toMatchObject({ categoryId: category, version: 2 });
+      expect(await service.update(context, item, 2, { name: 'Old item', sku: null, barcode: null, categoryId: null }, randomUUID()))
+        .toMatchObject({ categoryId: null, version: 3 });
+    } finally { await editPool.end(); }
     for (const table of ['sale_items', 'purchase_items']) {
       expect((await pool.query(`SELECT category_id,category_name,category_snapshot_status FROM ${table}`)).rows)
         .toEqual([{ category_id: null, category_name: null, category_snapshot_status: 'UNKNOWN' }]);

@@ -4,12 +4,14 @@ import type { PoolClient } from 'pg';
 
 import { IdempotencyKeyReusedError, IdempotencyReplayForbiddenError, IdempotencyService } from '../../core/idempotency/idempotency.service.js';
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
+import { normalizeCatalogPrice } from './catalog-price.service.js';
 
 export type CatalogItemType = 'PRODUCT' | 'SERVICE';
 export type CatalogItemBaseUnit = 'UNIT' | 'FRACTIONAL';
 
 export interface CatalogItemCreateInput {
   readonly categoryId?: string | null;
+  readonly price?: string;
   readonly barcode?: string | null;
   readonly baseUnit?: CatalogItemBaseUnit;
   readonly name: string;
@@ -28,6 +30,8 @@ export interface CatalogItemResult {
   readonly trackInventory: boolean;
   readonly type: CatalogItemType;
   readonly version: number;
+  readonly price?: string;
+  readonly priceVersion?: number;
 }
 
 export type CatalogItemCreationErrorCode =
@@ -57,6 +61,7 @@ export class CatalogItemCreationService {
     context: TenantTransactionContext,
     input: CatalogItemCreateInput,
   ): Promise<CatalogItemResult> {
+    const price = input.price === undefined ? undefined : normalizeCatalogPrice(input.price);
     const id = randomUUID();
     const name = input.name.trim();
     if (name.length === 0) {
@@ -91,8 +96,9 @@ export class CatalogItemCreationService {
       context,
       {
         action: 'catalog_item.created',
-        after: { categoryId: input.categoryId ?? null, barcode, baseUnit, name, sku, status: 'ACTIVE', trackInventory, type: input.type },
-        afterAllowlist: ['categoryId', 'barcode', 'baseUnit', 'name', 'sku', 'status', 'trackInventory', 'type'],
+        after: { categoryId: input.categoryId ?? null, barcode, baseUnit, name, sku, status: 'ACTIVE', trackInventory, type: input.type,
+          ...(price === undefined ? {} : { price }) },
+        afterAllowlist: ['categoryId', 'barcode', 'baseUnit', 'name', 'sku', 'status', 'trackInventory', 'type', 'price'],
         before: {},
         beforeAllowlist: [],
         branchId: null,
@@ -145,7 +151,7 @@ export class CatalogItemCreationService {
           );
           const row = result.rows.at(0);
           if (!row) throw new Error('El ítem de catálogo no fue persistido.');
-          return row;
+          return await this.withInitialPrice(client, context, row, price);
         } catch (error: unknown) {
           if (typeof error === 'object' && error !== null && 'constraint' in error) {
             const constraint = (error as { constraint?: unknown }).constraint;
@@ -170,6 +176,7 @@ export class CatalogItemCreationService {
 
   async createIdempotent(context: TenantTransactionContext, input: CatalogItemCreateInput,
     key: string): Promise<CatalogItemResult> {
+    const price = input.price === undefined ? undefined : normalizeCatalogPrice(input.price);
     if (!/^[\x21-\x7e]{1,128}$/.test(key)) {
       throw new CatalogItemCreationError('IDEMPOTENCY_KEY_REUSED', 'Clave idempotente inválida.');
     }
@@ -191,6 +198,7 @@ export class CatalogItemCreationService {
           authorizationClass: 'OWNER_OR_ADMIN', branchId: null, key,
           organizationId: context.organizationId,
           payload: { name, type: input.type, trackInventory, baseUnit, sku, barcode,
+            ...(price === undefined ? {} : { price }),
             ...(input.categoryId === undefined ? {} : { categoryId: input.categoryId }) }, scope: 'catalog_item.create',
         }, async () => { await this.requireOwnerOrAdmin(client, context); });
         if (acquired.kind === 'replay') return { result: this.readStored(acquired.response.body) };
@@ -208,7 +216,7 @@ export class CatalogItemCreationService {
           );
           const row = inserted.rows[0];
           if (!row) throw new Error('El ítem no fue persistido.');
-          result = row;
+          result = await this.withInitialPrice(client, context, row, price);
         } catch (error) {
           if (typeof error === 'object' && error !== null && 'constraint' in error) {
             const constraint = (error as { constraint?: unknown }).constraint;
@@ -225,10 +233,12 @@ export class CatalogItemCreationService {
           id: result.id, name: result.name, type: result.type, status: result.status,
           trackInventory: result.trackInventory, baseUnit: result.baseUnit, sku: result.sku,
           barcode: result.barcode, version: result.version,
+          ...(result.price === undefined ? {} : { price: result.price, priceVersion: result.priceVersion ?? 1 }),
         } });
         return { result, auditEvent: { action: 'catalog_item.created',
-          after: { categoryId: input.categoryId ?? null, name, type: input.type, trackInventory, baseUnit, sku, barcode, status: 'ACTIVE' },
-          afterAllowlist: ['categoryId', 'name', 'type', 'trackInventory', 'baseUnit', 'sku', 'barcode', 'status'],
+          after: { categoryId: input.categoryId ?? null, name, type: input.type, trackInventory, baseUnit, sku, barcode, status: 'ACTIVE',
+            ...(price === undefined ? {} : { price }) },
+          afterAllowlist: ['categoryId', 'name', 'type', 'trackInventory', 'baseUnit', 'sku', 'barcode', 'status', 'price'],
           before: {}, beforeAllowlist: [], branchId: null, context: {}, contextAllowlist: [],
           entityId: id, entityType: 'catalog_item', operationId: id,
         } };
@@ -250,6 +260,27 @@ export class CatalogItemCreationService {
       'barcode' in body && (body.barcode === null || typeof body.barcode === 'string') &&
       'version' in body && typeof body.version === 'number') return body as CatalogItemResult;
     throw new Error('Respuesta idempotente de ítem inválida.');
+  }
+
+  private async withInitialPrice(client: PoolClient, context: TenantTransactionContext,
+    item: CatalogItemResult, price: string | undefined): Promise<CatalogItemResult> {
+    if (price === undefined) return item;
+    // The caller holds the organization lock and the item has just been inserted in this transaction.
+    const organization = await client.query<{ base_currency: string }>(
+      'SELECT base_currency FROM organizations WHERE id=$1', [context.organizationId]);
+    const currency = organization.rows[0]?.base_currency;
+    if (!currency) throw new CatalogItemCreationError('CATALOG_ITEM_CREATION_FORBIDDEN', 'Organización no disponible.');
+    const priceVersionId = randomUUID();
+    await client.query(`INSERT INTO catalog_price_versions(id,organization_id,item_id,price_version,price,currency)
+      VALUES ($1,$2,$3,1,$4,$5)`, [priceVersionId, context.organizationId, item.id, price, currency]);
+    await client.query(`INSERT INTO organization_history_references(id,organization_id,reference_domain,reference_type,source_id)
+      VALUES ($1,$2,'MONETARY','CATALOG_PRICE_VERSION',$3)`, [randomUUID(), context.organizationId, priceVersionId]);
+    const updated = await client.query<{ version: number }>(
+      `UPDATE catalog_items SET price=$1,price_version=1,version=version+1,updated_at=now()
+       WHERE organization_id=$2 AND id=$3 RETURNING version::integer AS version`, [price, context.organizationId, item.id]);
+    const version = updated.rows[0]?.version;
+    if (version === undefined) throw new Error('El precio inicial no fue persistido.');
+    return { ...item, price, priceVersion: 1, version };
   }
 
   async findSimilarNames(

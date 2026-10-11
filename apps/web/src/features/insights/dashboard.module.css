@@ -1,0 +1,37 @@
+.heading { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+.heading p { margin: .5rem 0 0; max-width: 65ch; line-height: 1.6; }
+.refresh { min-height: 44px; padding: .6rem 1rem; border: 1px solid var(--color-control-border); border-radius: var(--radius-button); color: var(--color-primary); background: var(--color-surface); font: inherit; font-size: var(--text-label); font-weight: 600; cursor: pointer; }
+.refresh:hover:not(:disabled) { background: var(--color-primary-soft); }
+.refresh:disabled { opacity: .65; cursor: wait; }
+.periodPanel { padding: 1.25rem; border-radius: var(--radius-card); background: var(--color-surface); box-shadow: var(--shadow-glass); }
+.filterRow { display: flex; align-items: end; flex-wrap: wrap; gap: 1.25rem; }
+.periodButtons { display: flex; flex-wrap: wrap; gap: .375rem; flex: 1 1 26rem; }
+.periodButtons button { min-height: 44px; padding: .625rem .875rem; border: 1px solid transparent; border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text-secondary); font: inherit; font-size: var(--text-label); font-weight: 600; cursor: pointer; }
+.periodButtons button:hover { background: var(--color-primary-soft); color: var(--color-primary); }
+.periodButtons button[aria-pressed='true'] { background: var(--color-primary); color: var(--color-on-primary); }
+.branchField { flex: 1 1 14rem; max-width: 24rem; }
+.periodCaption { display: flex; flex-wrap: wrap; gap: .35rem; margin: 1rem 0 0; padding-top: 1rem; border-top: 1px solid var(--color-divider); color: var(--color-text-secondary); font-size: var(--text-label); line-height: 1.6; }
+.periodCaption strong { color: var(--color-text); font-weight: 650; }
+.periodCaption span { flex-basis: 100%; color: var(--color-text-muted); }
+.customRange { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--color-divider); }
+.dateHint, .rangeError { flex-basis: 100%; margin: 0; font-size: var(--text-label); }
+.dateHint { color: var(--color-text-secondary); }
+.rangeError { color: var(--color-danger-text); }
+.metrics { gap: 1rem; }
+.resultNote { margin: -.5rem 0 0; color: var(--color-text-muted); font-size: var(--text-label); line-height: 1.6; }
+.charts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+.chartNote { margin: -.25rem 0 1.25rem; color: var(--color-text-secondary); font-size: var(--text-label); line-height: 1.6; max-width: 65ch; }
+.chartRows { display: grid; gap: 1.5rem; margin: 0; }
+.chartRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem 1rem; align-items: start; }
+.chartRow dt { font-size: var(--text-label); font-weight: 650; overflow-wrap: anywhere; }
+.chartRow dt span { display: block; margin-top: .25rem; color: var(--color-text-secondary); font-weight: 400; }
+.chartRow dd { margin: 0; font-size: var(--text-label); font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; max-width: 24ch; }
+.bar { display: block; grid-column: 1 / -1; width: 100%; height: 12px; }
+.barTrack { fill: var(--color-divider); }
+.barFill { fill: var(--color-primary); }
+.bar[data-tone='expense'] .barFill { fill: var(--color-text-secondary); }
+.bar[data-tone='purchase'] .barFill { fill: var(--color-text-muted); }
+.emptyChart { margin: 0; padding-block: 1rem; color: var(--color-text-secondary); font-size: var(--text-label); line-height: 1.65; }
+@media (min-width: 64rem) { .charts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .charts > section:last-child { grid-column: 1 / -1; } }
+@media (max-width: 30rem) { .metrics dd { font-size: var(--text-title); } .periodPanel { padding: 1rem; } .branchField { max-width: none; } .chartRow { grid-template-columns: minmax(0, 1fr); } .chartRow dd { text-align: left; max-width: 100%; } }
+@media (forced-colors: active) { .periodButtons button[aria-pressed='true'] { border-color: Highlight; } .barFill { fill: CanvasText; } }

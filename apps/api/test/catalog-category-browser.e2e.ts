@@ -32,6 +32,8 @@ beforeAll(async () => {
   await pool.query("INSERT INTO organizations(id,name,base_currency,timezone) VALUES ($1,'Browser tenant','ARS','UTC')", [organizationId]);
   await pool.query("INSERT INTO memberships(id,organization_id,user_id,role) VALUES ($1,$2,$3,'ADMIN')", [randomUUID(), organizationId, actor.id]);
   await pool.query("INSERT INTO catalog_categories(id,organization_id,name) VALUES ($1,$2,'Original navegador')", [categoryId, organizationId]);
+  await pool.query("INSERT INTO catalog_categories(id,organization_id,name) VALUES ($1,$2,'Bebidas navegador')", [randomUUID(), organizationId]);
+  await pool.query("INSERT INTO catalog_categories(id,organization_id,name) VALUES ($1,$2,'Almacén navegador')", [randomUUID(), organizationId]);
   await pool.query("CREATE ROLE category_browser_runtime LOGIN PASSWORD 'runtime-password' IN ROLE uco_app");
   const runtimeUrl = new URL(container.getConnectionUri());
   runtimeUrl.username = 'category_browser_runtime'; runtimeUrl.password = 'runtime-password';
@@ -58,7 +60,7 @@ afterAll(async () => {
   if (priorOrigin === undefined) delete process.env.UCONEXT_PUBLIC_API_ORIGIN; else process.env.UCONEXT_PUBLIC_API_ORIGIN = priorOrigin;
 });
 
-it('T236I: edits categories by keyboard on desktop/mobile against real HTTP and blocks offline administration', async () => {
+async function runBrowserScenario(script: string): Promise<unknown> {
   const directory = resolve(root, 'output/playwright');
   await mkdir(directory, { recursive: true });
   const config = resolve(directory, 't236i-browser.config.json');
@@ -80,8 +82,14 @@ it('T236I: edits categories by keyboard on desktop/mobile against real HTTP and 
   try {
     await cli('open', `http://localhost:4181/apps/web/test/browser/catalog-category.html?organizationId=${organizationId}`, '--config', config);
     await cli('snapshot');
-    const result = await cli('run-code', '--filename', resolve(root, 'apps/web/test/browser/catalog-category.mjs'));
-    const body: unknown = JSON.parse(result.result ?? 'null');
+    const result = await cli('run-code', '--filename', resolve(root, 'apps/web/test/browser', script));
+    return JSON.parse(result.result ?? 'null');
+  } finally { await cli('close'); }
+}
+
+it('T236I: edits categories by keyboard on desktop/mobile against real HTTP and blocks offline administration', async () => {
+    const directory = resolve(root, 'output/playwright');
+    const body = await runBrowserScenario('catalog-category.mjs');
     expect(body).toMatchObject({ passed: true, patches: 2, backend: 'real NestJS/PostgreSQL runtime' });
     await writeFile(resolve(directory, 't236i-browser-result.json'), JSON.stringify(body, null, 2));
     expect((await pool.query('SELECT name,version FROM catalog_categories WHERE id=$1', [categoryId])).rows)
@@ -89,5 +97,13 @@ it('T236I: edits categories by keyboard on desktop/mobile against real HTTP and 
     expect((await pool.query("SELECT 1 FROM audit_events WHERE entity_id=$1 AND action='catalog_category.updated'", [categoryId])).rowCount).toBe(2);
     expect((await pool.query("SELECT 1 FROM idempotency_records WHERE organization_id=$1 AND scope='catalog_category.update' AND status='COMPLETED'", [organizationId])).rowCount).toBe(2);
     expect(await readFile(resolve(directory, 't236i-category-390.png'))).not.toHaveLength(0);
-  } finally { await cli('close'); }
+}, 120_000);
+
+it('T236P/T236Q: creates priced items and changes categories with reload on desktop/mobile against real HTTP', async () => {
+    const directory = resolve(root, 'output/playwright');
+    const itemBody = await runBrowserScenario('catalog-item-category.mjs');
+    expect(itemBody).toMatchObject({ passed: true, mutations: 3 });
+    await writeFile(resolve(directory, 't236p-browser-result.json'), JSON.stringify(itemBody, null, 2));
+    expect((await pool.query("SELECT category_id,version,price::text,price_version FROM catalog_items WHERE organization_id=$1 AND name='Producto navegador'", [organizationId])).rows)
+      .toEqual([{ category_id: null, version: '4', price: '1500.50', price_version: '1' }]);
 }, 120_000);

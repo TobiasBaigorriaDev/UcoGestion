@@ -1,0 +1,31 @@
+$ node ops/browser/run.mjs nightly
+Error: C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\node_modules\.pnpm\playwright-core@1.64.0-alpha-1790635538000\node_modules\playwright-core\lib\tools\cli-client\session.js:172
+    const rejectWithPid = (reject, message) => reject(Object.assign(new Error(`Daemon pid=${child.pid}: ${message}`), { daemonPid: child.pid }));
+                                                                    ^
+
+Error: Daemon pid=28964: Daemon process exited with code 1
+[PlaywrightError: spawn UNKNOWN
+Call log:
+  - <launching> C:\Users\tobib\AppData\Local\ms-playwright\firefox-1553\firefox\firefox.exe -no-remote -headless -profile C:\Users\tobib\AppData\Local\Temp\playwright_firefoxdev_profile-pEKtfV -juggler-pipe -silent
+] {
+  log: [
+    '  - <launching> C:\\Users\\tobib\\AppData\\Local\\ms-playwright\\firefox-1553\\firefox\\firefox.exe -no-remote -headless -profile C:\\Users\\tobib\\AppData\\Local\\Temp\\playwright_firefoxdev_profile-pEKtfV -juggler-pipe -silent'
+  ],
+  code: 'UNKNOWN',
+  errno: -4094,
+  syscall: 'spawn'
+}
+
+    at rejectWithPid (C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\node_modules\.pnpm\playwright-core@1.64.0-alpha-1790635538000\node_modules\playwright-core\lib\tools\cli-client\session.js:172:69)
+    at ChildProcess.<anonymous> (C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\node_modules\.pnpm\playwright-core@1.64.0-alpha-1790635538000\node_modules\playwright-core\lib\tools\cli-client\session.js:182:11)
+    at ChildProcess.emit (node:events:509:28)
+    at maybeClose (node:internal/child_process:1124:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:306:5) {
+  daemonPid: 28964
+}
+
+Node.js v24.15.0
+    at cli (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/ops/browser/run.mjs:89:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async run (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/ops/browser/run.mjs:111:9)
+[ELIFECYCLE] Command failed with exit code 1.

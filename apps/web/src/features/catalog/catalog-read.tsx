@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiClient, ApiProblemError } from '../../lib/api/client';
 import styles from '../identity/management.module.css';
+import catalogStyles from './catalog-read.module.css';
+import { CatalogSearch, filterCatalogItems } from './components/catalog-search';
 
 const itemSchema = z.object({ id: z.string(), name: z.string(), type: z.enum(['PRODUCT', 'SERVICE']), status: z.enum(['ACTIVE', 'INACTIVE']), baseUnit: z.enum(['UNIT', 'FRACTIONAL']), price: z.string().nullable(), priceVersion: z.number().int(), sku: z.string().nullable(), barcode: z.string().nullable() });
 const catalogSchema = z.object({ items: z.array(itemSchema), categories: z.array(z.object({ id: z.string(), name: z.string() })) });
@@ -29,7 +31,9 @@ export function CatalogReadView({ role, data, branchId, loadHistory }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiProblemError | null>(null);
   const [query, setQuery] = useState('');
-  const visible = (historical ?? data).items.filter((item) => item.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()) || item.sku?.toLocaleLowerCase().includes(query.toLocaleLowerCase()) || item.barcode?.includes(query));
+  const items = (historical ?? data).items;
+  const normalizedQuery = query.trim();
+  const visible = filterCatalogItems(items, query);
   async function showHistorical() {
     if (!branchId) return;
     setBusy(true); setError(null);
@@ -39,14 +43,16 @@ export function CatalogReadView({ role, data, branchId, loadHistory }: {
   }
   return <section className={styles.page} aria-labelledby="catalog-heading">
     <header className={styles.heading}><h1 id="catalog-heading">Catálogo</h1><p>Consultá ítems, precios vigentes y categorías.</p></header>
-    {role === 'OWNER' || role === 'ADMIN' ? <p><a href="/workspace/catalog/items">Administrar ítems</a> · <a href="/workspace/catalog/categories">Administrar categorías de catálogo</a></p> : null}
+    {role === 'OWNER' || role === 'ADMIN' ? <nav className={catalogStyles.managementActions} aria-label="Administración del catálogo">
+      <a className="uco-button uco-button--primary" href="/workspace/catalog/items">Administrar ítems</a>
+      <a className="uco-button uco-button--secondary" href="/workspace/catalog/categories">Administrar categorías de catálogo</a>
+    </nav> : null}
     <ErrorSummary error={error} />
     <div className={styles.panel}>
-      <label htmlFor="catalog-search">Buscar por nombre, SKU o código de barras</label>
-      <input id="catalog-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
+      <CatalogSearch query={query} onQueryChange={setQuery} total={items.length} matched={visible.length} />
       {role === 'EMPLOYEE' && branchId ? <button type="button" disabled={busy} onClick={() => void (historical ? setHistorical(null) : showHistorical())}>{historical ? 'Volver a ítems activos' : busy ? 'Cargando…' : 'Ver ítems inactivos de esta sucursal'}</button> : null}
       {historical ? <p role="status">Contexto histórico de la sucursal seleccionada. Los ítems inactivos no están disponibles para venta.</p> : null}
-      {visible.length === 0 ? <p>No hay ítems para mostrar.</p> : <ul className={styles.rows}>{visible.map((item) => <li className={styles.row} key={item.id}><div className={styles.memberTitle}><strong>{item.name}</strong><span>{item.status === 'INACTIVE' ? 'Inactivo · solo consulta' : item.type === 'SERVICE' ? 'Servicio' : 'Producto'}</span></div><div>{item.price === null ? 'Sin precio vigente' : <><span>Precio vigente: </span><strong>{item.price}</strong></>}</div>{item.sku ? <p>SKU: {item.sku}</p> : null}</li>)}</ul>}
+      {visible.length === 0 ? <p>{normalizedQuery && items.length ? 'No encontramos ítems con esa búsqueda. Probá con otro nombre, SKU o código de barras.' : 'No hay ítems para mostrar.'}</p> : <ul className={styles.rows}>{visible.map((item) => <li className={styles.row} key={item.id}><div className={styles.memberTitle}><strong>{item.name}</strong><span>{item.status === 'INACTIVE' ? 'Inactivo · solo consulta' : item.type === 'SERVICE' ? 'Servicio' : 'Producto'}</span></div><div>{item.price === null ? 'Sin precio vigente' : <><span>Precio vigente: </span><strong>{item.price}</strong></>}</div>{item.sku ? <p>SKU: {item.sku}</p> : null}</li>)}</ul>}
     </div>
     <section className={styles.panel} aria-label="Categorías"><h2>Categorías</h2>{data.categories.length ? <ul>{data.categories.map((category) => <li key={category.id}>{category.name}</li>)}</ul> : <p>No hay categorías activas.</p>}</section>
   </section>;

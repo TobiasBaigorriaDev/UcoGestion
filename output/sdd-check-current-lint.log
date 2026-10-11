@@ -1,0 +1,20 @@
+$ turbo run lint
+• turbo 2.10.13
+
+   • Packages in scope: @uconext/api, @uconext/config, @uconext/shared, @uconext/ui, @uconext/web
+   • Running lint in 5 packages
+   • Remote caching disabled
+
+@uconext/web:lint: cache miss, executing edc472df6a2646eb
+@uconext/shared:lint: cache miss, executing efd7e60ebe324c7e
+@uconext/ui:lint: cache hit, replaying logs 9e43ba88456c812a
+@uconext/api:lint: cache miss, executing c3cfe26a1804de4e
+@uconext/ui:lint: $ eslint --config ../../eslint.config.mjs src
+@uconext/web:lint: $ eslint --config ../../eslint.config.mjs app src test
+@uconext/shared:lint: $ eslint --config ../../eslint.config.mjs src
+@uconext/api:lint: $ eslint --config ../../eslint.config.mjs src test
+
+ Tasks:    4 successful, 4 total
+Cached:    1 cached, 4 total
+  Time:    15.061s 
+

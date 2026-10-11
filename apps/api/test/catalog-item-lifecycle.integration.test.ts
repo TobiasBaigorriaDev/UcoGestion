@@ -107,6 +107,46 @@ describe('catalog item and category lifecycle (T078 - T081A)', () => {
     await container?.stop();
   });
 
+  it('assigns categories atomically with replay, versioning, audit and tenant/role validation', async () => {
+    const ctx = ownerContext();
+    const item = await itemCreation.create(ctx, { name: 'Categorized', type: 'PRODUCT' });
+    const categoryA = randomUUID(), categoryB = randomUUID(), foreign = randomUUID(), inactive = randomUUID();
+    await pool.query(`INSERT INTO catalog_categories(id, organization_id, name, status) VALUES
+      ($1,$2,'A','ACTIVE'), ($3,$2,'B','ACTIVE'), ($4,$5,'Foreign','ACTIVE'), ($6,$2,'Old','INACTIVE')`,
+    [categoryA, organizationId, categoryB, foreign, otherOrganizationId, inactive]);
+    const input = { name: item.name, sku: null, barcode: null, categoryId: categoryA };
+    const key = randomUUID();
+    const assigned = await itemEditing.update(ctx, item.id, 1, input, key);
+    expect(assigned).toMatchObject({ categoryId: categoryA, version: 2 });
+    expect(await itemEditing.update(ctx, item.id, 1, input, key)).toEqual(assigned);
+    await expect(itemEditing.update(ctx, item.id, 1, { ...input, categoryId: categoryB }, key))
+      .rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
+    for (const categoryId of [foreign, inactive, randomUUID()]) {
+      await expect(itemEditing.update(ctx, item.id, 2, { ...input, name: 'Must rollback', categoryId }, randomUUID()))
+        .rejects.toMatchObject({ code: 'CATALOG_ITEM_CATEGORY_NOT_AVAILABLE' });
+    }
+    for (const actor of [cashierContext(), employeeContext()]) {
+      await expect(itemEditing.update(actor, item.id, 2, { ...input, categoryId: categoryB }, randomUUID()))
+        .rejects.toMatchObject({ code: 'CATALOG_ITEM_EDIT_FORBIDDEN' });
+    }
+    await expect(itemEditing.update(ownerContext(randomUUID(), otherOrganizationId), item.id, 2, input, randomUUID()))
+      .rejects.toMatchObject({ code: 'CATALOG_ITEM_NOT_FOUND' });
+    expect((await pool.query('SELECT name, category_id, version::integer FROM catalog_items WHERE id=$1', [item.id])).rows)
+      .toEqual([{ name: item.name, category_id: categoryA, version: 2 }]);
+    const changed = await itemEditing.update(adminContext(), item.id, 2, { ...input, categoryId: categoryB }, randomUUID());
+    expect(changed).toMatchObject({ categoryId: categoryB, version: 3 });
+    await expect(itemEditing.update(ctx, item.id, 2, input, randomUUID())).rejects.toMatchObject({ code: 'VERSION_CONFLICT' });
+    // Existing clients omitting category preserve the assignment, including inactive categories.
+    await pool.query("UPDATE catalog_categories SET status='INACTIVE' WHERE id=$1", [categoryB]);
+    expect(await itemEditing.update(ctx, item.id, 3, { name: item.name, sku: null, barcode: null }, randomUUID()))
+      .toMatchObject({ categoryId: categoryB, version: 4 });
+    expect(await itemEditing.update(ctx, item.id, 4, { ...input, categoryId: null }, randomUUID()))
+      .toMatchObject({ categoryId: null, version: 5 });
+    const audits = await pool.query('SELECT after_data AS after FROM audit_events WHERE entity_id=$1 AND action=$2', [item.id, 'catalog_item.edited']);
+    expect(audits.rows).toHaveLength(4);
+    expect(audits.rows).toContainEqual({ after: expect.objectContaining({ categoryId: null }) });
+  });
+
   beforeEach(async () => {
     organizationId = randomUUID();
     otherOrganizationId = randomUUID();

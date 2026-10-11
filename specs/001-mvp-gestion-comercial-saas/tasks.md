@@ -386,3 +386,17 @@ Alcance exclusivo autorizado: RF-03, RF-21, RF-23, RF-29, RF-93, RF-116, RF-220 
 - [x] T236K6 [RF-116]: navegador integrado sin login previo/dispositivo/bootstrap/sync; solo autorización verificada habilita operación offline. Backend añade roles/scopes/tenant/inactividad.
 - [x] T236K7 [RF-220]: ADMIN administra maestros globales y luego es rechazado en compra/venta fuera de scope; rol/tenant/inactividad negativos sin efectos.
 - [ ] T236K8 [RF-285]: IDs cruzados rechazados en ajustes/compras/ventas/transferencias y positivos locales; faltan relaciones y endpoints restantes.
+
+## Mejora de interfaz autorizada — 2026-10-11
+
+- [x] T236L [RF-152, RF-153, RF-154]: Corregir accesos de portada y estilos de vista previa bloqueados por CSP; mejorar navegación responsive, jerarquía, formularios, listados y resumen operativo con la identidad de DESIGN.md. Regresiones RED → GREEN y verificación de teclado, axe y tamaños móvil/tablet/escritorio. Alcance de presentación; no cambia reglas comerciales ni contratos API. [Archivos, comandos y resultados](t236l-ui-improvements-evidence.md).
+
+- [x] T236M [RF-142, RF-143, RF-144, RF-145, RF-152, RF-153, RF-154]: Mejorar el dashboard de inicio con gráficos accesibles sobre agregados existentes, indicadores y filtros de hoy, semana calendario, mes calendario y rango inclusivo personalizado, según zona horaria de la organización. Conservar vistas por rol, stock actual y contratos API. [Archivos, comandos y resultados](t236m-dashboard-evidence.md).
+
+- [x] T236N [RF-152, RF-153, RF-154, RF-221, RF-222, RF-223]: Destacar el buscador de catálogo por nombre/SKU/código, con coincidencias sin tildes, contador, limpieza y estado sin resultados; presentar los accesos de administración como botones para OWNER/ADMIN. Alcance de presentación sobre catálogo autorizado existente, sin cambios de API ni reglas comerciales. [Archivos, comandos y resultados](t236n-catalog-search-evidence.md).
+
+- [x] T236O [RF-152, RF-153, RF-154, RF-221]: Extender el mismo buscador a «Administrar ítems», filtrando activos e inactivos y conservando las acciones del listado. Compartir componente y filtrado con la vista de consulta. [Archivos, comandos y resultados](t236o-managed-catalog-search-evidence.md).
+
+- [x] T236P [RF-50, RF-51, RF-152, RF-153, RF-154, RF-221, RF-269]: Permitir asignar, cambiar y retirar categoría en el alta y edición de ítems; completar contrato existente, permisos runtime y pruebas reales de persistencia, rol, tenant, atomicidad, versión, idempotencia y auditoría sin alterar snapshots históricos. [Evidencia](t236p-item-category-evidence.md).
+
+- [x] T236Q [RF-43, RF-44, RF-46, RF-152, RF-153, RF-154, RF-221]: Permitir precio de venta opcional al crear un ítem, con decimal exacto, versión histórica, moneda vigente y confirmación atómica junto al alta; verificar validación, replay, conflictos de clave, permisos y rollback real. [Evidencia](t236q-initial-price-evidence.md).

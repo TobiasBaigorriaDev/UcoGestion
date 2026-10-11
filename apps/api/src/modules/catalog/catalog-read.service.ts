@@ -4,7 +4,7 @@ import { TenantTransaction, type TenantTransactionContext } from '../../database
 
 interface Actor { id: string; role: 'OWNER' | 'ADMIN' | 'CASHIER' | 'EMPLOYEE' }
 export interface Item { id: string; name: string; type: 'PRODUCT' | 'SERVICE'; status: 'ACTIVE' | 'INACTIVE'; baseUnit: 'UNIT' | 'FRACTIONAL'; price: string | null; priceVersion: number; sku: string | null; barcode: string | null }
-export interface ManagedItem extends Item { trackInventory: boolean; version: number }
+export interface ManagedItem extends Item { trackInventory: boolean; version: number; categoryId: string | null }
 export interface Category { id: string; name: string }
 export interface ManagedCategory extends Category { status: 'ACTIVE' | 'INACTIVE'; version: number }
 type ReadOptions = Readonly<{ mode: 'HISTORICAL'; branchId: string }>;
@@ -74,7 +74,7 @@ export class CatalogReadService {
       const result = await client.query<ManagedItem>(
         `SELECT id, name, type, status, track_inventory AS "trackInventory", base_unit AS "baseUnit",
                 price::text AS price, price_version::integer AS "priceVersion", sku, barcode,
-                version::integer AS version
+                category_id AS "categoryId", version::integer AS version
          FROM catalog_items WHERE organization_id = $1 ORDER BY name, id`, [context.organizationId],
       );
       return { items: result.rows };

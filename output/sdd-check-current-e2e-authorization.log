@@ -1,0 +1,53 @@
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+{"level":30,"time":"2026-10-10T22:48:09.299Z","component":"api","duration_ms":497.36449999999604,"method":"POST","path":"/api/v1/auth/login","request_id":"85326a96-5fe2-4dca-84a9-cf515ace1420","status_code":204,"trace_id":"5c951f13b03999583a55ce594420a2f4","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:50.599Z","component":"api","duration_ms":10.659899999998743,"method":"GET","path":"/api/v1/auth/csrf","request_id":"746f2813-f5ec-4a71-a267-bce71da58893","status_code":401,"trace_id":"fbfaab90d2643afd7d666b5a03f29d83","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:50.623Z","component":"api","duration_ms":6.44560000000638,"method":"POST","path":"/api/v1/offline/bootstrap","request_id":"0d0e5a11-a2e2-4fe8-8d73-8dba289a1707","status_code":401,"trace_id":"1a0ef9461b9a60d21e3f18dea54bdeb6","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:51.277Z","component":"api","duration_ms":504.5790999999881,"method":"POST","path":"/api/v1/auth/login","request_id":"c6a9d8c5-d868-4824-888a-793a5b6080cb","status_code":204,"trace_id":"48b4b38de1bffa37ade72c337b649349","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:51.325Z","component":"api","duration_ms":18.003900000010617,"method":"GET","path":"/api/v1/auth/csrf","request_id":"91ff80ff-4445-4b3b-ab53-f3edba2794ca","status_code":200,"trace_id":"ebf19f986981282e2d9b9633b134176b","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:51.443Z","component":"api","duration_ms":106.40119999999297,"method":"POST","path":"/api/v1/offline/bootstrap","request_id":"b5b87abf-a350-4bbd-ba53-a07c59c6090f","status_code":403,"trace_id":"6f43a56f546f1ab1dae23a6a24605ed0","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:51.509Z","component":"api","duration_ms":16.580000000001746,"method":"GET","path":"/api/v1/auth/csrf","request_id":"fb3abbe8-d918-4f3a-94ed-ec07fdd6f621","status_code":200,"trace_id":"fd930130b09def7506fd51036a2048cd","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:51.623Z","component":"api","duration_ms":89.43099999999686,"method":"POST","path":"/api/v1/devices/authorize-pos","request_id":"7436dfd4-2419-4cec-87a9-b94bb2c325bd","status_code":201,"trace_id":"7e4654b035557dbd3fe440e1fa775c63","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:52.102Z","component":"api","duration_ms":27.432199999995646,"method":"GET","path":"/api/v1/auth/csrf","request_id":"0fa805b0-7801-44e1-9cc0-7731c1e856dc","status_code":200,"trace_id":"ea2b1e8ad12ed4786aed03b1582498b0","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:52.440Z","component":"api","duration_ms":322.69250000000466,"method":"POST","path":"/api/v1/offline/bootstrap","request_id":"fcda0a61-2ac0-459e-8afd-071c1548f46f","status_code":201,"trace_id":"a6831b717d09f75eba151f6389a2853d","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:52.505Z","component":"api","duration_ms":7.375400000004447,"method":"GET","path":"/api/v1/auth/csrf","request_id":"0dac8ba9-3b60-4c80-b3f4-37d948a97f51","status_code":200,"trace_id":"7000740428bc27e654f6bb5b5eb75e64","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:52.618Z","component":"api","duration_ms":98.18919999999343,"method":"POST","path":"/api/v1/offline/authorize","request_id":"6d66f6a9-7e1a-4cee-a0d6-b1988cedabc8","status_code":409,"trace_id":"479f9d7e93f1fc3f8600384532b48341","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:52.673Z","component":"api","duration_ms":8.677400000000489,"method":"GET","path":"/api/v1/auth/csrf","request_id":"f919718e-48b9-46b8-9b2d-21e6083cda7a","status_code":200,"trace_id":"9f71dae3a717a2e23cf751c05454d97a","msg":"http request completed"}
+{"level":30,"time":"2026-10-10T22:48:52.785Z","component":"api","duration_ms":95.24569999999949,"method":"POST","path":"/api/v1/offline/authorize","request_id":"39dabbc2-73aa-440a-8146-ebb5e57d76ca","status_code":201,"trace_id":"aee47c8ea429787900d72af8c6f957d6","msg":"http request completed"}
+ ❯ test/organization-switch-browser.e2e.ts (2 tests | 1 failed) 86155ms
+   × RF-03 real membership switch retires prior branch, keys, private state and other tabs 61714ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/organization-switch-browser.e2e.ts > RF-03 real membership switch retires prior branch, keys, private state and other tabs
+Error: {
+  "isError": true,
+  "error": "TimeoutError: locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('combobox', { name: 'Organización activa' }) to be visible\u001b[22m\n"
+}
+
+ ❯ cli test/organization-switch-browser.e2e.ts:90:119
+     88|         `-s=${session}`, ...args, '--json'], { cwd: root, windowsHide:…
+     89|     } catch (error) {
+     90|       if (typeof error === 'object' && error !== null && 'stdout' in e…
+       |                                                                                                                       ^
+     91|       throw error;
+     92|     }
+ ❯ runBrowser test/organization-switch-browser.e2e.ts:101:20
+ ❯ test/organization-switch-browser.e2e.ts:110:3
+
+Caused by: Error: Command failed: C:\Program Files\nodejs\node.exe C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\node_modules\.pnpm\@playwright+cli@0.1.22\node_modules\@playwright\cli\playwright-cli.js -s=category-b8cc2eba run-code --filename C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\web\test\browser\organization-switch.mjs --json
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 1, killed: false, signal: null, cmd: 'C:\Program Files\nodejs\node.exe C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\node_modules\.pnpm\@playwright+cli@0.1.22\node_modules\@playwright\cli\playwright-cli.js -s=category-b8cc2eba run-code --filename C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\web\test\browser\organization-switch.mjs --json', stdout: '{\n  "isError": true,\n  "error": "TimeoutError: locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole(\'combobox\', { name: \'Organización activa\' }) to be visible\u001b[22m\n"\n}\n', stderr: '' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  19:47:17
+   Duration  99.78s (transform 4.37s, setup 0ms, import 13.16s, tests 86.16s, environment 0ms)
+
+undefined
+C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\api:
+[ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL] Command failed with exit code 1: vitest run --config vitest.authorization-browser.config.mts

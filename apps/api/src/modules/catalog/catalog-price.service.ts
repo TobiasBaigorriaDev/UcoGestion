@@ -195,14 +195,18 @@ export class CatalogPriceService {
   }
 
   private validatePrice(rawPrice: string): string {
-    const validated = validateNonNegativeMoney(rawPrice);
-    if (validated === undefined) {
-      throw new CatalogPriceError('CATALOG_PRICE_INVALID', 'El precio debe ser no negativo y tener como máximo dos decimales.');
-    }
-    const price = Money.from(validated).toString();
-    if (!/^(?:0|[1-9]\d{0,17})\.\d{2}$/.test(price)) {
-      throw new CatalogPriceError('CATALOG_PRICE_INVALID', 'El precio debe caber en numeric(20,2).');
-    }
-    return price;
+    return normalizeCatalogPrice(rawPrice);
   }
+}
+
+export function normalizeCatalogPrice(rawPrice: string): string {
+  const validated = validateNonNegativeMoney(rawPrice);
+  if (validated === undefined) {
+    throw new CatalogPriceError('CATALOG_PRICE_INVALID', 'El precio debe ser no negativo y tener como máximo dos decimales.');
+  }
+  const price = Money.from(validated).toString();
+  if (!/^(?:0|[1-9]\d{0,17})\.\d{2}$/.test(price)) {
+    throw new CatalogPriceError('CATALOG_PRICE_INVALID', 'El precio debe caber en numeric(20,2).');
+  }
+  return price;
 }

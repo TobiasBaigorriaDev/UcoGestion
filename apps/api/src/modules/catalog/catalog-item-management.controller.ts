@@ -13,10 +13,11 @@ import { CatalogItemEditError, CatalogItemEditService } from './catalog-item-edi
 import { CatalogPriceError, CatalogPriceService } from './catalog-price.service.js';
 
 const itemSchema = z.strictObject({ categoryId: z.uuid().nullable().optional(), name: z.string().trim().min(1).max(255),
+  price: z.string().optional(),
   type: z.enum(['PRODUCT', 'SERVICE']), trackInventory: z.boolean().optional(),
   baseUnit: z.enum(['UNIT', 'FRACTIONAL']).optional(),
   sku: z.string().nullable().optional(), barcode: z.string().nullable().optional() });
-const editSchema = z.strictObject({ name: z.string().trim().min(1).max(255),
+const editSchema = z.strictObject({ categoryId: z.uuid().nullable().optional(), name: z.string().trim().min(1).max(255),
   sku: z.string().nullable(), barcode: z.string().nullable() });
 const priceSchema = z.strictObject({ price: z.string() });
 interface CatalogRequest { readonly headers: Record<string, string | string[] | undefined>; identity?: { readonly organizationId: string; readonly userId: string } }
@@ -31,6 +32,7 @@ export class CatalogItemManagementController {
     @Body(new ZodValidationPipe(itemSchema)) body: z.infer<typeof itemSchema>) {
     try { return await this.creation.createIdempotent(this.context(request), {
       name: body.name, type: body.type,
+      ...(body.price === undefined ? {} : { price: body.price }),
       ...(body.categoryId === undefined ? {} : { categoryId: body.categoryId }),
       ...(body.trackInventory === undefined ? {} : { trackInventory: body.trackInventory }),
       ...(body.baseUnit === undefined ? {} : { baseUnit: body.baseUnit }),
@@ -51,7 +53,10 @@ export class CatalogItemManagementController {
   async edit(@Req() request: CatalogRequest, @Param('id', ParseUUIDPipe) id: string,
     @IfMatchVersion() version: number,
     @Body(new ZodValidationPipe(editSchema)) body: z.infer<typeof editSchema>) {
-    try { return await this.editing.update(this.context(request), id, version, body, this.key(request)); }
+    try { return await this.editing.update(this.context(request), id, version, {
+      name: body.name, sku: body.sku, barcode: body.barcode,
+      ...(body.categoryId === undefined ? {} : { categoryId: body.categoryId }),
+    }, this.key(request)); }
     catch (error) { this.handleError(error); }
   }
 

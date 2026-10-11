@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import styles from './app-shell.module.css';
 
@@ -35,6 +35,8 @@ export function AppShell({
 }: AppShellProps) {
   const organizationLabelId = useId();
   const branchLabelId = useId();
+  const navigationId = useId();
+  const [menuOpen, setMenuOpen] = useState(false);
   const activeNavigationRef = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
     activeNavigationRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'center' });
@@ -47,7 +49,9 @@ export function AppShell({
     <div className={styles.shell}>
       <a className={styles.skipLink} href="#contenido-principal">Ir al contenido principal</a>
       <header className={styles.header}>
-        <a className={styles.brand} href="/" aria-label="UcoNext, inicio">UcoNext</a>
+        <a className={styles.brand} href="/workspace" aria-label="UcoNext, inicio">
+          <span className={styles.brandMark} aria-hidden="true">U</span>UcoNext
+        </a>
         <div className={styles.context} role="group" aria-label="Contexto de trabajo">
           <div className={styles.contextField}>
             <label htmlFor={organizationLabelId}>Organización activa</label>
@@ -79,12 +83,19 @@ export function AppShell({
           </div>
         </div>
       </header>
-      <nav className={styles.navigation} aria-label="Navegación principal"
-        aria-description="Deslizá horizontalmente para ver más secciones">
+      <button type="button" className={styles.menuToggle} aria-expanded={menuOpen}
+        aria-controls={navigationId} onClick={() => setMenuOpen(!menuOpen)}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        <span>Secciones <span className={styles.currentSection}>· {navigation.find(item => item.href === currentPath)?.label ?? 'Inicio'}</span></span>
+        <span className={styles.menuAction}>{menuOpen ? 'Cerrar' : 'Ver todas'}</span>
+      </button>
+      <nav id={navigationId} className={styles.navigation} aria-label="Navegación principal"
+        data-open={menuOpen} aria-description="Abrí Secciones para ver el menú; deslizá para recorrerlo">
+        <p className={styles.navigationTitle}>Tu espacio de trabajo</p>
         {navigation.map((item) => (
           <a key={item.href} href={item.href} ref={currentPath === item.href ? activeNavigationRef : undefined}
             aria-current={currentPath === item.href ? 'page' : undefined}>
-            {item.label}
+            <span className={styles.navigationMarker} aria-hidden="true" />{item.label}
           </a>
         ))}
       </nav>

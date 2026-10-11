@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -7,9 +7,95 @@ import { CatalogItemManagement } from '../src/features/catalog/catalog-item-mana
 
 afterEach(cleanup);
 
+it('creates an item with a canonical initial price and rejects invalid amounts', async () => {
+  const create = vi.fn().mockResolvedValue({ id: 'new-priced-item' });
+  render(<CatalogItemManagement organizationId="org" items={[]} onReload={vi.fn()}
+    onCreate={create} onLookupSimilar={vi.fn().mockResolvedValue([])} />);
+  await userEvent.type(screen.getByRole('textbox', { name: 'Nombre del ítem nuevo' }), 'Con precio');
+  const price = screen.getByRole('textbox', { name: 'Precio de venta opcional' });
+  for (const invalid of ['-1', '1,234', 'abc']) {
+    await userEvent.clear(price);
+    await userEvent.type(price, invalid);
+    await userEvent.click(screen.getByRole('button', { name: 'Crear ítem' }));
+    expect(create).not.toHaveBeenCalled();
+    expect(price.getAttribute('aria-invalid')).toBe('true');
+  }
+  await userEvent.clear(price);
+  await userEvent.type(price, '1500,50');
+  await userEvent.click(screen.getByRole('button', { name: 'Crear ítem' }));
+  expect(create).toHaveBeenCalledWith('org', expect.objectContaining({ price: '1500.50' }));
+  expect(await screen.findByText('Ítem creado con precio de venta.')).toBeTruthy();
+  expect((price as HTMLInputElement).value).toBe('');
+}, 20000);
+
 const item = { id: 'item-a', name: 'Yerba', type: 'PRODUCT' as const, status: 'ACTIVE' as const,
   trackInventory: true, baseUnit: 'UNIT' as const, price: '100.00', priceVersion: 1,
   sku: 'Y-1', barcode: null, version: 2 };
+
+it('filters managed items by name, SKU or barcode and retains editing actions', async () => {
+  const user = userEvent.setup();
+  const coffee = { ...item, id: 'coffee', name: 'Café molido', sku: 'CAFE-01', barcode: '7791234567890', status: 'INACTIVE' as const };
+  render(<CatalogItemManagement organizationId="org" items={[item, coffee]} onReload={vi.fn()} />);
+  const list = within(screen.getByRole('region', { name: 'Ítems de la organización' }));
+  const search = screen.getByRole('searchbox', { name: 'Buscar producto' });
+  for (const query of ['  cafe  ', 'cafe-01', '7791234567890']) {
+    await user.clear(search);
+    await user.type(search, query);
+    expect(list.getByRole('button', { name: 'Editar Café molido' })).toBeTruthy();
+    expect(list.getByRole('button', { name: 'Activar Café molido' })).toBeTruthy();
+    expect(list.queryByRole('button', { name: 'Editar Yerba' })).toBeNull();
+    expect(list.getByRole('status').textContent).toBe('1 de 2 ítems');
+  }
+  await user.click(list.getByRole('button', { name: 'Editar Café molido' }));
+  expect(list.getByRole('textbox', { name: 'Nombre de Café molido' })).toBeTruthy();
+  await user.clear(search);
+  await user.type(search, 'inexistente');
+  expect(list.getByText('No encontramos ítems con esa búsqueda. Probá con otro nombre, SKU o código de barras.')).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Limpiar búsqueda' }));
+  expect(list.getByRole('button', { name: 'Editar Yerba' })).toBeTruthy();
+  expect(document.activeElement).toBe(search);
+}, 15000);
+
+it('assigns, changes and removes the optional catalog category', async () => {
+  const categories = [
+    { id: 'category-a', name: 'Almacén', status: 'ACTIVE' as const, version: 1 },
+    { id: 'category-b', name: 'Bebidas', status: 'ACTIVE' as const, version: 1 },
+    { id: 'category-old', name: 'Anterior', status: 'INACTIVE' as const, version: 1 },
+  ];
+  const create = vi.fn().mockResolvedValue(item);
+  const edit = vi.fn().mockResolvedValue(item);
+  const props = { organizationId: 'org', items: [{ ...item, categoryId: 'category-a' }], categories,
+    onReload: vi.fn(), onCreate: create, onEdit: edit, onLookupSimilar: vi.fn().mockResolvedValue([]) };
+  const { rerender } = render(<CatalogItemManagement {...props} />);
+  const newCategory = screen.getByRole('combobox', { name: 'Categoría del ítem nuevo' });
+  expect((newCategory as HTMLSelectElement).value).toBe('');
+  expect(within(newCategory).queryByRole('option', { name: 'Anterior' })).toBeNull();
+  await userEvent.type(screen.getByRole('textbox', { name: 'Nombre del ítem nuevo' }), 'Nuevo');
+  await userEvent.selectOptions(newCategory, 'category-b');
+  await userEvent.click(screen.getByRole('button', { name: 'Crear ítem' }));
+  expect(create).toHaveBeenCalledWith('org', expect.objectContaining({ categoryId: 'category-b' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
+  expect((screen.getByRole('combobox', { name: 'Categoría de Yerba' }) as HTMLSelectElement).value).toBe('category-a');
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Categoría de Yerba' }), 'category-b');
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios de Yerba' }));
+  expect(edit).toHaveBeenLastCalledWith('org', item.id, 2, expect.objectContaining({ categoryId: 'category-b' }));
+  rerender(<CatalogItemManagement {...props} items={[{ ...item, categoryId: 'category-b', version: 3 }]} />);
+  await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
+  expect((screen.getByRole('combobox', { name: 'Categoría de Yerba' }) as HTMLSelectElement).value).toBe('category-b');
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Categoría de Yerba' }), '');
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios de Yerba' }));
+  expect(edit).toHaveBeenLastCalledWith('org', item.id, 3, expect.objectContaining({ categoryId: null }));
+  rerender(<CatalogItemManagement {...props} items={[{ ...item, categoryId: 'category-old', version: 4 }]} />);
+  await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
+  expect((screen.getByRole('combobox', { name: 'Categoría de Yerba' }) as HTMLSelectElement).value).toBe('category-old');
+  expect(screen.getByRole('option', { name: 'Anterior (inactiva)' })).toBeTruthy();
+}, 15000);
+
+it('distinguishes an empty managed catalog from a search without matches', async () => {
+  render(<CatalogItemManagement organizationId="org" items={[]} onReload={vi.fn()} />);
+  await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar producto' }), 'yerba');
+  expect(screen.getByText('No hay ítems registrados.')).toBeTruthy();
+});
 
 it('creates products with nonstructural fields, warns on names, and edits price separately', async () => {
   const create = vi.fn().mockResolvedValue(item);

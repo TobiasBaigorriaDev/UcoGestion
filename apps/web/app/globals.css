@@ -29,6 +29,15 @@ a {
   color: inherit;
 }
 
+input, textarea {
+  caret-color: var(--color-primary);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
 ::selection {
   background: var(--color-vibrant);
   color: var(--color-on-vibrant);

@@ -402,7 +402,7 @@ describe('catalog item creation', () => {
     const categoryId = randomUUID(), inactive = randomUUID(), foreign = randomUUID();
     await pool.query("INSERT INTO catalog_categories (id, organization_id, name, status) VALUES ($1,$4,'Assigned','ACTIVE'),($2,$4,'Inactive','INACTIVE'),($3,$5,'Foreign','ACTIVE')",
       [categoryId, inactive, foreign, organizationA, organizationB]);
-    const input = { name: 'Categorized item', type: 'PRODUCT' as const, categoryId };
+    const input = { name: 'Categorized item', type: 'PRODUCT' as const, categoryId, price: '25.00' };
     const created = await service.createIdempotent(context(ownerUserId, 'category-create'), input, 'category-create');
     expect((await pool.query('SELECT category_id FROM catalog_items WHERE id=$1', [created.id])).rows).toEqual([{ category_id: categoryId }]);
     expect(await service.createIdempotent(context(ownerUserId, 'category-replay'), input, 'category-create')).toEqual(created);
@@ -413,6 +413,49 @@ describe('catalog item creation', () => {
         .rejects.toMatchObject({ code: 'CATALOG_ITEM_CATEGORY_NOT_AVAILABLE' });
       await expect(service.createIdempotent(context(ownerUserId, 'invalid-category'), { ...input, categoryId: selected }, randomUUID()))
         .rejects.toMatchObject({ code: 'CATALOG_ITEM_CATEGORY_NOT_AVAILABLE' });
+    }
+  });
+
+  it('creates an initial immutable price atomically with replay and role validation', async () => {
+    const input = { name: 'Initial priced item', type: 'PRODUCT' as const, price: '1500.50' };
+    const key = randomUUID();
+    const created = await service.createIdempotent(context(ownerUserId, 'initial-price'), input, key);
+    expect(created).toMatchObject({ price: '1500.50', priceVersion: 1, version: 2 });
+    expect(await service.createIdempotent(context(ownerUserId, 'initial-replay'), input, key)).toEqual(created);
+    await expect(service.createIdempotent(context(ownerUserId, 'initial-key-conflict'), { ...input, price: '1.00' }, key))
+      .rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
+    expect((await pool.query('SELECT price::text,price_version::integer,version::integer FROM catalog_items WHERE id=$1', [created.id])).rows)
+      .toEqual([{ price: '1500.50', price_version: 1, version: 2 }]);
+    expect((await pool.query('SELECT price::text,currency FROM catalog_price_versions WHERE item_id=$1', [created.id])).rows)
+      .toEqual([{ price: '1500.50', currency: 'ARS' }]);
+    expect((await pool.query("SELECT after_data FROM audit_events WHERE entity_id=$1 AND action='catalog_item.created'", [created.id])).rows)
+      .toEqual([{ after_data: expect.objectContaining({ price: '1500.50' }) }]);
+    await expect(service.createIdempotent(context(cashierUserId, 'price-role-denied'), input, randomUUID()))
+      .rejects.toMatchObject({ code: 'CATALOG_ITEM_CREATION_FORBIDDEN' });
+    for (const price of ['-1', '1.234', 'NaN', '1000000000000000000.00']) {
+      await expect(service.createIdempotent(context(ownerUserId, 'price-invalid'), { ...input, price }, randomUUID()))
+        .rejects.toMatchObject({ code: 'CATALOG_PRICE_INVALID' });
+    }
+    expect(await service.create(context(ownerUserId, 'zero-price'), { ...input, name: 'Zero price', price: '0' }))
+      .toMatchObject({ price: '0.00', priceVersion: 1 });
+  });
+
+  it('rolls back item, initial price, monetary reference and idempotency when auditing fails', async () => {
+    await pool.query(`CREATE FUNCTION reject_priced_item_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF NEW.after_data->>'name' = 'Rollback initial price' THEN RAISE EXCEPTION 'Audit test failure'; END IF; RETURN NEW; END $$;
+      CREATE TRIGGER reject_priced_item_audit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION reject_priced_item_audit()`);
+    const key = randomUUID();
+    const before = (await pool.query('SELECT count(*)::text AS count FROM catalog_price_versions')).rows;
+    const history = (await pool.query('SELECT count(*)::text AS count FROM organization_history_references')).rows;
+    try {
+      await expect(service.createIdempotent(context(ownerUserId, 'price-audit-failure'),
+        { name: 'Rollback initial price', type: 'PRODUCT', price: '10.00' }, key)).rejects.toThrow('Audit test failure');
+      expect((await pool.query("SELECT id FROM catalog_items WHERE name='Rollback initial price'")).rowCount).toBe(0);
+      expect((await pool.query('SELECT count(*)::text AS count FROM catalog_price_versions')).rows).toEqual(before);
+      expect((await pool.query('SELECT count(*)::text AS count FROM organization_history_references')).rows).toEqual(history);
+      expect((await pool.query('SELECT id FROM idempotency_records WHERE key=$1', [key])).rowCount).toBe(0);
+    } finally {
+      await pool.query('DROP TRIGGER reject_priced_item_audit ON audit_events; DROP FUNCTION reject_priced_item_audit()');
     }
   });
 

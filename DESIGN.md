@@ -101,9 +101,16 @@ La paleta cromática se estructura en tonos verdes de contraste y neutros limpio
 ### Hierarchy
 - **Display** (Bold 700 / ExtraBold 800, 2rem - 3.5rem, 1.12): Títulos de alto impacto en vistas y hero.
 - **Headline** (SemiBold 600 / Bold 700, 1.5rem, 1.3): Encabezados de tarjetas y secciones.
+- **Título de página operativa** (Bold 700 / 750, 1.875rem, 1.25): Encabezados de administración, acceso, POS y reportes. Tamaño fijo para conservar una jerarquía predecible en móvil y escritorio; Display queda reservado para la portada.
 - **Title** (Medium 500 / SemiBold 600, 1.125rem, 1.4): Títulos de módulos internos y subbloques.
 - **Body** (Regular 400, 1rem, 1.5): Párrafos y textos explicativos (máx. 65–75ch).
 - **Label** (Medium 500, 0.875rem, 1.4): Microcopia, chips y etiquetas táctiles.
+
+### Superficies operativas
+
+Separadores `#E2E8F0` delimitan filas y navegación sin competir con los datos. Controles usan borde `#7B899C` para distinguir su superficie y estado de foco. La superficie `#EDF6EF` acompaña hover y selección con texto Bosque, conservando la regla de Manzana. Estos valores viven en `packages/ui` como `--color-divider`, `--color-control-border` y `--color-primary-soft`.
+
+En escritorio, el menú lateral conserva la sección activa y puede desplazarse sin desplazar el contenido principal. En móvil y tablet se abre con “Secciones”, mostrando la ubicación actual antes de desplegarse. Los formularios agrupan campos alineados, mantienen labels persistentes y usan acciones secundarias de menor peso visual en listados.
 
 ## Layout
 

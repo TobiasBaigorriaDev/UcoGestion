@@ -19,9 +19,13 @@
   --color-danger: #ef4444;
   --color-danger-text: #b42318;
   --color-focus: #166534;
+  --color-divider: #e2e8f0;
+  --color-control-border: #7b899c;
+  --color-primary-soft: #edf6ef;
 
   --font-sans: var(--font-plus-jakarta), 'Plus Jakarta Sans', sans-serif;
   --text-display: clamp(2rem, 5vw, 3.5rem);
+  --text-page-title: 1.875rem;
   --text-headline: 1.5rem;
   --text-title: 1.125rem;
   --text-body: 1rem;

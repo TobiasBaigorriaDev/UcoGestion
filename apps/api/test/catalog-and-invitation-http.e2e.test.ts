@@ -206,6 +206,26 @@ describe('catalog and invitation HTTP contracts', () => {
     expect(accepted.body).toMatchObject({ organizationId });
     expect((await pool.query('SELECT id FROM memberships WHERE organization_id = $1 AND user_id = $2', [organizationId, existing.id])).rowCount).toBe(1);
   });
+  it('T236Q creates an item with its initial price through the strict HTTP contract', async () => {
+    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin', 'http://localhost:3000')
+      .send({ email: 'contract-owner@example.com', password: 'correct-password' }).expect(204);
+    const cookie = (login.headers['set-cookie'] as string[] | undefined)?.[0]?.split(';')[0] ?? '';
+    const csrf = await request(app.getHttpServer()).get('/api/v1/auth/csrf').set('Cookie', cookie).expect(200);
+    const create = (key: string) => request(app.getHttpServer()).post('/api/v1/catalog/items')
+      .set('Origin', 'http://localhost:3000').set('Cookie', cookie).set('X-Organization-Id', organizationId)
+      .set('X-CSRF-Token', csrf.body.csrfToken as string).set('Idempotency-Key', key);
+    const key = randomUUID(), input = { name: 'Priced HTTP', type: 'PRODUCT', price: '25.50' };
+    const first = await create(key).send(input).expect(201);
+    expect(first.body).toMatchObject({ price: '25.50', priceVersion: 1, version: 2 });
+    expect((await create(key).send(input).expect(201)).body).toEqual(first.body);
+    await create(key).send({ ...input, price: '10.00' }).expect(409);
+    expect((await create(randomUUID()).send({ ...input, price: '-1' }).expect(400)).body)
+      .toMatchObject({ code: 'CATALOG_PRICE_INVALID', traceId: expect.any(String) });
+    await create(randomUUID()).send({ ...input, price: 25.50 }).expect(400);
+    expect((await pool.query('SELECT price::text,price_version::integer FROM catalog_items WHERE id=$1', [first.body.id])).rows)
+      .toEqual([{ price: '25.50', price_version: 1 }]);
+  });
+
   it('T236J accepts the optional category on item creation and validates tenant membership over HTTP', async () => {
     const login = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin', 'http://localhost:3000')
       .send({ email: 'contract-owner@example.com', password: 'correct-password' }).expect(204);
@@ -225,6 +245,22 @@ describe('catalog and invitation HTTP contracts', () => {
     const denied = await create().set('Idempotency-Key', randomUUID()).send({ ...input, categoryId: foreignCategory }).expect(409);
     expect(denied.body).toMatchObject({ code: 'CATALOG_ITEM_CATEGORY_NOT_AVAILABLE', traceId: expect.any(String) });
     await create().set('Idempotency-Key', randomUUID()).send({ ...input, categoryId: 'invalid' }).expect(400);
+    const edit = (version: string, editKey: string) => request(app.getHttpServer()).patch(`/api/v1/catalog/items/${first.body.id}`)
+      .set('Origin', 'http://localhost:3000').set('Cookie', cookie).set('X-Organization-Id', organizationId)
+      .set('X-CSRF-Token', csrf.body.csrfToken as string).set('If-Match', version).set('Idempotency-Key', editKey);
+    const editInput = { name: input.name, sku: null, barcode: null, categoryId: null };
+    const editKey = randomUUID();
+    const edited = await edit('1', editKey).send(editInput).expect(200);
+    expect(edited.body).toMatchObject({ categoryId: null, version: 2 });
+    expect((await edit('1', editKey).send(editInput).expect(200)).body).toEqual(edited.body);
+    await edit('2', randomUUID()).send({ ...editInput, categoryId: foreignCategory }).expect(409);
+    await edit('2', randomUUID()).send({ ...editInput, categoryId: 'invalid' }).expect(400);
+    await edit('1', randomUUID()).send({ ...editInput, categoryId }).expect(409);
+    expect((await edit('2', randomUUID()).send({ ...editInput, categoryId }).expect(200)).body)
+      .toMatchObject({ categoryId, version: 3 });
+    const managed = await request(app.getHttpServer()).get('/api/v1/catalog/items/manage')
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(managed.body.items).toContainEqual(expect.objectContaining({ id: first.body.id, categoryId }));
   });
 
 });
