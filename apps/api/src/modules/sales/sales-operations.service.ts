@@ -1,4 +1,6 @@
 import type { PoolClient } from 'pg';
+import { saleCodeFromId, saleCodeLookup } from '@uconext/shared';
+import { encodeCursor, type Cursor } from '../../core/validation/pagination.js';
 
 import { AuditEventWriter } from '../../core/audit/audit-event-writer.js';
 import { IdempotencyService, toJsonValue } from '../../core/idempotency/idempotency.service.js';
@@ -30,9 +32,18 @@ export interface SaleConfirmationResult {
   readonly receipt: { readonly label: string; readonly [key: string]: unknown };
 }
 
+/** Read view: identity comes from the authorized sale row, never rewritten history. */
+export type SaleReceiptView = SaleConfirmationResult['receipt'] & {
+  readonly saleId: string; readonly saleCode: string;
+};
+
 export class ConcurrentSaleModificationError extends Error {
   readonly code = 'SALE_CONCURRENT_MODIFICATION' as const;
   constructor() { super('La venta encontró una modificación concurrente. Intentá nuevamente.'); }
+}
+
+export class AmbiguousSaleCodeError extends Error {
+  constructor() { super('Hay más de una venta con ese código. Buscá la venta por fecha en el historial.'); }
 }
 
 export class SaleCheckoutContextError extends Error {
@@ -48,6 +59,107 @@ export class SalesOperationsService {
 
   constructor(private readonly transactions: TenantTransaction) {
     this.quotes = new SalesQuoteService(transactions);
+  }
+
+  async resolveSaleCode(context: TenantTransactionContext, value: string): Promise<string | null> {
+    const code = saleCodeLookup(value);
+    if (!code) return null;
+    return this.transactions.read(context, async (client) => {
+      const result = await client.query<{ id: string }>(`SELECT s.id FROM sales s JOIN memberships m
+        ON m.organization_id = s.organization_id AND m.user_id = $2
+          AND m.status = 'ACTIVE' AND m.revoked_at IS NULL
+        WHERE s.organization_id = $1 AND s.id BETWEEN $3::uuid AND $4::uuid
+          AND right(s.id::text, 3) = $5
+          AND m.role IN ('OWNER', 'ADMIN', 'CASHIER')
+          AND (m.role <> 'CASHIER' OR (s.actor_user_id = $2 AND s.session_owner_user_id = $2))
+          AND (m.role = 'OWNER' OR EXISTS (SELECT 1 FROM effective_membership_branch_scope scope
+            WHERE scope.organization_id = m.organization_id AND scope.membership_id = m.id
+              AND scope.branch_id = s.branch_id))
+        LIMIT 2`, [context.organizationId, context.userId, code.lowerId, code.upperId, code.suffix]);
+      if (result.rows.length > 1) throw new AmbiguousSaleCodeError();
+      return result.rows[0]?.id ?? null;
+    });
+  }
+
+  async list(context: TenantTransactionContext, query: {
+    branchId?: string | undefined; limit: number; cursor?: Cursor | undefined;
+    from?: string | undefined; to?: string | undefined; status?: string | undefined;
+  }) {
+    return this.transactions.read(context, async (client) => {
+      const result = await client.query<{ id: string; branchId: string; confirmedAt: string; total: string;
+        currency: string; status: 'CONFIRMED' | 'CANCELLED'; cursorTime: string }>(`
+        SELECT s.id, s.branch_id AS "branchId", s.confirmed_at::text AS "confirmedAt", s.total::text,
+          s.currency_code AS currency,
+          CASE WHEN c.id IS NULL THEN 'CONFIRMED' ELSE 'CANCELLED' END AS status,
+          to_char(s.confirmed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "cursorTime"
+        FROM sales s JOIN organizations o ON o.id = s.organization_id
+        JOIN memberships m ON m.organization_id = s.organization_id AND m.user_id = $2
+          AND m.status = 'ACTIVE' AND m.revoked_at IS NULL
+        LEFT JOIN sale_cancellations c ON c.organization_id = s.organization_id AND c.sale_id = s.id
+        WHERE s.organization_id = $1 AND ($3::uuid IS NULL OR s.branch_id = $3)
+          AND m.role IN ('OWNER', 'ADMIN', 'CASHIER')
+          AND (m.role <> 'CASHIER' OR (s.actor_user_id = $2 AND s.session_owner_user_id = $2))
+          AND (m.role = 'OWNER' OR EXISTS (SELECT 1 FROM effective_membership_branch_scope scope
+            WHERE scope.organization_id = m.organization_id AND scope.membership_id = m.id
+              AND scope.branch_id = s.branch_id))
+          AND ($4::date IS NULL OR s.confirmed_at >= ($4::date::timestamp AT TIME ZONE o.timezone))
+          AND ($5::date IS NULL OR s.confirmed_at < (($5::date + 1)::timestamp AT TIME ZONE o.timezone))
+          AND ($6::text IS NULL OR ($6 = 'CANCELLED' AND c.id IS NOT NULL)
+            OR ($6 = 'CONFIRMED' AND c.id IS NULL))
+          AND ($7::timestamptz IS NULL OR (s.confirmed_at, s.id) < ($7::timestamptz, $8::uuid))
+        ORDER BY s.confirmed_at DESC, s.id DESC LIMIT $9`,
+      [context.organizationId, context.userId, query.branchId ?? null, query.from ?? null, query.to ?? null,
+        query.status ?? null, query.cursor?.sortValue ?? null, query.cursor?.id ?? null, query.limit + 1]);
+      const rows = result.rows.slice(0, query.limit);
+      const last = rows.at(-1);
+      return { items: rows.map(({ id, branchId, confirmedAt, total, currency, status }) =>
+        ({ id, branchId, confirmedAt, total, currency, status })),
+      nextCursor: result.rows.length > query.limit && last
+        ? encodeCursor({ id: last.id, sortValue: last.cursorTime }) : null };
+    });
+  }
+
+  async trends(context: TenantTransactionContext, query: { from: string; to: string;
+    branchId?: string | undefined; groupBy?: 'DAY' | 'HOUR' | undefined }) {
+    return this.transactions.read(context, async client => {
+      const result = await client.query<{ date: string; hour: number | null; amount: string;
+        count: number; currency: string }>(`
+        WITH buckets AS (
+          SELECT generate_series($3::date, $4::date, interval '1 day')::date AS day,
+            NULL::integer AS hour WHERE $6::text = 'DAY'
+          UNION ALL
+          SELECT $3::date AS day, generate_series(0, 23) AS hour WHERE $6::text = 'HOUR'
+        ),
+        allowed AS (
+          SELECT s.id, s.total, (s.confirmed_at AT TIME ZONE o.timezone)::date AS local_day,
+            extract(hour FROM s.confirmed_at AT TIME ZONE o.timezone)::integer AS local_hour
+          FROM sales s JOIN organizations o ON o.id = s.organization_id
+          JOIN memberships m ON m.organization_id = s.organization_id AND m.user_id = $2
+            AND m.status = 'ACTIVE' AND m.revoked_at IS NULL
+          LEFT JOIN sale_cancellations c ON c.organization_id = s.organization_id AND c.sale_id = s.id
+          WHERE s.organization_id = $1 AND c.id IS NULL
+            AND s.confirmed_at >= ($3::date::timestamp AT TIME ZONE o.timezone)
+            AND s.confirmed_at < (($4::date + 1)::timestamp AT TIME ZONE o.timezone)
+            AND ($5::uuid IS NULL OR s.branch_id = $5)
+            AND m.role IN ('OWNER', 'ADMIN', 'CASHIER')
+            AND (m.role <> 'CASHIER' OR (s.actor_user_id = $2 AND s.session_owner_user_id = $2))
+            AND (m.role = 'OWNER' OR EXISTS (SELECT 1 FROM effective_membership_branch_scope scope
+              WHERE scope.organization_id = m.organization_id AND scope.membership_id = m.id
+                AND scope.branch_id = s.branch_id))
+        )
+        SELECT to_char(buckets.day, 'YYYY-MM-DD') AS date, buckets.hour,
+          coalesce(sum(allowed.total),0)::numeric(20,2)::text AS amount,
+          count(allowed.id)::integer AS count, o.base_currency AS currency
+        FROM buckets CROSS JOIN organizations o LEFT JOIN allowed ON allowed.local_day = buckets.day
+          AND (buckets.hour IS NULL OR allowed.local_hour = buckets.hour)
+        WHERE o.id = $1 GROUP BY buckets.day, buckets.hour, o.base_currency
+        ORDER BY buckets.day, buckets.hour`,
+      [context.organizationId, context.userId, query.from, query.to, query.branchId ?? null,
+        query.groupBy ?? 'DAY']);
+      return { currency: result.rows[0]?.currency ?? null,
+        points: result.rows.map(({ date, hour, amount, count }) =>
+          ({ date, ...(hour === null ? {} : { hour }), amount, count })) };
+    });
   }
 
   async checkoutContext(context: TenantTransactionContext, branchId: string): Promise<{
@@ -98,20 +210,22 @@ export class SalesOperationsService {
     });
   }
 
-  async receipt(context: TenantTransactionContext, saleId: string): Promise<SaleConfirmationResult['receipt'] | null> {
+  async receipt(context: TenantTransactionContext, saleId: string): Promise<SaleReceiptView | null> {
     return this.transactions.read(context, async (client) => {
-      const result = await client.query<{ receipt_snapshot: SaleConfirmationResult['receipt'] }>(
-        `SELECT s.receipt_snapshot FROM sales s JOIN memberships m
+      const result = await client.query<{ id: string; receipt_snapshot: SaleConfirmationResult['receipt'] }>(
+        `SELECT s.id, s.receipt_snapshot FROM sales s JOIN memberships m
            ON m.organization_id = s.organization_id AND m.user_id = $2
          WHERE s.organization_id = $1 AND s.id = $3
            AND m.status = 'ACTIVE' AND m.revoked_at IS NULL
            AND m.role IN ('OWNER', 'ADMIN', 'CASHIER')
-           AND (m.role <> 'CASHIER' OR s.actor_user_id = $2)
+           AND (m.role <> 'CASHIER' OR (s.actor_user_id = $2 AND s.session_owner_user_id = $2))
            AND (m.role = 'OWNER' OR EXISTS (SELECT 1 FROM effective_membership_branch_scope scope
              WHERE scope.organization_id = m.organization_id AND scope.membership_id = m.id
                AND scope.branch_id = s.branch_id))`,
         [context.organizationId, context.userId, saleId]);
-      return result.rows[0]?.receipt_snapshot ?? null;
+      const sale = result.rows[0];
+      return sale ? { ...sale.receipt_snapshot, saleId: sale.id,
+        saleCode: saleCodeFromId(sale.id) } : null;
     });
   }
 
@@ -133,7 +247,7 @@ export class SalesOperationsService {
         LEFT JOIN sale_cancellations c ON c.organization_id = s.organization_id AND c.sale_id = s.id
         WHERE s.organization_id = $1 AND s.id = $3
           AND m.role IN ('OWNER', 'ADMIN', 'CASHIER')
-          AND (m.role <> 'CASHIER' OR s.actor_user_id = $2)
+          AND (m.role <> 'CASHIER' OR (s.actor_user_id = $2 AND s.session_owner_user_id = $2))
           AND (m.role = 'OWNER' OR EXISTS (SELECT 1 FROM effective_membership_branch_scope scope
             WHERE scope.organization_id = m.organization_id AND scope.membership_id = m.id
               AND scope.branch_id = s.branch_id))`,

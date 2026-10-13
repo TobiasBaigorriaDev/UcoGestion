@@ -82,7 +82,29 @@ describe('catalog category management', () => {
     } satisfies Partial<CatalogCategoryManagementError>);
   });
 
+  it('persists library icons with idempotency, audit and tenant authorization', async () => {
+    const ctx = context(ownerUserId, 'category-icon');
+    const input = { name: 'Iconos', icon: 'cup-soda' };
+    const created = await service.create(ctx, input, 'icon-create');
+    expect(created).toHaveProperty('icon', 'cup-soda');
+    expect(await service.create(ctx, input, 'icon-create')).toEqual(created);
+    await expect(service.create(ctx, { ...input, icon: 'apple' }, 'icon-create')).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
+    const updated = await service.update(ctx, created.id, 1, { name: 'Iconos', icon: 'apple' }, 'icon-edit');
+    expect(updated).toHaveProperty('icon', 'apple');
+    expect(await service.update(ctx, created.id, 1, { name: 'Iconos', icon: 'apple' }, 'icon-edit')).toEqual(updated);
+    await expect(service.update({ ...ctx, organizationId: organizationB }, created.id, 2, { name: 'Ajena', icon: 'fish' }, 'icon-cross-tenant')).rejects.toMatchObject({ code: 'CATALOG_CATEGORY_MANAGEMENT_FORBIDDEN' });
+    const renamed = await service.update(ctx, created.id, 2, { name: 'Nombre nuevo' }, 'icon-rename');
+    expect(renamed).toHaveProperty('icon', 'apple');
+    const cleared = await service.update(ctx, created.id, 3, { name: 'Nombre nuevo', icon: null }, 'icon-clear');
+    expect(cleared).toHaveProperty('icon', null);
+    const audit = await pool.query('SELECT after_data FROM audit_events WHERE entity_id = $1 AND action = $2', [created.id, 'catalog_category.created']);
+    expect(audit.rows).toHaveLength(1);
+    expect(audit.rows[0].after_data).toMatchObject({ icon: 'cup-soda' });
+  });
+
   it('rejects blank names and operational roles', async () => {
+    await expect(service.create(context(ownerUserId, 'invalid-icon'), { name: 'Inválida', icon: 'https://example.test/icon.svg' }, 'invalid-icon')).rejects.toMatchObject({ code: 'CATALOG_CATEGORY_ICON_INVALID' });
+    await expect(pool.query("INSERT INTO catalog_categories (id, organization_id, name, icon) VALUES ($1, $2, 'Invalid icon', 'unknown')", [randomUUID(), organizationA])).rejects.toMatchObject({ code: '23514' });
     await expect(service.create(context(ownerUserId, 'catalog-category-blank'), { name: '   ' }))
       .rejects.toMatchObject({
         code: 'CATALOG_CATEGORY_NAME_INVALID',
@@ -168,14 +190,14 @@ describe('catalog category management', () => {
         RAISE EXCEPTION 'category audit unavailable'; END IF; RETURN NEW; END $$;
       CREATE TRIGGER fail_category_edit_audit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION fail_category_edit_audit()`);
     try {
-      await expect(service.update(ctx, category.id, 1, { name: 'Atomic edited' }, key)).rejects.toThrow('category audit unavailable');
+      await expect(service.update(ctx, category.id, 1, { name: 'Atomic edited', icon: 'coffee' }, key)).rejects.toThrow('category audit unavailable');
       expect((await pool.query('SELECT * FROM catalog_categories WHERE id=$1', [category.id])).rows).toEqual(before);
       expect((await pool.query('SELECT config_epoch FROM organizations WHERE id=$1', [organizationA])).rows).toEqual(epoch);
       expect((await pool.query('SELECT 1 FROM idempotency_records WHERE organization_id=$1 AND key=$2', [organizationA, key])).rowCount).toBe(0);
     } finally {
       await pool.query('DROP TRIGGER fail_category_edit_audit ON audit_events; DROP FUNCTION fail_category_edit_audit()');
     }
-    await expect(service.update(ctx, category.id, 1, { name: 'Atomic edited' }, key)).resolves.toMatchObject({ version: 2 });
+    await expect(service.update(ctx, category.id, 1, { name: 'Atomic edited', icon: 'coffee' }, key)).resolves.toMatchObject({ version: 2, icon: 'coffee' });
   });
 
   it('T236I: revalidates permissions on replay after the actor is downgraded', async () => {

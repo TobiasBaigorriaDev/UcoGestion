@@ -1,3 +1,3 @@
-import { Workspace } from '../../../src/features/identity/workspace';
+import { redirect } from 'next/navigation';
 
-export default function InventoryPage() { return <Workspace page="inventory" />; }
+export default function InventoryPage() { redirect('/workspace/catalog'); }

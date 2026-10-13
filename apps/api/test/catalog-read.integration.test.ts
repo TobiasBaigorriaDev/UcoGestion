@@ -22,6 +22,7 @@ describe('catalog read permissions', () => {
   const outsider = randomUUID();
   const activeItem = randomUUID();
   const inactiveItem = randomUUID();
+  const category = randomUUID();
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16-alpine').start();
@@ -40,7 +41,8 @@ describe('catalog read permissions', () => {
     await admin.query("INSERT INTO catalog_items (id, organization_id, name, type, status) VALUES ($1, $2, 'Yerba', 'PRODUCT', 'ACTIVE'), ($3, $2, 'Antiguo', 'PRODUCT', 'INACTIVE'), ($4, $5, 'Ajeno', 'PRODUCT', 'ACTIVE')", [activeItem, organization, inactiveItem, randomUUID(), otherOrganization]);
     await admin.query("INSERT INTO catalog_price_versions (id, organization_id, item_id, price_version, price, currency) VALUES ($1, $2, $3, 1, '123.45', 'ARS')", [randomUUID(), organization, activeItem]);
     await admin.query("UPDATE catalog_items SET price = '123.45', price_version = 1, version = 2 WHERE id = $1", [activeItem]);
-    await admin.query("INSERT INTO catalog_categories (id, organization_id, name) VALUES ($1, $2, 'Almacén')", [randomUUID(), organization]);
+    await admin.query("INSERT INTO catalog_categories (id, organization_id, name, icon) VALUES ($1, $2, 'Almacén', 'coffee')", [category, organization]);
+    await admin.query('UPDATE catalog_items SET category_id = $1 WHERE id = $2', [category, activeItem]);
   });
 
   afterAll(async () => { await runtime?.end(); await admin?.end(); await container?.stop(); });
@@ -52,7 +54,10 @@ describe('catalog read permissions', () => {
       const result = await reader.read(context(user));
       expect(result.items.map((item) => item.id)).toEqual([activeItem]);
       expect(result.items[0]?.price).toBe('123.45');
+      expect(result.items[0]?.trackInventory).toBe(false);
+      expect(result.items[0]).toHaveProperty('categoryId', category);
       expect(result.categories.map((category) => category.name)).toEqual(['Almacén']);
+      expect(result.categories[0]).toHaveProperty('icon', 'coffee');
       expect(JSON.stringify(result)).not.toMatch(/cost|margin/i);
     }
     await expect(reader.read(context(outsider))).rejects.toMatchObject({ status: 403 });
@@ -61,6 +66,7 @@ describe('catalog read permissions', () => {
   it('allows inactive item context only to EMPLOYEE in an assigned branch', async () => {
     const result = await reader.read(context(employee), { mode: 'HISTORICAL', branchId: branch });
     expect(result.items.map((item) => item.id)).toContain(inactiveItem);
+    expect(result.items.find(item => item.id === inactiveItem)).toHaveProperty('categoryId', null);
     await expect(reader.read(context(employee), { mode: 'HISTORICAL', branchId: otherBranch })).rejects.toMatchObject({ status: 403 });
     await expect(reader.read(context(cashier), { mode: 'HISTORICAL', branchId: branch })).rejects.toMatchObject({ status: 403 });
   });

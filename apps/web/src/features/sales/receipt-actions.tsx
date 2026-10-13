@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { saleCodeFromId } from '@uconext/shared';
 
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
@@ -46,7 +47,7 @@ export function ReceiptActions({ organizationId, saleId }: {
       const blob = await receiptBlob(organizationId, saleId, 'pdf');
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
-      anchor.href = url; anchor.download = `comprobante-${saleId}.pdf`;
+      anchor.href = url; anchor.download = `comprobante-${saleCodeFromId(saleId)}.pdf`;
       document.body.append(anchor); anchor.click(); anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (cause) { setError(failure(cause)); }

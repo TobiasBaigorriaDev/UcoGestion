@@ -5,6 +5,7 @@ import { Test } from '@nestjs/testing';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { Pool } from 'pg';
 import request from 'supertest';
+import { pdfText } from './receipt-pdf-text.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { AppModule } from '../src/app.module.js';
@@ -73,7 +74,10 @@ describe('T145 sales HTTP confirmation', () => {
     await pool.query("INSERT INTO customers (id, organization_id, name, status) VALUES ($1, $2, 'Comprador', 'ACTIVE')",
       [customerId, organizationId]);
     previousUrl = process.env.DATABASE_URL;
-    process.env.DATABASE_URL = container.getConnectionUri();
+    await pool.query("CREATE ROLE sales_http_runtime LOGIN PASSWORD 'runtime-password' IN ROLE uco_app");
+    const runtimeUrl = new URL(container.getConnectionUri());
+    runtimeUrl.username = 'sales_http_runtime'; runtimeUrl.password = 'runtime-password';
+    process.env.DATABASE_URL = runtimeUrl.toString();
     const module = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = configureApi(module.createNestApplication());
     await app.init();
@@ -193,7 +197,7 @@ describe('T145 sales HTTP confirmation', () => {
     await pool.query("UPDATE catalog_items SET name = 'Artículo nuevo' WHERE id = $1", [itemId]);
     const receipt = await request(app.getHttpServer()).get(`/api/v1/sales/${sale.clientOperationId}/receipt`)
       .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
-    expect(receipt.body).toMatchObject({ label: 'Comprobante no fiscal',
+    expect(receipt.body).toMatchObject({ saleId: sale.clientOperationId, label: 'Comprobante no fiscal',
       organization: { name: 'Sales HTTP' }, branch: { name: 'Principal' },
       customer: { name: 'Comprador' }, items: [{ name: 'Producto' }] });
     const printable = await request(app.getHttpServer())
@@ -202,14 +206,18 @@ describe('T145 sales HTTP confirmation', () => {
     expect(printable.headers['content-type']).toContain('text/html');
     expect(printable.text).toContain('Comprobante no fiscal');
     expect(printable.text).toContain('Comprador');
+    expect(printable.text).toContain(`ID de venta: ${receipt.body.saleCode}`);
     expect(printable.text).not.toContain('Cliente nuevo');
     const pdf = await request(app.getHttpServer()).get(`/api/v1/sales/${sale.clientOperationId}/receipt.pdf`)
       .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
     expect(pdf.headers['content-type']).toContain('application/pdf');
-    expect(pdf.headers['content-disposition']).toBe(`attachment; filename="comprobante-${sale.clientOperationId}.pdf"`);
+    expect(pdf.headers['content-disposition']).toBe(`attachment; filename="comprobante-${receipt.body.saleCode}.pdf"`);
     expect(pdf.headers['x-content-type-options']).toBe('nosniff');
     expect(Number(pdf.headers['content-length'])).toBe(pdf.body.length);
     expect(pdf.body.length).toBeGreaterThan(100);
+    expect(await pdfText(pdf.body)).toContain(`ID de venta: ${receipt.body.saleCode}`);
+    expect((await pool.query('SELECT receipt_snapshot FROM sales WHERE id=$1', [sale.clientOperationId]))
+      .rows[0]?.receipt_snapshot).toEqual(confirmed.body.receipt);
     expect(printable.headers['x-content-type-options']).toBe('nosniff');
     expect(printable.text).not.toMatch(/<(?:script|iframe|object|embed)\b/i);
     for (const suffix of ['/receipt/print', '/receipt.pdf']) {
@@ -402,4 +410,162 @@ describe('T145 sales HTTP confirmation', () => {
     expect((await pool.query('SELECT amount::text FROM sale_refunds WHERE cancellation_id = $1',
       [cashCancelled.body.id])).rows[0]?.amount).toBe('11.00');
   });
+  it('lists history with stable cursors, local dates, statuses and existing scope', async () => {
+    const ids = [randomUUID(), randomUUID(), randomUUID()].sort().reverse();
+    for (const id of ids) await pool.query(`INSERT INTO sales
+      (id, organization_id, branch_id, cash_session_id, device_id, actor_user_id,
+       session_owner_user_id, client_operation_id, currency_code, subtotal, discount, total,
+       receipt_snapshot, confirmed_at) VALUES ($1,$2,$3,$4,$5,$6,$6,$1,'ARS',0,0,0,'{}',
+       '2025-01-02T02:30:00.123456Z')`, [id, organizationId, branchId, sessionId, deviceId, ownerId]);
+    await pool.query(`INSERT INTO sale_cancellations
+      (id,organization_id,sale_id,branch_id,actor_user_id,reason)
+      VALUES ($1,$2,$3,$4,$5,'Prueba historial')`, [randomUUID(), organizationId, ids[1], branchId, ownerId]);
+    await pool.query("UPDATE organizations SET timezone = 'America/Argentina/Buenos_Aires' WHERE id = $1", [organizationId]);
+    const login = await request(app.getHttpServer()).post('/api/v1/auth/login')
+      .set('Origin', 'http://localhost:3000').send({ email, password: 'correct-password' }).expect(204);
+    const cookies: unknown = login.headers['set-cookie'];
+    const cookie = Array.isArray(cookies) && typeof cookies[0] === 'string' ? cookies[0].split(';')[0] ?? '' : '';
+    const get = (query: string, tenant = organizationId, actorCookie = cookie) => request(app.getHttpServer())
+      .get(`/api/v1/sales?branchId=${branchId}&${query}`).set('Cookie', actorCookie).set('X-Organization-Id', tenant);
+    const first = await get('from=2025-01-01&to=2025-01-01&limit=2').expect(200);
+    expect(first.body.items.map((row: { id: string }) => row.id)).toEqual(ids.slice(0, 2));
+    expect(first.body.items).toMatchObject([{ status: 'CONFIRMED', total: '0.00', currency: 'ARS' }, { status: 'CANCELLED' }]);
+    const second = await get(`from=2025-01-01&to=2025-01-01&limit=2&cursor=${encodeURIComponent(first.body.nextCursor as string)}`).expect(200);
+    expect(second.body.items.map((row: { id: string }) => row.id)).toEqual(ids.slice(2));
+    expect(second.body.nextCursor).toBeNull();
+    expect((await get('from=2025-01-02&to=2025-01-02').expect(200)).body.items).toEqual([]);
+    expect((await get('status=CANCELLED&from=2025-01-01&to=2025-01-01').expect(200)).body.items.map((row: { id: string }) => row.id)).toEqual([ids[1]]);
+    expect((await get('', otherOrganizationId).expect(200)).body.items).toEqual([]);
+    for (const actorEmail of ['sales-cashier@example.com', 'sales-unscoped-admin@example.com']) {
+      const actor = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin', 'http://localhost:3000')
+        .send({ email: actorEmail, password: 'correct-password' }).expect(204);
+      const actorCookies: unknown = actor.headers['set-cookie'];
+      const actorCookie = Array.isArray(actorCookies) && typeof actorCookies[0] === 'string'
+        ? actorCookies[0].split(';')[0] ?? '' : '';
+      expect((await get('', organizationId, actorCookie).expect(200)).body.items).toEqual([]);
+    }
+    for (const invalid of ['status=DRAFT', 'from=2025-02-30', 'from=2025-02-01&to=2025-01-01',
+      'limit=101', 'cursor=bad', 'unexpected=1']) await get(invalid).expect(400);
+    await request(app.getHttpServer()).get(`/api/v1/sales?branchId=${branchId}`).expect(401);
+  });
+  it('groups authorized net sales by local day across selected branches', async () => {
+    const secondBranch = randomUUID();
+    await pool.query("INSERT INTO branches(id,organization_id,name) VALUES ($1,$2,'Secundaria')", [secondBranch, organizationId]);
+    const secondRegister = randomUUID(), secondDevice = randomUUID(), secondSession = randomUUID();
+    await pool.query("INSERT INTO cash_registers(id,organization_id,branch_id,name) VALUES ($1,$2,$3,'Caja secundaria')", [secondRegister, organizationId, secondBranch]);
+    await pool.query("INSERT INTO devices(id,organization_id,branch_id,authorized_by_user_id,authorized_at,status) VALUES ($1,$2,$3,$4,now(),'ACTIVE')", [secondDevice, organizationId, secondBranch, ownerId]);
+    await pool.query("INSERT INTO cash_sessions(id,organization_id,branch_id,cash_register_id,owner_user_id,device_id,origin,status,opening_cash,expected_cash,currency_code) VALUES ($1,$2,$3,$4,$5,$6,'ONLINE','OPEN',0,0,'ARS')", [secondSession, organizationId, secondBranch, secondRegister, ownerId, secondDevice]);
+    const firstSale = randomUUID(), secondSale = randomUUID(), cancelled = randomUUID();
+    for (const [id, branch, session, device, total] of [
+      [firstSale, branchId, sessionId, deviceId, '15.25'],
+      [secondSale, secondBranch, secondSession, secondDevice, '9.75'],
+      [cancelled, secondBranch, secondSession, secondDevice, '80.00'],
+    ]) await pool.query(`INSERT INTO sales(id,organization_id,branch_id,cash_session_id,device_id,actor_user_id,session_owner_user_id,client_operation_id,currency_code,subtotal,discount,total,receipt_snapshot,confirmed_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$6,$1,'ARS',$7,0,$7,'{}','2024-12-29T02:30:00Z')`, [id, organizationId, branch, session, device, ownerId, total]);
+    await pool.query("INSERT INTO sale_cancellations(id,organization_id,sale_id,branch_id,actor_user_id,reason) VALUES ($1,$2,$3,$4,$5,'Prueba')", [randomUUID(), organizationId, cancelled, secondBranch, ownerId]);
+    await pool.query("UPDATE organizations SET timezone='America/Argentina/Buenos_Aires' WHERE id=$1", [organizationId]);
+    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin','http://localhost:3000').send({ email, password: 'correct-password' }).expect(204);
+    const cookie = (login.headers['set-cookie'] as string[] | undefined)?.[0]?.split(';')[0] ?? '';
+    const get = (suffix: string, tenant = organizationId) => request(app.getHttpServer()).get(`/api/v1/sales/trends?from=2024-12-28&to=2024-12-30${suffix}`).set('Cookie',cookie).set('X-Organization-Id',tenant);
+    expect((await get('').expect(200)).body.points).toEqual([
+      { date: '2024-12-28', amount: '25.00', count: 2 },
+      { date: '2024-12-29', amount: '0.00', count: 0 },
+      { date: '2024-12-30', amount: '0.00', count: 0 },
+    ]);
+    expect((await get(`&branchId=${branchId}`).expect(200)).body.points[0]).toEqual({ date: '2024-12-28', amount: '15.25', count: 1 });
+    const hourly = await request(app.getHttpServer())
+      .get('/api/v1/sales/trends?from=2024-12-28&to=2024-12-28&groupBy=HOUR')
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(hourly.body.points).toHaveLength(24);
+    expect(hourly.body.points[0]).toEqual({ date: '2024-12-28', hour: 0, amount: '0.00', count: 0 });
+    expect(hourly.body.points[23]).toEqual({ date: '2024-12-28', hour: 23, amount: '25.00', count: 2 });
+    const history = await request(app.getHttpServer())
+      .get('/api/v1/sales?from=2024-12-28&to=2024-12-28')
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(history.body.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: firstSale, branchId }),
+      expect.objectContaining({ id: secondSale, branchId: secondBranch }),
+    ]));
+    expect((await get('',otherOrganizationId).expect(200)).body.points[0]).toEqual({ date: '2024-12-28', amount: '0.00', count: 0 });
+    const adminLogin = await request(app.getHttpServer()).post('/api/v1/auth/login')
+      .set('Origin','http://localhost:3000').send({ email: 'sales-unscoped-admin@example.com', password: 'correct-password' }).expect(204);
+    const adminCookie = (adminLogin.headers['set-cookie'] as string[] | undefined)?.[0]?.split(';')[0] ?? '';
+    expect((await request(app.getHttpServer()).get('/api/v1/sales/trends?from=2024-12-28&to=2024-12-28')
+      .set('Cookie', adminCookie).set('X-Organization-Id', organizationId).expect(200)).body.points[0])
+      .toEqual({ date: '2024-12-28', amount: '0.00', count: 0 });
+    for (const invalid of ['&from=2025-02-30', '&to=2025-02-01', '&branchId=bad']) await get(invalid).expect(400);
+  });
+  it('D03 protects detail and every receipt representation with real tenant, branch, role and session scope', async () => {
+    const ownSession = randomUUID(), ownRegister = randomUUID(), ownSale = randomUUID(), foreignSessionSale = randomUUID();
+    const scopedAdmin = await createGlobalUser(pool, { email: 'receipt-admin@example.com', password: 'correct-password' });
+    const employee = await createGlobalUser(pool, { email: 'receipt-employee@example.com', password: 'correct-password' });
+    const adminMembership = randomUUID(), employeeMembership = randomUUID();
+    await pool.query("INSERT INTO memberships(id,organization_id,user_id,role) VALUES ($1,$2,$3,'ADMIN'),($4,$2,$5,'EMPLOYEE')",
+      [adminMembership, organizationId, scopedAdmin.id, employeeMembership, employee.id]);
+    await pool.query('INSERT INTO membership_branches(organization_id,membership_id,branch_id) VALUES ($1,$2,$3),($1,$4,$3)',
+      [organizationId, adminMembership, branchId, employeeMembership]);
+    await pool.query("INSERT INTO cash_registers(id,organization_id,branch_id,name) VALUES ($1,$2,$3,'Caja del cajero')",
+      [ownRegister, organizationId, branchId]);
+    await pool.query(`INSERT INTO cash_sessions(id,organization_id,branch_id,cash_register_id,owner_user_id,device_id,
+      origin,status,opening_cash,expected_cash,currency_code) VALUES ($1,$2,$3,$4,$5,$6,'ONLINE','OPEN',0,0,'ARS')`,
+      [ownSession, organizationId, branchId, ownRegister, cashierId, deviceId]);
+    const snapshot = { label: 'Comprobante no fiscal', total: '0.00', currency: 'ARS' };
+    for (const value of [{ id: ownSale, session: ownSession, owner: cashierId },
+      { id: foreignSessionSale, session: sessionId, owner: ownerId }]) {
+      await pool.query(`INSERT INTO sales(id,organization_id,branch_id,cash_session_id,device_id,actor_user_id,
+        session_owner_user_id,client_operation_id,currency_code,subtotal,discount,total,receipt_snapshot)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$1,'ARS',0,0,0,$8::jsonb)`,
+        [value.id, organizationId, branchId, value.session, deviceId, cashierId, value.owner, JSON.stringify(snapshot)]);
+    }
+    const loginCookie = async (loginEmail: string) => {
+      const response = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin', 'http://localhost:3000')
+        .send({ email: loginEmail, password: 'correct-password' }).expect(204);
+      const cookies: unknown = response.headers['set-cookie'];
+      return Array.isArray(cookies) && typeof cookies[0] === 'string' ? cookies[0].split(';')[0] ?? '' : '';
+    };
+    const ownerCookie = await loginCookie(email), cashierCookie = await loginCookie('sales-cashier@example.com');
+    const adminCookie = await loginCookie('receipt-admin@example.com'), employeeCookie = await loginCookie('receipt-employee@example.com');
+    const unscopedCookie = await loginCookie('sales-unscoped-admin@example.com');
+    for (const allowed of [ownerCookie, adminCookie, cashierCookie]) {
+      const history = await request(app.getHttpServer()).get(`/api/v1/sales?branchId=${branchId}&limit=100`)
+        .set('Cookie', allowed).set('X-Organization-Id', organizationId).expect(200);
+      expect(history.body.items.map((row: { id: string }) => row.id)).toContain(ownSale);
+      if (allowed === cashierCookie) expect(history.body.items.map((row: { id: string }) => row.id)).not.toContain(foreignSessionSale);
+    }
+    for (const denied of [employeeCookie, unscopedCookie]) {
+      const history = await request(app.getHttpServer()).get(`/api/v1/sales?branchId=${branchId}`)
+        .set('Cookie', denied).set('X-Organization-Id', organizationId).expect(200);
+      expect(history.body.items).toEqual([]);
+    }
+    for (const suffix of ['', '/receipt', '/receipt/print', '/receipt.pdf']) {
+      for (const allowed of [ownerCookie, adminCookie, cashierCookie]) {
+        const result = await request(app.getHttpServer()).get(`/api/v1/sales/${ownSale}${suffix}`)
+          .set('Cookie', allowed).set('X-Organization-Id', organizationId).expect(200);
+        if (suffix === '/receipt') expect(result.body.saleId).toBe(ownSale);
+      }
+      for (const denied of [employeeCookie, unscopedCookie]) {
+        const result = await request(app.getHttpServer()).get(`/api/v1/sales/${ownSale}${suffix}`)
+          .set('Cookie', denied).set('X-Organization-Id', organizationId).expect(404);
+        expect(JSON.stringify(result.body)).not.toContain('Comprobante no fiscal');
+      }
+      await request(app.getHttpServer()).get(`/api/v1/sales/${ownSale}${suffix}`)
+        .set('Cookie', ownerCookie).set('X-Organization-Id', otherOrganizationId).expect(404);
+      await request(app.getHttpServer()).get(`/api/v1/sales/${ownSale}${suffix}`)
+        .set('X-Organization-Id', organizationId).expect(401);
+      // Knowing an ID, or being the recorded actor, cannot grant another session's data.
+      await request(app.getHttpServer()).get(`/api/v1/sales/${foreignSessionSale}${suffix}`)
+        .set('Cookie', cashierCookie).set('X-Organization-Id', organizationId).expect(404);
+    }
+    await pool.query("UPDATE memberships SET status='REVOKED',revoked_at=now() WHERE id=$1", [cashierMembershipId]);
+    await request(app.getHttpServer()).get(`/api/v1/sales?branchId=${branchId}`)
+      .set('Cookie', cashierCookie).set('X-Organization-Id', organizationId).expect(403);
+    for (const suffix of ['', '/receipt', '/receipt/print', '/receipt.pdf']) {
+      await request(app.getHttpServer()).get(`/api/v1/sales/${ownSale}${suffix}`)
+        .set('Cookie', cashierCookie).set('X-Organization-Id', organizationId).expect(403);
+    }
+    expect((await pool.query('SELECT receipt_snapshot FROM sales WHERE id=$1', [ownSale])).rows[0]?.receipt_snapshot).toEqual(snapshot);
+  });
+
+
+
 });

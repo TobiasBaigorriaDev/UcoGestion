@@ -1,18 +1,21 @@
 import { randomUUID } from 'node:crypto';
+import { saleCodeFromId, saleCodeLookup } from '@uconext/shared';
 
 import { BadRequestException, Body, ConflictException, Controller, ForbiddenException,
   Get, Header, NotFoundException, Param, Post, Query, Req, StreamableFile,
   UnauthorizedException } from '@nestjs/common';
 import { z } from 'zod';
+import { ApiQuery } from '@nestjs/swagger';
 
 import { IdempotencyKeyReusedError, IdempotencyReplayForbiddenError,
   IdempotencyReplayPendingError } from '../../core/idempotency/idempotency.service.js';
 import { requireIdempotencyKey } from '../../core/validation/idempotency-key.js';
+import { parseCursorPageQuery } from '../../core/validation/pagination.js';
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
 import type { TenantTransactionContext } from '../../database/tenant-transaction.js';
 import { CashSessionDeviceError } from '../cash/index.js';
 import { SaleCancellationError, SaleCashRefundError } from './sale-cancellation-preparation.js';
-import { ConcurrentSaleModificationError, SaleCheckoutContextError,
+import { AmbiguousSaleCodeError, ConcurrentSaleModificationError, SaleCheckoutContextError,
   SalesOperationsService } from './sales-operations.service.js';
 import { PriceChangedError } from './sales-price-acceptance.js';
 import { SaleCustomerError, SalePaymentError, SaleSessionBranchError,
@@ -42,11 +45,69 @@ interface SalesRequest {
 export class SalesController {
   constructor(private readonly sales: SalesOperationsService) {}
 
+  @Get()
+  @ApiQuery({ name: 'branchId', required: false, type: String })
+  @ApiQuery({ name: 'from', required: false, type: String, description: 'Fecha local inicial inclusiva (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'to', required: false, type: String, description: 'Fecha local final inclusiva (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'status', required: false, enum: ['CONFIRMED', 'CANCELLED'] })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async list(@Req() request: SalesRequest, @Query() raw: Record<string, unknown>) {
+    let page;
+    try {
+      page = parseCursorPageQuery(raw, ['branchId', 'from', 'to', 'status']);
+      if (page.filters.branchId && !z.uuid().safeParse(page.filters.branchId).success) throw new Error();
+      for (const date of [page.filters.from, page.filters.to]) {
+        if (date !== undefined && !z.iso.date().safeParse(date).success) throw new Error();
+      }
+      if (page.filters.from && page.filters.to && page.filters.from > page.filters.to) throw new Error();
+      if (page.filters.status && !['CONFIRMED', 'CANCELLED'].includes(page.filters.status)) throw new Error();
+      if (page.cursor && !z.iso.datetime({ offset: true }).safeParse(page.cursor.sortValue).success) throw new Error();
+    } catch { throw new BadRequestException({ code: 'SALE_HISTORY_QUERY_INVALID',
+      title: 'Filtros inválidos', detail: 'Revisá las fechas, el estado y la paginación del historial.' }); }
+    return this.sales.list(this.context(request), { branchId: page.filters.branchId,
+      limit: page.limit, cursor: page.cursor, from: page.filters.from, to: page.filters.to,
+      status: page.filters.status });
+  }
+
   @Get('checkout-context')
   async checkoutContext(@Req() request: SalesRequest, @Query('branchId') branchId?: string) {
     if (!branchId || !z.uuid().safeParse(branchId).success) throw new BadRequestException();
     try { return await this.sales.checkoutContext(this.context(request), branchId); }
     catch (error) { this.handleError(error); }
+  }
+
+  @Get('trends')
+  @ApiQuery({ name: 'from', required: true, type: String })
+  @ApiQuery({ name: 'to', required: true, type: String })
+  @ApiQuery({ name: 'branchId', required: false, type: String })
+  @ApiQuery({ name: 'groupBy', required: false, enum: ['DAY', 'HOUR'] })
+  async trends(@Req() request: SalesRequest, @Query() raw: Record<string, unknown>) {
+    const parsed = z.strictObject({ from: z.iso.date(), to: z.iso.date(),
+      branchId: z.uuid().optional(), groupBy: z.enum(['DAY', 'HOUR']).optional() }).safeParse(raw);
+    if (!parsed.success || parsed.data.from > parsed.data.to ||
+      (Date.parse(parsed.data.to) - Date.parse(parsed.data.from)) / 86_400_000 > 30 ||
+      (parsed.data.groupBy === 'HOUR' && parsed.data.from !== parsed.data.to)) {
+      throw new BadRequestException({ code: 'SALE_TRENDS_QUERY_INVALID',
+        title: 'Período inválido', detail: 'Elegí un período de hasta 31 días y una sucursal válida.' });
+    }
+    return this.sales.trends(this.context(request), parsed.data);
+  }
+
+  @Get('by-code/:code')
+  async byCode(@Req() request: SalesRequest, @Param('code') code: string) {
+    if (!saleCodeLookup(code)) throw new BadRequestException({ code: 'SALE_CODE_INVALID',
+      title: 'Código inválido', detail: 'Ingresá los 12 caracteres del comprobante.' });
+    try {
+      const id = await this.sales.resolveSaleCode(this.context(request), code);
+      if (!id) throw new NotFoundException({ code: 'SALE_NOT_FOUND', title: 'Venta no encontrada',
+        detail: 'No encontramos esa venta entre las ventas que podés consultar.' });
+      return { id };
+    } catch (error) {
+      if (error instanceof AmbiguousSaleCodeError) throw new ConflictException({
+        code: 'SALE_CODE_AMBIGUOUS', title: 'Código repetido', detail: error.message });
+      throw error;
+    }
   }
 
   @Get(':id')
@@ -82,7 +143,7 @@ export class SalesController {
     if (!receipt) throw new NotFoundException();
     const bytes = await renderReceiptPdf(receipt);
     return new StreamableFile(Buffer.from(bytes), { type: 'application/pdf',
-      disposition: `attachment; filename="comprobante-${id}.pdf"` });
+      disposition: `attachment; filename="comprobante-${saleCodeFromId(id)}.pdf"` });
   }
 
   @Post('quote')

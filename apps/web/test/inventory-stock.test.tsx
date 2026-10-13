@@ -7,6 +7,17 @@ import { InventoryStock } from '../src/features/inventory/inventory-stock.js';
 
 afterEach(cleanup);
 
+it('shows stock and minimum without redundant decimals and preserves actual fractions', () => {
+  render(<InventoryStock organizationId="o1" role="CASHIER" branches={branches} branchId="b1"
+    stocks={[{ ...stocks[0]!, quantity: '29.000', threshold: '30.000' },
+      { ...stocks[1]!, baseUnit: 'FRACTIONAL', quantity: '12345678901234567.250', threshold: '0.500' }]}
+    nextCursor={null} onBranchChange={vi.fn()} onReload={vi.fn()} />);
+  expect(screen.getByText('Disponible: 29 unidades')).toBeTruthy();
+  expect(screen.getByText('Mínimo: 30')).toBeTruthy();
+  expect(screen.getByText('Disponible: 12345678901234567,25 unidades fraccionables')).toBeTruthy();
+  expect(screen.getByText('Mínimo: 0,5')).toBeTruthy();
+});
+
 const stocks = [{ branchId: 'b1', itemId: 'i1', itemName: 'Yerba', baseUnit: 'UNIT' as const,
   quantity: '2.000', threshold: '2.000', lowStock: true },
 { branchId: 'b1', itemId: 'i2', itemName: 'Aceite', baseUnit: 'UNIT' as const,

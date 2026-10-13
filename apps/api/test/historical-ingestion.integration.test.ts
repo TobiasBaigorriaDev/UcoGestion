@@ -17,6 +17,9 @@ import { recordRevocationCheckpoint, revocationCheckpointPayload, readRevocation
 import { HistoricalDeliveryIngestion } from '../src/modules/offline-sync/historical-delivery-ingestion.js';
 import { CashCloseService } from '../src/modules/cash/cash-close.service.js';
 import { OfflineSaleImporter } from '../src/modules/sales/index.js';
+import { SalesOperationsService } from '../src/modules/sales/sales-operations.service.js';
+import { renderReceiptHtml, renderReceiptPdf } from '../src/modules/sales/receipt-renderer.js';
+import { pdfText } from './receipt-pdf-text.js';
 import { ExceptionalClosePreparation } from '../src/modules/cash/exceptional-close-preparation.js';
 import { UnrecoverableDeviceService } from '../src/modules/offline-sync/unrecoverable-device.service.js';
 import { ExceptionalCashCloseService } from '../src/modules/cash/exceptional-cash-close.service.js';
@@ -137,6 +140,17 @@ describe('historical delivery transactions',()=>{
     await pool.query("UPDATE branches SET status='ACTIVE' WHERE id=$1",[branch]);
     await pool.query("UPDATE cash_registers SET status='ACTIVE' WHERE id=$1",[register]);
     await pool.query("UPDATE payment_method_settings SET enabled=true WHERE organization_id=$1 AND method='CASH'",[org]);
+    const reads = new SalesOperationsService(transactions);
+    expect(await reads.receipt(context(), id)).toBeNull();
+    await pool.query("UPDATE memberships SET status='ACTIVE',revoked_at=NULL WHERE organization_id=$1",[org]);
+    const receipt = await reads.receipt(context(), id);
+    expect(receipt?.saleId).toBe(id);
+    expect((await reads.detail(context(), id))?.id).toBe(id);
+    if (!receipt) throw new Error('Missing authorized imported receipt');
+    expect(renderReceiptHtml(receipt)).toContain(`ID de venta: ${receipt.saleCode}`);
+    expect(await pdfText(await renderReceiptPdf(receipt))).toContain(`ID de venta: ${receipt.saleCode}`);
+    expect((await pool.query('SELECT receipt_snapshot FROM sales WHERE id=$1', [id])).rows[0]?.receipt_snapshot).toEqual(persisted?.receipt_snapshot);
+    await pool.query("UPDATE memberships SET status='REVOKED',revoked_at=now() WHERE organization_id=$1",[org]);
     operation=sale;exact=bytes;
   });
 

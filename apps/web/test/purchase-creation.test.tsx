@@ -32,7 +32,8 @@ it('T173A limits EMPLOYEE to reception and accepts zero unit cost', async () => 
 
 it('T173A confirms a zero-total OWNER purchase as PAID without payment', async () => {
   const confirm = vi.fn().mockResolvedValue({ id: 'purchase', status: 'PAID', total: '0.00', currency: 'ARS' });
-  render(<PurchaseCreation {...props} role="OWNER" onConfirm={confirm} />);
+  const onConfirmed = vi.fn();
+  render(<PurchaseCreation {...props} role="OWNER" onConfirm={confirm} onConfirmed={onConfirmed} />);
   await userEvent.selectOptions(screen.getByLabelText('Proveedor'), 'supplier');
   await userEvent.selectOptions(screen.getByLabelText('Producto'), 'item');
   await userEvent.type(screen.getByLabelText('Cantidad'), '1');
@@ -40,6 +41,7 @@ it('T173A confirms a zero-total OWNER purchase as PAID without payment', async (
   await userEvent.selectOptions(screen.getByLabelText('Estado al confirmar'), 'PAID');
   await userEvent.click(screen.getByRole('button', { name: 'Confirmar compra' }));
   expect(confirm).toHaveBeenCalledWith('org', expect.any(Object), 'PAID', null, expect.any(String));
+  expect(onConfirmed).toHaveBeenCalledOnce();
 });
 
 it('T173A requires a session for cash and keeps lines after a payment error', async () => {

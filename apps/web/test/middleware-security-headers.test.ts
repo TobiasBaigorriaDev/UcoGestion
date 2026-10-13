@@ -91,3 +91,4 @@ describe('Web security headers and CSP middleware', () => {
     expect(response.headers.get('location')).toBe('https://app.example.test/some-path');
   });
 });
+

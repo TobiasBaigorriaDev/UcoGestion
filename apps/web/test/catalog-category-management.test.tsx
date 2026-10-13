@@ -8,6 +8,45 @@ import { ApiProblemError } from '../src/lib/api/client.js';
 
 afterEach(cleanup);
 
+it('shows only icon artwork and offers searchable grocery and kiosk choices', async () => {
+  const user = userEvent.setup();
+  const create = vi.fn().mockResolvedValue({ id: 'soda', name: 'Bebidas', icon: 'cup-soda', status: 'ACTIVE', version: 1 });
+  render(<CatalogCategoryManagement organizationId="org" categories={[]} onCreate={create} onReload={vi.fn()} />);
+  expect(screen.queryByText(/^Icono:/)).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Elegir icono' }));
+  expect(screen.queryByText('Carpeta general')).toBeNull();
+  expect(screen.queryByText('Golosinas')).toBeNull();
+  expect(screen.getAllByRole('radio')).toHaveLength(52);
+  for (const name of ['Gaseosas y refrescos', 'Helados', 'Galletitas', 'Limpieza', 'Cigarrillos', 'Pilas']) {
+    expect(screen.getByRole('radio', { name })).toBeTruthy();
+    expect(screen.queryByText(name)).toBeNull();
+  }
+  await user.type(screen.getByRole('searchbox', { name: 'Buscar icono' }), 'gaseosas');
+  await user.click(screen.getByRole('radio', { name: 'Gaseosas y refrescos' }));
+  await user.type(screen.getByRole('textbox', { name: 'Nombre de la categoría' }), 'Bebidas');
+  await user.click(screen.getByRole('button', { name: 'Crear categoría' }));
+  expect(create).toHaveBeenCalledWith('org', 'Bebidas', 'cup-soda');
+});
+
+it('selects a library icon on creation and allows replacing it on edit', async () => {
+  const user = userEvent.setup();
+  const create = vi.fn().mockResolvedValue({ id: 'coffee', name: 'Café', icon: 'coffee', status: 'ACTIVE', version: 1 });
+  const update = vi.fn().mockResolvedValue({ id: 'coffee', name: 'Café', icon: 'apple', status: 'ACTIVE', version: 2 });
+  render(<CatalogCategoryManagement organizationId="org" categories={[{ id: 'coffee', name: 'Café', icon: 'coffee', status: 'ACTIVE', version: 1 }]}
+    onCreate={create} onUpdate={update} onReload={vi.fn()} />);
+  await user.type(screen.getByRole('textbox', { name: 'Nombre de la categoría' }), 'Café');
+  await user.click(screen.getByRole('button', { name: 'Elegir icono' }));
+  await user.type(screen.getByRole('searchbox', { name: 'Buscar icono' }), 'cafe');
+  await user.click(screen.getByRole('radio', { name: 'Café y bebidas calientes' }));
+  await user.click(screen.getByRole('button', { name: 'Crear categoría' }));
+  expect(create).toHaveBeenCalledWith('org', 'Café', 'coffee');
+  await user.click(screen.getByRole('button', { name: 'Editar Café' }));
+  await user.click(screen.getByRole('button', { name: 'Cambiar icono de Café' }));
+  await user.click(screen.getByRole('radio', { name: 'Frutas' }));
+  await user.click(screen.getByRole('button', { name: 'Guardar nombre de Café' }));
+  expect(update).toHaveBeenCalledWith('org', 'coffee', 1, 'Café', 'apple');
+});
+
 it('T236I: edits the selected category using its version and reloads after success', async () => {
   const update = vi.fn().mockResolvedValue({ id: 'active-id', name: 'Bebidas', status: 'ACTIVE', version: 2 });
   const reload = vi.fn();

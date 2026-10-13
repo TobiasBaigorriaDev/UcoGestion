@@ -4,13 +4,16 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { categoryIconSchema } from '@uconext/shared';
 
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiClient, ApiProblemError } from '../../lib/api/client';
 import styles from '../identity/management.module.css';
 import categoryStyles from './catalog-category-management.module.css';
+import { CategoryIconPicker } from './components/category-icon-picker';
+import { CategoryIcon } from './components/category-icon';
 
-const categorySchema = z.object({ id: z.string(), name: z.string(), status: z.enum(['ACTIVE', 'INACTIVE']), version: z.number().int().positive() });
+const categorySchema = z.object({ id: z.string(), name: z.string(), status: z.enum(['ACTIVE', 'INACTIVE']), version: z.number().int().positive(), icon: categoryIconSchema.optional() });
 const categoriesSchema = z.object({ categories: z.array(categorySchema) });
 const nameSchema = z.object({ name: z.string().trim().min(1).max(255) });
 export type ManagedCategory = z.infer<typeof categorySchema>;
@@ -28,9 +31,9 @@ export async function loadManagedCategories(organizationId: string): Promise<Man
   return result.categories;
 }
 
-export async function createCatalogCategory(organizationId: string, name: string): Promise<ManagedCategory> {
+export async function createCatalogCategory(organizationId: string, name: string, icon?: string | null): Promise<ManagedCategory> {
   const result = await client.request('/catalog/categories', { method: 'POST', organizationId,
-    csrfToken: await csrfToken(), idempotencyKey: crypto.randomUUID(), body: { name }, parse: (value) => categorySchema.parse(value) });
+    csrfToken: await csrfToken(), idempotencyKey: crypto.randomUUID(), body: { name, ...(icon === undefined ? {} : { icon }) }, parse: (value) => categorySchema.parse(value) });
   if (!result) throw new Error('Empty category response');
   return result;
 }
@@ -42,9 +45,9 @@ export async function changeCatalogCategoryStatus(organizationId: string, id: st
   return result;
 }
 
-export async function updateCatalogCategory(organizationId: string, id: string, version: number, name: string): Promise<ManagedCategory> {
+export async function updateCatalogCategory(organizationId: string, id: string, version: number, name: string, icon?: string | null): Promise<ManagedCategory> {
   const result = await client.request(`/catalog/categories/${encodeURIComponent(id)}`, { method: 'PATCH', organizationId,
-    csrfToken: await csrfToken(), ifMatch: String(version), idempotencyKey: crypto.randomUUID(), body: { name }, parse: (value) => categorySchema.parse(value) });
+    csrfToken: await csrfToken(), ifMatch: String(version), idempotencyKey: crypto.randomUUID(), body: { name, ...(icon === undefined ? {} : { icon }) }, parse: (value) => categorySchema.parse(value) });
   if (!result) throw new Error('Empty category response');
   return result;
 }
@@ -88,6 +91,8 @@ export function CatalogCategoryManagement({ organizationId, categories, onReload
   const [message, setMessage] = useState('');
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [newIcon, setNewIcon] = useState<string | null>(null);
+  const [editIcon, setEditIcon] = useState<string | null>(null);
   const editForm = useForm<z.infer<typeof nameSchema>>({ resolver: zodResolver(nameSchema), defaultValues: { name: '' } });
   const { register, handleSubmit, reset, formState: { errors } } = useForm<z.infer<typeof nameSchema>>({
     resolver: zodResolver(nameSchema), defaultValues: { name: '' },
@@ -104,32 +109,38 @@ export function CatalogCategoryManagement({ organizationId, categories, onReload
     <ErrorSummary error={error} />
     {message ? <p role="status">{message}</p> : null}
     <form className={styles.panel} onSubmit={handleSubmit(({ name }) => perform(async () => {
-      await onCreate(organizationId, name.trim()); reset();
+      if (!expense && newIcon !== null) await onCreate(organizationId, name.trim(), newIcon);
+      else await onCreate(organizationId, name.trim());
+      reset(); setNewIcon(null);
     }, 'Categoría creada.'))} noValidate>
       <h2>Nueva categoría</h2>
       <label htmlFor="category-name">Nombre de la categoría</label>
       <input id="category-name" aria-invalid={!!errors.name} {...register('name')} />
       {errors.name ? <p role="alert">Ingresá un nombre de hasta 255 caracteres.</p> : null}
+      {!expense ? <CategoryIconPicker value={newIcon} onChange={setNewIcon} disabled={busy} /> : null}
       <button type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Crear categoría'}</button>
     </form>
     <section className={styles.panel} aria-labelledby="category-list-heading">
       <h2 id="category-list-heading">Categorías de la organización</h2>
       {categories.length === 0 ? <p>No hay categorías. Podés crear una arriba.</p> : <ul className={styles.rows}>{categories.map((category) => <li className={styles.row} key={category.id}>
-        <div className={styles.memberTitle}><strong>{category.name}</strong><span>{category.status === 'ACTIVE' ? 'Activa' : 'Inactiva'}</span></div>
+        <div className={styles.memberTitle}>{!expense ? <CategoryIcon icon={category.icon} /> : null}<strong>{category.name}</strong><span>{category.status === 'ACTIVE' ? 'Activa' : 'Inactiva'}</span></div>
         <div className={styles.actions}>
-          {!expense ? <button type="button" disabled={busy} onClick={() => { setEditingId(category.id); setConfirmId(null); editForm.reset({ name: category.name }); }}>Editar {category.name}</button> : null}
+          {!expense ? <button type="button" disabled={busy} onClick={() => { setEditingId(category.id); setConfirmId(null); setEditIcon(category.icon ?? null); editForm.reset({ name: category.name }); }}>Editar {category.name}</button> : null}
           <button type="button" disabled={busy} onClick={() => void perform(() => onChangeStatus(organizationId, category.id, category.version, category.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'), category.status === 'ACTIVE' ? 'Categoría desactivada.' : 'Categoría activada.')}>
             {category.status === 'ACTIVE' ? `Desactivar ${category.name}` : `Activar ${category.name}`}
           </button>
           <button type="button" disabled={busy} onClick={() => setConfirmId(category.id)}>Eliminar {category.name}</button>
         </div>
         {editingId === category.id ? <form className={categoryStyles.editor} onSubmit={editForm.handleSubmit(({ name }) => perform(async () => {
-          await onUpdate(organizationId, category.id, category.version, name.trim()); setEditingId(null);
+          if (editIcon !== (category.icon ?? null)) await onUpdate(organizationId, category.id, category.version, name.trim(), editIcon);
+          else await onUpdate(organizationId, category.id, category.version, name.trim());
+          setEditingId(null);
         }, 'Categoría actualizada.'))} noValidate>
           <label htmlFor={`category-edit-${category.id}`}>Nuevo nombre de {category.name}</label>
           <input id={`category-edit-${category.id}`} autoFocus aria-invalid={!!editForm.formState.errors.name}
             aria-describedby={editForm.formState.errors.name ? `category-edit-error-${category.id}` : undefined} {...editForm.register('name')} />
           {editForm.formState.errors.name ? <p id={`category-edit-error-${category.id}`} role="alert">Ingresá un nombre de hasta 255 caracteres.</p> : null}
+          <CategoryIconPicker value={editIcon} onChange={setEditIcon} disabled={busy} label={`Cambiar icono de ${category.name}`} />
           <div className={styles.actions}>
             <button type="submit" disabled={busy}>Guardar nombre de {category.name}</button>
             <button type="button" disabled={busy} onClick={() => setEditingId(null)}>Cancelar edición de {category.name}</button>

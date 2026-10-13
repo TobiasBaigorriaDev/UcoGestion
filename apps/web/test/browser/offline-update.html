@@ -24,8 +24,8 @@ window.migration = {
   async snapshot() {
     const db = new Dexie(name); await db.open();
     try { return { version: db.verno,
-      records: (await db.table('records').toArray()).map(row => Array.from(row.ciphertext)),
-      pending: (await db.table('delivery_queue').toArray()).map(row => Array.from(row.envelope)) }; }
+      records: (await db.table('records').toArray()).map(row => ({ id: row.id, ciphertext: Array.from(row.ciphertext) })),
+      pending: (await db.table('delivery_queue').toArray()).map(row => ({ id: row.id, envelope: Array.from(row.envelope) })) }; }
     finally { db.close(); }
   },
   migrate: prepareOfflineUpdate,

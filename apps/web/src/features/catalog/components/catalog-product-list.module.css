@@ -1,0 +1,18 @@
+.groups { display: grid; gap: 1rem; min-width: 0; }
+.group { min-width: 0; }
+.heading { margin: 0; }
+.group .folderButton { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr) auto 1.25rem; align-items: center; gap: .75rem; width: 100%; min-height: 64px; padding: 1rem; border: 1px solid var(--color-primary); border-radius: var(--radius-sm); background: var(--color-primary-soft); color: var(--color-primary); text-align: start; }
+.group .folderButton:not(:disabled):hover { background: var(--color-surface); color: var(--color-primary); }
+.title { font-size: var(--text-title); font-weight: 750; line-height: 1.4; overflow-wrap: anywhere; }
+.count { font-size: var(--text-label); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.folderIcon { width: 1.5rem; height: 1.5rem; }
+.chevron { width: 1.25rem; height: 1.25rem; }
+.folderButton[aria-expanded='true'] .chevron { transform: rotate(90deg); }
+.contents { padding: .5rem .75rem .25rem 1rem; margin-inline-start: 1rem; border-inline-start: 2px solid var(--color-divider); }
+@media (max-width: 30rem) {
+  .group .folderButton { grid-template-columns: 1.5rem minmax(0, 1fr) 1.25rem; column-gap: .625rem; row-gap: .25rem; }
+  .folderIcon { grid-row: 1 / 3; }
+  .count { grid-column: 2; grid-row: 2; }
+  .chevron { grid-column: 3; grid-row: 1 / 3; }
+  .contents { padding-inline: .5rem 0; margin-inline-start: .5rem; }
+}

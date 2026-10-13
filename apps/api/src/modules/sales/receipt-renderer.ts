@@ -1,8 +1,8 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 
-import type { SaleConfirmationResult } from './sales-operations.service.js';
+import type { SaleReceiptView } from './sales-operations.service.js';
 
-type Receipt = SaleConfirmationResult['receipt'];
+type Receipt = SaleReceiptView;
 const record = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown> : {};
@@ -16,7 +16,7 @@ export const receiptLines = (receipt: Receipt): string[] => {
   const customer = record(receipt.customer);
   const items = Array.isArray(receipt.items) ? receipt.items : [];
   const payments = Array.isArray(receipt.payments) ? receipt.payments : [];
-  return [field(receipt.label), field(organization.name), field(branch.name),
+  return [field(receipt.label), `ID de venta: ${receipt.saleCode}`, field(organization.name), field(branch.name),
     ...(customer.name ? [`Cliente: ${field(customer.name)}`] : []),
     ...items.map((value) => { const item = record(value);
       return `${field(item.name)} | ${field(item.quantity)} ${field(item.unit)} | ${field(item.lineTotal)}`; }),

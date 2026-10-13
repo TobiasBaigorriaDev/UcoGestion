@@ -9,6 +9,7 @@ import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
 import { confirmPurchase, type PurchaseConfirmationInput, type PurchasePaymentInput } from './purchases-api';
 import styles from '../identity/management.module.css';
+import workspaceStyles from './purchase-workspace.module.css';
 
 const lineSchema = z.object({ itemId: z.string().min(1), quantity: z.string().regex(/^(?:0|[1-9]\d{0,16})(?:\.\d{1,3})?$/),
   unitCost: z.string().regex(/^(?:0|[1-9]\d{0,17})\.\d{2}$/) });
@@ -25,6 +26,7 @@ export interface PurchaseCreationProps {
   paymentMethods: readonly string[];
   sessions: readonly { id: string; deviceId: string; registerName: string }[];
   onConfirm?: typeof confirmPurchase;
+  onConfirmed?: () => void;
 }
 
 function totalCents(lines: readonly { quantity: string; unitCost: string }[]): bigint | null {
@@ -41,7 +43,7 @@ function totalCents(lines: readonly { quantity: string; unitCost: string }[]): b
 }
 
 export function PurchaseCreation({ organizationId, branchId, role, suppliers, items,
-  paymentMethods, sessions, onConfirm = confirmPurchase }: PurchaseCreationProps) {
+  paymentMethods, sessions, onConfirm = confirmPurchase, onConfirmed }: PurchaseCreationProps) {
   const [error, setError] = useState<ApiProblemError | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const key = useRef<string | null>(null);
@@ -84,6 +86,7 @@ export function PurchaseCreation({ organizationId, branchId, role, suppliers, it
     try {
       const result = await onConfirm(organizationId, input, paid ? 'PAID' : 'PENDING_PAYMENT', payment, operationKey);
       setSuccess(`${result.status === 'PAID' ? 'Compra pagada' : 'Recepción pendiente de pago'} · ${result.id}`);
+      onConfirmed?.();
       key.current = null;
       form.reset();
     } catch (cause) {
@@ -93,7 +96,7 @@ export function PurchaseCreation({ organizationId, branchId, role, suppliers, it
   }
 
   return <section className={styles.page} aria-labelledby="purchase-create-heading">
-    <header className={styles.heading}><h1 id="purchase-create-heading">Nueva compra</h1>
+    <header className={styles.heading}><h2 id="purchase-create-heading">Nueva compra</h2>
       <p>{role === 'EMPLOYEE' ? 'Registrá la mercadería recibida. El pago quedará pendiente.'
         : 'Registrá productos, costos y el estado inicial del pago.'}</p></header>
     <form className={styles.panel} onSubmit={form.handleSubmit((data) => void submit(data))}>
@@ -107,7 +110,7 @@ export function PurchaseCreation({ organizationId, branchId, role, suppliers, it
             <option value="PAID">Pagada</option></select></div> : null}</div>
       <h2>Productos recibidos</h2>
       {fields.map((field, index) => <fieldset key={field.id}><legend>Producto {index + 1}</legend>
-        <div className={styles.fields}><div><label htmlFor={`purchase-item-${index}`}>Producto</label>
+        <div className={`${styles.fields} ${workspaceStyles.lineFields}`}><div className={workspaceStyles.itemField}><label htmlFor={`purchase-item-${index}`}>Producto</label>
           <select id={`purchase-item-${index}`} {...form.register(`lines.${index}.itemId`)}>
             <option value="">Seleccioná un producto</option>
             {items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>

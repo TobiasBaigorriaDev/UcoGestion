@@ -2,7 +2,34 @@
 
 > D01 y D02 incorporadas por autorización explícita del usuario. Especificación cerrada para planificación y build.
 
+> **D03 — ID de venta recuperable: APROBADO (2026-10-11).** El usuario aprobó explícitamente D03 con «apruebo» después de revisar la propuesta. RF-317–RF-323 y sus criterios de aceptación quedan incorporados a la especificación cerrada; plan §22 habilita su implementación con TDD.
+
+> **D05 — ID de venta corto (2026-10-11):** el usuario pidió que el comprobante muestre un ID fácil de ingresar y eligió 12 caracteres. Esta decisión actualiza la presentación y consulta de D03; el UUID de RF-267 sigue siendo la identidad técnica inmutable.
+
 ## Resumen
+
+> **D04 — Historial de ventas (2026-10-11):** autorizado por la solicitud explícita del usuario de incorporar historial en Ventas, conservando consulta por ID y permisos existentes.
+
+- **RF-324**: Ventas debe listar las ventas confirmadas y anuladas de la sucursal activa, con estado, fecha de confirmación, total, moneda histórica e ID, de más reciente a más antigua.
+- **RF-325**: El historial debe permitir filtros por fechas locales inclusivas de la organización y estado, con paginación por cursor y tamaño acotado; fechas iguales seleccionan un día completo.
+- **RF-326**: Seleccionar una venta del historial debe reutilizar el detalle y comprobante actuales; la consulta por ID permanece disponible.
+- **RF-327**: El historial debe revalidar en backend membresía, organización, rol y sucursal. CASHIER solo consulta ventas cuyo actor y titular de sesión sean ese usuario; EMPLOYEE no accede. No se amplían roles ni permisos.
+- **RF-328**: Cambiar organización o sucursal debe reiniciar filtros, página y selección. Carga, error, ausencia de ventas y paginación deben ser accesibles; una anulación actualiza el historial.
+
+> **D06 — Tendencias y filtros en Ventas (2026-10-11):** solicitado explícitamente por el usuario. Amplía la consulta de Ventas, sin modificar documentos ni operaciones comerciales.
+
+- **RF-332**: Ventas debe ofrecer filtros Hoy, Esta semana y Este mes según la zona horaria de la organización, además del rango de fechas existente. Semana comienza el lunes; los límites locales son inclusivos.
+- **RF-333**: OWNER y ADMIN pueden ver el historial y las tendencias de una sucursal autorizada o todas las autorizadas. CASHIER solo ve ventas propias de sus sesiones, también al elegir todas. EMPLOYEE no accede.
+- **RF-334**: Ventas debe mostrar gráficos de líneas para el dinero neto y la cantidad de ventas confirmadas según el período y las sucursales elegidos. Un día se agrupa por hora local; semana y mes, por día local. Las anuladas se excluyen de ambos valores; los intervalos transcurridos sin ventas se muestran en cero. En períodos en curso, los gráficos y sus tablas terminan en la hora o fecha actual de la organización y no muestran intervalos futuros. Importes se transportan como strings decimales y se presentan con la moneda de la organización.
+- **RF-335**: Los gráficos deben exponer fecha y valor como texto accesible, además de la barra visual, con estados de carga, error y reintento. Se admiten hasta 31 días en gráficos; un rango mayor conserva el historial y explica el límite.
+
+> **D07 — Historial y tendencias en Compras (2026-10-11):** solicitado explícitamente por el usuario para la sección Compras.
+
+- **RF-336**: OWNER y ADMIN deben consultar compras históricas de sus sucursales autorizadas, ordenadas de más reciente a más antigua, con proveedor, productos y cantidades históricos, fecha y hora de confirmación, estado, importe y moneda histórica. CASHIER y EMPLOYEE no acceden a este historial financiero; la consulta individual de recepciones propias de EMPLOYEE conserva sus permisos actuales.
+- **RF-337**: El historial admite Hoy, Esta semana, Este mes y rango local inclusivo, estado, sucursal autorizada o todas las autorizadas, y paginación por cursor acotada. Cambios de organización, sucursal o filtros reinician página y selección.
+- **RF-338**: Compras muestra gráficos de líneas de gasto neto y cantidad de compras no anuladas por hora local para un día y por día local para hasta 31 días. Los intervalos transcurridos sin compras muestran cero; los futuros no se muestran. Las anuladas permanecen en el historial, pero no suman en los gráficos.
+- **RF-339**: Seleccionar una compra reutiliza el detalle y las acciones actuales. Confirmar, pagar o anular actualiza listado, detalle y gráficos sin crear otra mutación ni alterar documentos históricos.
+- **RF-340**: Historial y gráficos revalidan membresía, rol, organización y alcance de sucursal en backend bajo transacción tenant y RLS; muestran carga, error, reintento y vacío accesibles, con valores textuales junto a los gráficos.
 
 Plataforma web/PWA multi-tenant para gestionar la operación comercial de pequeñas y medianas empresas, con POS online y continuidad offline limitada.
 
@@ -59,6 +86,12 @@ Plataforma web/PWA multi-tenant para gestionar la operación comercial de peque�
 - **RF-49**: Cuando CASHIER o EMPLOYEE intente modificar precios o aplicar descuentos, el sistema debe rechazar la acción.
 - **RF-50**: Cuando se gestione una categoría de catálogo o gasto, el sistema debe mantener ambos dominios separados y aislados por organización.
 - **RF-51**: Cuando se cree un producto o servicio, el sistema debe permitir que no tenga categoría de catálogo.
+
+Presentación de categorías — ampliación solicitada explícitamente el 2026-10-12:
+
+- **RF-341**: Al crear o editar una categoría de catálogo, OWNER/ADMIN debe poder seleccionar un icono de una biblioteca SVG con variedad para almacenes y kioscos y búsqueda; las opciones y su vista previa muestran solo el icono, con nombres accesibles sin texto visible, conservando una carpeta por defecto sin selección obligatoria. Categorías de gasto conservan su flujo actual.
+- **RF-342**: El icono seleccionado debe persistirse como identificador permitido de presentación, acompañar el nombre de categoría en gestión/consulta y usarse en las carpetas de Productos. Categorías anteriores y Sin categoría deben conservar el icono de carpeta; no cambia snapshots históricos ni autorización.
+- **RF-343**: Los cambios de icono deben reutilizar contratos de creación/edición, versiones, idempotencia, transacción tenant y auditoría. Deben rechazarse identificadores fuera de la biblioteca; no se aceptan SVG, HTML, URLs o archivos suministrados por el usuario.
 - **RF-52**: Cuando se registre un gasto, el sistema debe exigir una categoría de gasto activa y válida.
 - **RF-53**: Cuando una categoría tenga referencias históricas, el sistema debe impedir su eliminación física y permitir su desactivación.
 - **RF-54**: Cuando un producto, servicio o categoría no tenga referencias operativas, el sistema debe permitir su eliminación física para corregir un alta errónea. La operación queda sujeta además a las restricciones de preservación offline de RF-302–RF-306.
@@ -326,6 +359,50 @@ Plataforma web/PWA multi-tenant para gestionar la operación comercial de peque�
 - **RF-314**: Cuando el canal de entrega funcione después de logout o revocación, el sistema debe limitarlo a sobres ya sellados y respuestas ACK mínimas autenticadas; no debe conceder lectura de datos tenant, recibos, catálogo, estado comercial detallado ni creación de nuevas operaciones.
 - **RF-315**: Cuando un sobre no obtenga un ACK definitivo verificable por un fallo recuperable, rotación de claves o respuesta incierta, el sistema debe conservarlo byte por byte y reintentar de forma idempotente. Las claves servidor necesarias no pueden retirarse mientras puedan existir sobres pendientes cifrados con ellas.
 - **RF-316**: Cuando se reciba un ACK definitivo verificable, el sistema debe eliminar o inutilizar atómicamente el sobre de transporte y los datos locales ya innecesarios. Un rechazo de seguridad definitivo debe impedir reintentos de negocio y conservar solo la evidencia local mínima que permita informar el estado sin revelar el payload a otra identidad.
+
+## D03 — ID de venta recuperable — aprobado
+
+Una persona debe poder obtener el ID visible de una venta en su confirmación o comprobante y usarlo en «Ventas → Consultar venta». El ID visible de 12 caracteres se deriva del UUID global e inmutable de RF-267; la referencia local de RF-268 se conserva como dato adicional. El código puede repetirse excepcionalmente, por lo que la consulta debe detectar la ambigüedad y nunca seleccionar una venta arbitraria. Los roles, sucursales y operaciones offline permitidas no cambian.
+
+### Requisitos D03
+
+- **RF-317**: Cuando se confirme una venta online o se complete su confirmación local offline, el sistema debe mostrar el ID visible, estable y de 12 caracteres con la etiqueta «ID de venta» en la pantalla de confirmación, sin depender de abrir, imprimir o descargar el comprobante. Una operación fallida o de resultado incierto no debe presentarse como confirmada.
+- **RF-318**: Cuando se muestre el ID en la confirmación, el sistema debe ofrecer «Copiar ID de venta», operable por teclado y con foco visible, copiar exactamente el ID sin etiquetas ni referencias adicionales y anunciar el resultado de forma accesible. Si el portapapeles no está disponible o rechaza la copia, debe conservar el ID seleccionable e informar cómo copiarlo manualmente sin alterar la venta.
+- **RF-319**: Cuando se visualice, imprima, descargue o regenere un comprobante no fiscal de una venta online u offline, el sistema debe incluir de forma legible el mismo ID visible de 12 caracteres bajo «ID de venta», también en el PDF generado online. La disponibilidad local del comprobante offline no debe depender de sincronizar. La regeneración de comprobantes anteriores debe derivar el código del UUID original sin editar sus snapshots históricos.
+- **RF-320**: Cuando se reintente una confirmación, se pierda una respuesta, se recargue una operación offline pendiente o se sincronice/reintente su entrega, el sistema debe conservar el ID original en confirmación, comprobante y consulta, sin crear otra venta ni duplicar pagos, movimientos o auditoría. La sincronización conserva además la referencia local de RF-268.
+- **RF-321**: Cuando se abra «Ventas → Consultar venta», el sistema debe pedir los 12 caracteres del ID que aparece en el comprobante no fiscal y aceptar también UUIDs completos anteriores. La ayuda debe estar asociada al campo; un código válido debe recuperar una única venta dentro del alcance autorizado, un código ambiguo debe indicar el historial como alternativa y uno inválido debe producir un error accesible y accionable.
+- **RF-322**: Cuando se consulte una venta o cualquiera de las versiones de su comprobante mediante el ID visible, el sistema debe revalidar autenticación, membresía, rol, organización y alcance de sucursal/sesión existentes en backend. Conocer el ID no concede acceso; las solicitudes fuera del alcance no deben entregar datos de la venta ni del comprobante. La presentación offline se limita a los datos de la identidad autorizada y desbloqueada y nunca utiliza el canal de entrega opaca para leerlos.
+- **RF-323**: Cuando una venta esté confirmada localmente y pendiente de sincronización, el sistema debe distinguir esa condición en la confirmación y comprobante y explicar que la consulta online estará disponible después de la sincronización aceptada por el servidor. El ID no cambia al quedar disponible; esto no agrega una consulta administrativa offline ni prolonga acceso tras logout, cambio de identidad o revocación conocida.
+
+### Criterios de aceptación D03
+
+| Caso | Resultado verificable | RF |
+| --- | --- | --- |
+| D03-A01 | Confirmar online, incluida venta de total cero: ID de 12 caracteres visible, copiable y derivado de la venta persistida; dos ventas consecutivas muestran sus respectivos IDs. | RF-317, RF-318 |
+| D03-A02 | Copiar con teclado: portapapeles contiene solo el ID y se anuncia el éxito. Permiso denegado/API ausente: ID seleccionable, aviso accionable y venta intacta. | RF-318 |
+| D03-A03 | Comprobante digital, HTML imprimible y PDF contienen el mismo ID; reimpresión/regeneración de una venta anterior sin ID en el snapshot lo conserva sin UPDATE del historial. | RF-319 |
+| D03-A04 | Confirmar offline con identidad desbloqueada: ID y comprobante local disponibles sin red, copia accesible y estado pendiente; fallo del sellado dual no confirma ni muestra éxito. | RF-317–RF-320, RF-323 |
+| D03-A05 | Respuesta online perdida, doble clic y reintento idéntico: mismo ID/resultado, una venta y un único conjunto de efectos; clave reutilizada con payload diferente conserva el conflicto existente. | RF-320 |
+| D03-A06 | Pérdida/retorno de red, reload, cierre/reapertura de pestaña con desbloqueo, ACK perdido y entrega repetida: mismos ID y referencia local, sobre pendiente intacto hasta ACK definitivo y efectos únicos en PostgreSQL. | RF-319, RF-320, RF-323 |
+| D03-A07 | Desde confirmación/comprobante, pegar el ID en consulta tras sync: recuperar esa venta. Ayuda vinculada al campo; entrada inválida, ausencia de venta y pendiente aún no recibida producen estados accesibles sin simular éxito. | RF-321, RF-323 |
+| D03-A08 | ID real conocido de otro tenant, sucursal no asignada o sesión no permitida a CASHIER: detalle, JSON de comprobante, impresión y PDF no entregan datos. OWNER/ADMIN/CASHIER autorizados conservan sus permisos; EMPLOYEE, sesión/membresía revocada y petición sin autenticación son denegados. | RF-322 |
+| D03-A09 | Grant expirado, revocación, logout y cambio de identidad: no nuevas ventas ni exposición de ID/comprobante ajenos; entrega legítima pendiente conserva ID y solo devuelve ACK mínimo. | RF-320, RF-322, RF-323 |
+| D03-A10 | Actualización PWA/migración local con pendientes v1/v2 y conflictos de stock/sesión o datos tardíos legítimos: preservar IDs, sobres y referencias sin reescritura ni duplicados; mantener estados y restricciones existentes. | RF-320, RF-322, RF-323 |
+| D03-A11 | Móvil, tablet y escritorio: ID visible legible sin recorte, foco visible, labels, anuncios de copia y errores verificados por teclado y axe. Fallos de impresión/descarga no revierten ni duplican ventas. | RF-317–RF-319, RF-321 |
+
+**Puerta SDD:** aprobación explícita recibida el 2026-10-11 para D03 en este spec y plan §22. Generar tareas atómicas con `sdd-build`, ejecutar RED → GREEN → refactor y verificar la trazabilidad con `sdd-check`. Estos criterios son pruebas requeridas, no evidencia de pruebas ejecutadas.
+
+## D05 — ID de venta corto — solicitud explícita del usuario
+
+- **RF-329**: El ID visible usa exactamente 12 caracteres alfanuméricos en mayúsculas, omite letras fáciles de confundir y se calcula de forma determinista a partir del UUID original. Debe coincidir en confirmación, historial, comprobante digital, HTML, PDF y comprobante local offline, incluso después de sincronizar o regenerar uno anterior.
+- **RF-330**: La consulta acepta el ID visible sin distinguir mayúsculas y tolera espacios, guiones y las equivalencias habituales `O/0` e `I/L/1`. El UUID completo existente sigue funcionando. La resolución se limita a ventas autorizadas y, si hay más de una coincidencia autorizada, informa el conflicto sin elegir una venta ni revelar ventas fuera del alcance.
+- **RF-331**: El UUID técnico, la clave idempotente, la referencia local offline, los snapshots y las operaciones pendientes mantienen sus valores originales. Mostrar o consultar el código corto no crea una venta, un movimiento ni un evento de auditoría nuevo.
+
+| Caso | Resultado verificable | RF |
+| --- | --- | --- |
+| D05-A01 | Una venta online y otra offline exhiben el mismo código de 12 caracteres en confirmación, copia y cada versión de su comprobante; tras sincronizar, el código no cambia. | RF-329, RF-331 |
+| D05-A02 | Ingresar el código en Ventas recupera una sola venta autorizada; variantes de escritura y UUID anterior funcionan; entradas inválidas y códigos ambiguos tienen mensajes accionables. | RF-330 |
+| D05-A03 | Un código conocido de otro tenant, sucursal o sesión no entrega datos; la reimpresión histórica deriva el código sin UPDATE de snapshots. | RF-329–RF-331 |
 
 ## Fuera de alcance
 

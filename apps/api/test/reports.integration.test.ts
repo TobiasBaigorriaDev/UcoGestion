@@ -350,6 +350,18 @@ describe('read-only report datasets', () => {
     }
   });
 
+  it('includes inactive expense category names under tenant authorization', async () => {
+    const categoryId = randomUUID(), expense = randomUUID();
+    await ownerPool.query(`INSERT INTO expense_categories (id, organization_id, name, status)
+      VALUES ($1,$2,'Luz histórica','INACTIVE')`, [categoryId, organizationId]);
+    await ownerPool.query(`INSERT INTO expenses (id,organization_id,branch_id,expense_category_id,
+      actor_user_id,concept,amount,method,currency_code) VALUES ($1,$2,$3,$4,$5,'Boleta',15,'TRANSFER','ARS')`,
+    [expense, organizationId, branchId, categoryId, ownerId]);
+    const result = await reports.list(context(), 'expenses', { limit: 100 });
+    expect(result.items).toContainEqual(expect.objectContaining({ id: expense, categoryId, categoryName: 'Luz histórica' }));
+    await expect(reports.list(context(ownerId, otherOrganizationId), 'expenses', { limit: 100 })).rejects.toMatchObject({ code: 'REPORT_ACCESS_FORBIDDEN' });
+  });
+
   it('queues PDF export and revalidates actor scope in the outbox worker', async () => {
     const uploaded = new Map<string, Uint8Array>();
     const storage: ObjectStoragePort = {

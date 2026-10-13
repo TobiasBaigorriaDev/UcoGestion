@@ -33,6 +33,7 @@ async (page) => {
   await page.evaluate(() => window.posHarness.fault(false));
   const sale = await page.evaluate(id => window.posHarness.confirm(id), draft.id);
   check(sale.id === draft.id && sale.operationId === draft.id && sale.change === '5.00', 'Stable sale identity or cash change missing');
+  check((await page.evaluate(id => window.posHarness.receipt(id), sale.id)).saleId === draft.id, 'Local receipt lost original UUID');
   const original = await page.evaluate(() => window.posHarness.state());
   check(original.pending.length === 2 && original.head.sequence === '2', 'Sale was not sealed with its payment');
   await page.evaluate(() => window.posHarness.lock());
@@ -45,6 +46,7 @@ async (page) => {
   check(JSON.stringify(resumed.pending) === JSON.stringify(original.pending), 'Reload changed pending envelope bytes');
   const replay = await page.evaluate(id => window.posHarness.confirm(id), draft.id);
   check(JSON.stringify(replay) === JSON.stringify(sale), 'Reload changed replay identity or reference');
+  check((await page.evaluate(id => window.posHarness.receipt(id), sale.id)).saleId === draft.id, 'Reload changed receipt UUID');
   check(JSON.stringify((await page.evaluate(() => window.posHarness.state())).pending) === JSON.stringify(original.pending), 'Replay appended another sale');
   check(await page.evaluate(async () => { try { await window.posHarness.open(); return false; } catch { return true; } }), 'Reload forgot open session');
   await page.evaluate(version => window.posHarness.initialize(version), version);

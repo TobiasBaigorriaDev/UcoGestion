@@ -1778,6 +1778,74 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
       },
     },
     "/api/v1/purchases": {
+      "get": {
+        "operationId": "PurchasesController_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "number",
+            },
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "enum": [
+                "PAID",
+                "PENDING_PAYMENT",
+                "CANCELLED",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "description": "Fecha local final inclusiva (YYYY-MM-DD)",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "description": "Fecha local inicial inclusiva (YYYY-MM-DD)",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Purchases",
+        ],
+      },
       "post": {
         "operationId": "PurchasesController_confirmPending",
         "parameters": [],
@@ -1797,6 +1865,57 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         "parameters": [],
         "responses": {
           "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Purchases",
+        ],
+      },
+    },
+    "/api/v1/purchases/trends": {
+      "get": {
+        "operationId": "PurchasesController_trends",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "groupBy",
+            "required": false,
+            "schema": {
+              "enum": [
+                "DAY",
+                "HOUR",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
             "description": "",
           },
         },
@@ -2023,11 +2142,101 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
       },
     },
     "/api/v1/sales": {
+      "get": {
+        "operationId": "SalesController_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "number",
+            },
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "enum": [
+                "CONFIRMED",
+                "CANCELLED",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "description": "Fecha local final inclusiva (YYYY-MM-DD)",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "description": "Fecha local inicial inclusiva (YYYY-MM-DD)",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Sales",
+        ],
+      },
       "post": {
         "operationId": "SalesController_confirm",
         "parameters": [],
         "responses": {
           "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Sales",
+        ],
+      },
+    },
+    "/api/v1/sales/by-code/{code}": {
+      "get": {
+        "operationId": "SalesController_byCode",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
             "description": "",
           },
         },
@@ -2065,6 +2274,57 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         "parameters": [],
         "responses": {
           "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "Sales",
+        ],
+      },
+    },
+    "/api/v1/sales/trends": {
+      "get": {
+        "operationId": "SalesController_trends",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "groupBy",
+            "required": false,
+            "schema": {
+              "enum": [
+                "DAY",
+                "HOUR",
+              ],
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "branchId",
+            "required": false,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
             "description": "",
           },
         },

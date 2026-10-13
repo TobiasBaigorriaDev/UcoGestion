@@ -94,6 +94,7 @@ window.posHarness = {
   confirm: draftId => pos.confirmSale(actor, { draftId, payments: [{ method: 'CASH', appliedAmount: '10.00', receivedAmount: '15.00' }] }),
   fault: enabled => { envelopeFault = enabled; },
   catalog: () => pos.catalog(actor),
+  receipt: id => pos.receipt(actor, id),
   lock: () => keys.lock(),
   expire: () => sessionStorage.setItem('pos-test-clock',String(JSON.parse(localStorage.getItem('pos-public-fixture')).exp*1000)),
   rewind: () => sessionStorage.setItem('pos-test-clock',String(JSON.parse(localStorage.getItem('pos-public-fixture')).iat*1000+1000)),

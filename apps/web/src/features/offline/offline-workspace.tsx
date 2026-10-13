@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { loadOfflineSetup, type OfflineSetup } from '../../offline/offline-setup';
 import { OfflineSettings } from './offline-settings';
+import { OfflinePosWorkspace } from './offline-pos-workspace';
 
 export function OfflineWorkspace({ organizationId, branchId, role }: {
   organizationId: string; branchId: string; role: 'OWNER' | 'ADMIN' | 'CASHIER' | 'EMPLOYEE';
@@ -22,5 +23,6 @@ export function OfflineWorkspace({ organizationId, branchId, role }: {
   if (failed) return <section><h1>POS sin conexión</h1><p role="alert">No pudimos validar este equipo. Conectate e iniciá sesión nuevamente. Si aún no está autorizado, pedile a OWNER o ADMIN que lo prepare.</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Reintentar validación online</button></section>;
   if (!setup) return <p role="status">Validando identidad y equipo online…</p>;
   return <OfflineSettings role={role} configured={setup.configured} deviceAuthorized={setup.deviceAuthorized} unlock={setup.unlock}
-    authorize={setup.authorize} refresh={setup.refresh} sync={setup.sync} lock={setup.lock} readStatus={setup.readStatus} />;
+    authorize={setup.authorize} refresh={setup.refresh} sync={setup.sync} lock={setup.lock} readStatus={setup.readStatus}
+    renderPos={status => <OfflinePosWorkspace controller={setup.pos} expired={status.expired} />} />;
 }

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -8,8 +8,32 @@ import { CatalogReadView } from '../src/features/catalog/catalog-read.js';
 afterEach(cleanup);
 
 const data = { items: [
-  { id: '1', name: 'Yerba', type: 'PRODUCT' as const, status: 'ACTIVE' as const, baseUnit: 'UNIT' as const, price: '123.00', priceVersion: 1, sku: null, barcode: null },
+  { id: '1', name: 'Yerba', type: 'PRODUCT' as const, status: 'ACTIVE' as const, trackInventory: true, baseUnit: 'UNIT' as const, price: '123.00', priceVersion: 1, sku: null, barcode: null },
 ], categories: [{ id: '2', name: 'Almacén' }] };
+
+it('groups the consultation catalog using category associations and includes uncategorized products', async () => {
+  render(<CatalogReadView role="CASHIER" data={{ ...data, items: [
+    { ...data.items[0]!, categoryId: '2' },
+    { ...data.items[0]!, id: 'bag', name: 'Bolsa', categoryId: null },
+  ] }} loadHistory={vi.fn()} />);
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Agrupar por categorías' }));
+  expect(screen.queryByText('Yerba')).toBeNull();
+  await userEvent.click(screen.getByRole('button', { name: 'Abrir categoría Almacén' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Abrir categoría Sin categoría' }));
+  expect(within(screen.getByRole('region', { name: 'Almacén' })).getByText('Yerba')).toBeTruthy();
+  expect(within(screen.getByRole('region', { name: 'Sin categoría' })).getByText('Bolsa')).toBeTruthy();
+  await userEvent.click(screen.getByRole('button', { name: 'Cerrar categoría Almacén' }));
+  expect(screen.queryByText('Yerba')).toBeNull();
+});
+
+it.each(['CASHIER', 'EMPLOYEE'] as const)('orders products in the consultation view for %s', async role => {
+  const user = userEvent.setup();
+  const { container } = render(<CatalogReadView role={role} data={{ ...data, items: [data.items[0]!,
+    { ...data.items[0]!, id: 'coffee', name: 'Café', price: '9.50' },
+  ] }} loadHistory={vi.fn()} />);
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Ordenar productos' }), 'price-desc');
+  expect(Array.from(container.querySelectorAll('summary > strong')).map(element => element.textContent)).toEqual(['Yerba', 'Café']);
+});
 
 it.each(['OWNER', 'ADMIN'] as const)('offers visible management actions for %s', (role) => {
   render(<CatalogReadView role={role} data={data} loadHistory={vi.fn()} />);
@@ -50,9 +74,13 @@ it('searches by name, SKU and barcode and recovers after no matches', async () =
 });
 
 it('shows active catalog prices and categories without edit controls', async () => {
-  const { container } = render(<CatalogReadView role="CASHIER" data={data} loadHistory={vi.fn()} />);
+  const { container } = render(<CatalogReadView role="CASHIER" data={data} branchName="Centro"
+    stocks={[{ branchId: 'branch-a', itemId: '1', itemName: 'Yerba', baseUnit: 'UNIT', quantity: '2.000', threshold: '3.000', lowStock: true }]}
+    loadHistory={vi.fn()} />);
   expect(screen.getByText('Yerba')).toBeTruthy();
   expect(screen.getByText('123.00')).toBeTruthy();
+  expect(screen.getByText('2 unidades')).toBeTruthy();
+  expect(screen.getByText('Stock bajo')).toBeTruthy();
   expect(screen.getByText('Almacén')).toBeTruthy();
   expect(screen.queryByRole('button', { name: /editar|borrar|desactivar/i })).toBeNull();
   expect((await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toEqual([]);

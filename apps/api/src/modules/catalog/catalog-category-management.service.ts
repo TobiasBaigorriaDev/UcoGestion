@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { PoolClient } from 'pg';
+import { categoryIconSchema } from '@uconext/shared';
 
 import {
   IdempotencyKeyReusedError,
@@ -19,6 +20,7 @@ import { PostgresCategoryServerReferencePredicate } from './category-server-refe
 
 export interface CatalogCategoryCreateInput {
   readonly name: string;
+  readonly icon?: string | null | undefined;
 }
 
 export interface CatalogCategoryResult {
@@ -26,12 +28,14 @@ export interface CatalogCategoryResult {
   readonly name: string;
   readonly status: 'ACTIVE' | 'INACTIVE';
   readonly version: number;
+  readonly icon?: string | null;
 }
 
 export type CatalogCategoryManagementErrorCode =
   | CategoryLifecycleErrorCode
   | 'CATALOG_CATEGORY_MANAGEMENT_FORBIDDEN'
   | 'CATALOG_CATEGORY_NAME_INVALID'
+  | 'CATALOG_CATEGORY_ICON_INVALID'
   | 'CATALOG_CATEGORY_NOT_FOUND'
   | 'IDEMPOTENCY_KEY_REUSED'
   | 'VERSION_CONFLICT';
@@ -61,6 +65,7 @@ export class CatalogCategoryManagementService {
   ): Promise<CatalogCategoryResult> {
     const id = randomUUID();
     const name = input.name.trim();
+    const icon = this.validateIcon(input.icon) ?? null;
     if (name.length === 0) {
       throw new CatalogCategoryManagementError(
         'CATALOG_CATEGORY_NAME_INVALID',
@@ -71,8 +76,8 @@ export class CatalogCategoryManagementService {
       context,
       {
         action: 'catalog_category.created',
-        after: { name, status: 'ACTIVE' },
-        afterAllowlist: ['name', 'status'],
+        after: { name, status: 'ACTIVE', ...(input.icon === undefined ? {} : { icon }) },
+        afterAllowlist: ['name', 'status', 'icon'],
         before: {},
         beforeAllowlist: [],
         branchId: null,
@@ -85,10 +90,10 @@ export class CatalogCategoryManagementService {
       async (client) => {
         await this.requireOwnerOrAdmin(client, context);
         const result = await client.query<CatalogCategoryResult>(
-          `INSERT INTO catalog_categories (id, organization_id, name, status)
-           VALUES ($1, $2, $3, 'ACTIVE')
-           RETURNING id, name, status, version::integer AS version`,
-          [id, context.organizationId, name],
+          `INSERT INTO catalog_categories (id, organization_id, name, status, icon)
+           VALUES ($1, $2, $3, 'ACTIVE', $4)
+           RETURNING id, name, icon, status, version::integer AS version`,
+          [id, context.organizationId, name, icon],
         );
         const row = result.rows.at(0);
         if (!row) throw new Error('La categoría de catálogo no fue persistida.');
@@ -108,26 +113,26 @@ export class CatalogCategoryManagementService {
           branchId: null,
           key: idempotencyKey,
           organizationId: context.organizationId,
-          payload: { name },
+          payload: { name, ...(input.icon === undefined ? {} : { icon }) },
           scope: 'catalog_category.create',
         }, async () => { await this.requireOwnerOrAdmin(client, context); });
         if (acquired.kind === 'replay') return { result: this.readStoredCategoryResult(acquired.response.body) };
         await this.lockOrganizationEpoch(client, context.organizationId);
         const inserted = await client.query<CatalogCategoryResult>(
-          `INSERT INTO catalog_categories (id, organization_id, name, status)
-           VALUES ($1, $2, $3, 'ACTIVE')
-           RETURNING id, name, status, version::integer AS version`,
-          [id, context.organizationId, name],
+          `INSERT INTO catalog_categories (id, organization_id, name, status, icon)
+           VALUES ($1, $2, $3, 'ACTIVE', $4)
+           RETURNING id, name, icon, status, version::integer AS version`,
+          [id, context.organizationId, name, icon],
         );
         const result = inserted.rows[0];
         if (!result) throw new Error('La categoría de catálogo no fue persistida.');
         await this.advanceOrganizationEpoch(client, context.organizationId);
         await idempotency.complete(acquired.record.id, { statusCode: 201, body: {
-          id: result.id, name: result.name, status: result.status, version: result.version,
+          id: result.id, name: result.name, status: result.status, version: result.version, icon: result.icon ?? null,
         } });
         return { result, auditEvent: {
-          action: 'catalog_category.created', after: { name, status: 'ACTIVE' },
-          afterAllowlist: ['name', 'status'], before: {}, beforeAllowlist: [], branchId: null,
+          action: 'catalog_category.created', after: { name, status: 'ACTIVE', ...(input.icon === undefined ? {} : { icon }) },
+          afterAllowlist: ['name', 'status', 'icon'], before: {}, beforeAllowlist: [], branchId: null,
           context: {}, contextAllowlist: [], entityId: id, entityType: 'catalog_category',
           operationId: id,
         } };
@@ -146,6 +151,7 @@ export class CatalogCategoryManagementService {
   ): Promise<CatalogCategoryResult> {
     this.validateInputs(expectedVersion, idempotencyKey);
     const name = input.name.trim();
+    const requestedIcon = this.validateIcon(input.icon);
     if (name.length === 0 || name.length > 255) {
       throw new CatalogCategoryManagementError('CATALOG_CATEGORY_NAME_INVALID',
         'Ingresá un nombre de categoría de hasta 255 caracteres.');
@@ -157,7 +163,7 @@ export class CatalogCategoryManagementService {
         const acquired = await idempotency.acquire({
           actorUserId: context.userId, authorizationClass: 'OWNER_OR_ADMIN', branchId: null,
           key: idempotencyKey, organizationId: context.organizationId,
-          payload: { categoryId, expectedVersion, name }, scope: 'catalog_category.update',
+          payload: { categoryId, expectedVersion, name, ...(requestedIcon === undefined ? {} : { icon: requestedIcon }) }, scope: 'catalog_category.update',
         }, async () => { await this.requireOwnerOrAdmin(client, context); });
         if (acquired.kind === 'replay') return { result: this.readStoredCategoryResult(acquired.response.body) };
         await this.lockOrganizationEpoch(client, context.organizationId);
@@ -167,20 +173,20 @@ export class CatalogCategoryManagementService {
             'La categoría fue modificada por otra operación.', category.version);
         }
         const updated = await client.query<CatalogCategoryResult>(
-          `UPDATE catalog_categories SET name = $1, version = version + 1, updated_at = now()
+          `UPDATE catalog_categories SET name = $1, icon = $4, version = version + 1, updated_at = now()
            WHERE organization_id = $2 AND id = $3
-           RETURNING id, name, status, version::integer AS version`,
-          [name, context.organizationId, categoryId],
+           RETURNING id, name, icon, status, version::integer AS version`,
+          [name, context.organizationId, categoryId, requestedIcon === undefined ? category.icon ?? null : requestedIcon],
         );
         const result = updated.rows[0];
         if (!result) throw new Error('La categoría de catálogo no pudo ser actualizada.');
         await this.advanceOrganizationEpoch(client, context.organizationId);
         await idempotency.complete(acquired.record.id, { statusCode: 200, body: {
-          id: result.id, name: result.name, status: result.status, version: result.version,
+          id: result.id, name: result.name, status: result.status, version: result.version, icon: result.icon ?? null,
         } });
         return { result, auditEvent: {
-          action: 'catalog_category.updated', before: { name: category.name }, beforeAllowlist: ['name'],
-          after: { name }, afterAllowlist: ['name'], branchId: null,
+          action: 'catalog_category.updated', before: { name: category.name, ...(requestedIcon === undefined ? {} : { icon: category.icon ?? null }) }, beforeAllowlist: ['name', 'icon'],
+          after: { name, ...(requestedIcon === undefined ? {} : { icon: requestedIcon }) }, afterAllowlist: ['name', 'icon'], branchId: null,
           context: { categoryId, version: result.version }, contextAllowlist: ['categoryId', 'version'],
           entityId: categoryId, entityType: 'catalog_category', operationId: randomUUID(),
         } };
@@ -239,7 +245,7 @@ export class CatalogCategoryManagementService {
           `UPDATE catalog_categories
            SET status = $1, version = version + 1, updated_at = now()
            WHERE organization_id = $2 AND id = $3
-           RETURNING id, name, status, version::integer AS version`,
+           RETURNING id, name, icon, status, version::integer AS version`,
           [targetStatus, context.organizationId, categoryId],
         );
         const result = updated.rows[0];
@@ -253,6 +259,7 @@ export class CatalogCategoryManagementService {
             name: result.name,
             status: result.status,
             version: result.version,
+            icon: result.icon ?? null,
           },
         });
 
@@ -402,7 +409,7 @@ export class CatalogCategoryManagementService {
     categoryId: string,
   ): Promise<CatalogCategoryResult> {
     const result = await client.query<CatalogCategoryResult>(
-      `SELECT id, name, status, version::integer AS version
+      `SELECT id, name, icon, status, version::integer AS version
        FROM catalog_categories
        WHERE organization_id = $1 AND id = $2
        FOR UPDATE`,
@@ -441,6 +448,13 @@ export class CatalogCategoryManagementService {
         !/^[\x21-\x7e]{1,128}$/.test(idempotencyKey)) {
       throw new CatalogCategoryManagementError('VERSION_CONFLICT', 'Versión o clave idempotente inválida.');
     }
+  }
+
+  private validateIcon(icon: string | null | undefined): string | null | undefined {
+    if (icon === undefined) return undefined;
+    const parsed = categoryIconSchema.safeParse(icon);
+    if (!parsed.success) throw new CatalogCategoryManagementError('CATALOG_CATEGORY_ICON_INVALID', 'Elegí un icono de la biblioteca.');
+    return parsed.data;
   }
 
   private readStoredCategoryResult(body: unknown): CatalogCategoryResult {

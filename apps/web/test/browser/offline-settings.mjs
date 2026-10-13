@@ -1,6 +1,8 @@
 /* global document, window */
 // eslint-disable-next-line @typescript-eslint/no-unused-expressions
 async page => {
+  const faults = []; page.on('pageerror', error => faults.push(error.message));
+  try {
   const check = (value, message) => { if (!value) throw new Error(message); };
   await page.context().setOffline(false);
   await page.goto('http://127.0.0.1:4179/apps/web/test/browser/offline-settings.html');
@@ -38,4 +40,6 @@ async page => {
   await page.getByRole('button', { name: 'Reintentar entrega del equipo' }).click();
   await page.getByText(/0 entregas pendientes en este equipo/).waitFor();
   return { passed: true, scenarios: ['real-pin', 'verified-identity-queue', 'keyboard', 'mobile', 'axe-with-contrast', 'recoverable-error-exact-bytes', 'signed-ack', 'retirement', 'generic-foreign-pending', 'generic-error-no-private-data', 'generic-signed-ack'] };
+
+  } catch (error) { throw new Error(`${error.message}; fixture errors: ${faults.join(' | ')}; UI: ${await page.locator('body').innerText()}`, { cause: error }); }
 }

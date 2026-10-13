@@ -279,12 +279,14 @@ export const catalogCategories = pgTable(
     id: uuid().primaryKey(),
     organizationId: uuid('organization_id').notNull().references(() => organizations.id),
     name: text().notNull(),
+    icon: text(),
     status: text().notNull().default('ACTIVE'),
     version: bigint({ mode: 'number' }).notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [unique('catalog_categories_organization_id_id_key').on(table.organizationId, table.id)],
+  (table) => [unique('catalog_categories_organization_id_id_key').on(table.organizationId, table.id),
+    check('catalog_categories_icon_check', sql`${table.icon} IS NULL OR ${table.icon} IN ('folder', 'apple', 'coffee', 'milk', 'wine', 'beef', 'fish', 'wheat', 'cake-slice', 'candy', 'shirt', 'pill', 'wrench', 'package', 'smartphone', 'leaf', 'shopping-basket', 'utensils', 'egg', 'flower-2', 'cup-soda', 'bottle-wine', 'beer', 'sandwich', 'pizza', 'popcorn', 'ice-cream-cone', 'cookie', 'croissant', 'banana', 'carrot', 'cherry', 'citrus', 'grape', 'salad', 'soup', 'drumstick', 'ham', 'cooking-pot', 'snowflake', 'spray-can', 'brush-cleaning', 'soap-dispenser-droplet', 'cigarette', 'newspaper', 'battery', 'ticket', 'shopping-bag', 'store', 'lollipop', 'nut', 'droplet')`)],
 );
 
 export const catalogItems = pgTable(

@@ -7,6 +7,7 @@ import { PosCart, type CartLine } from './pos-cart';
 import { PosCheckout } from './pos-checkout';
 import type { SaleConfirmation } from './sales-api';
 import { ReceiptActions } from './receipt-actions';
+import { SaleConfirmation as ConfirmedSale } from './sale-confirmation';
 import styles from './pos.module.css';
 
 export function PosOnline({ organizationId, branchId, role, items }: {
@@ -22,10 +23,9 @@ export function PosOnline({ organizationId, branchId, role, items }: {
   };
   return <section className={styles.page}>
     <header><h1>Venta online</h1><p>Agregá productos, revisá el total y confirmá el cobro.</p></header>
-    {sale ? <div className={styles.success} role="status"><strong>Venta confirmada</strong>
-      <p>Total: {sale.total}. El comprobante sigue disponible aunque falle la impresión.</p>
+    {sale ? <ConfirmedSale saleId={sale.id} total={sale.total}>
       <ReceiptActions organizationId={organizationId} saleId={sale.id} />
-    </div> : null}
+    </ConfirmedSale> : null}
     <div className={styles.layout}>
       <PosCart key={`cart-${revision}`} items={items} onLinesChange={setLines} />
       <PosCheckout key={`checkout-${revision}`} organizationId={organizationId} branchId={branchId} role={role}

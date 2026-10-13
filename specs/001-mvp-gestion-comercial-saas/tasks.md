@@ -400,3 +400,49 @@ Alcance exclusivo autorizado: RF-03, RF-21, RF-23, RF-29, RF-93, RF-116, RF-220 
 - [x] T236P [RF-50, RF-51, RF-152, RF-153, RF-154, RF-221, RF-269]: Permitir asignar, cambiar y retirar categoría en el alta y edición de ítems; completar contrato existente, permisos runtime y pruebas reales de persistencia, rol, tenant, atomicidad, versión, idempotencia y auditoría sin alterar snapshots históricos. [Evidencia](t236p-item-category-evidence.md).
 
 - [x] T236Q [RF-43, RF-44, RF-46, RF-152, RF-153, RF-154, RF-221]: Permitir precio de venta opcional al crear un ítem, con decimal exacto, versión histórica, moneda vigente y confirmación atómica junto al alta; verificar validación, replay, conflictos de clave, permisos y rollback real. [Evidencia](t236q-initial-price-evidence.md).
+
+## D03 — ID de venta recuperable — aprobado el 2026-10-11
+
+Bloque autorizado: D03-T01–D03-T05, secuencial con TDD, conforme a plan §22. Unidades de revisión: confirmación/copia, recibo autorizado, POS/comprobante local, consulta/sync y resiliencia/evidencia. No mezclarlas con cambios previos ni cerrar T236 con este bloque.
+
+- [x] D03-T01: Mostrar el ID estable en confirmación online y copiarlo con teclado, anuncio accesible y fallback manual; verificar venta cero, consecutivas y reintento incierto [RF-317, RF-318, RF-320, RF-152–RF-154].
+- [x] D03-T02: Derivar saleId desde la lectura autorizada y reproducirlo en JSON/HTML/PDF, incluidos snapshots anteriores sin reescritura; probar negativas tenant/sucursal/sesión con PostgreSQL y HTTP reales [RF-319, RF-322, RF-81–RF-83, RF-24, RF-267–RF-270]. Depende de D03-T01.
+- [x] D03-T03: Conectar motor POS offline existente a pantalla operable y comprobante HTML local imprimible/descargable, con ID, copia y estado pendiente; conservar sellado dual e identidad [RF-317–RF-320, RF-322, RF-323, RF-117, RF-309–RF-316]. Depende de D03-T02.
+- [x] D03-T04: Asociar ayuda al campo de consulta y acreditar recorrido confirmado/comprobante → ID → sincronización real → consulta autorizada, con negativos de scope y revocación [RF-320–RF-323, RF-02, RF-04, RF-24, RF-144, RF-151]. Depende de D03-T03.
+- [ ] D03-T05: Verificar IDs en resiliencia offline, actualización, expiración/revocación, ACK perdido y conflictos; ejecutar checks raíz, motores Playwright y sdd-check D03 con evidencia y límites [RF-317–RF-323, RF-275–RF-279, RF-309–RF-316]. Depende de D03-T04.
+
+
+## D04 — Historial de ventas — solicitud explícita 2026-10-11
+
+- [x] D06-T01 [RF-332–RF-335]: Agregar presets de período y filtro de sucursal a Ventas; mostrar tendencias diarias de dinero y cantidad con autorización tenant y pruebas de PostgreSQL/UI. Solicitud explícita 2026-10-11. [Evidencia](d06-sales-trends-evidence.md).
+
+- [x] D04-T01: Incorporar historial vertical con listado autorizado, filtros locales, cursor acotado y selección que reutiliza detalle/comprobante; verificar PostgreSQL real, contratos HTTP, UI, teclado y responsive [RF-324–RF-328, RF-02, RF-04, RF-24, RF-144, RF-151, RF-322]. Depende del detalle y comprobante existentes (D03-T04); no modifica ni cierra D03-T05.
+
+## D05 — ID visible corto — solicitud explícita 2026-10-11
+
+- [ ] D05-T01: Derivar el código de 12 caracteres desde el UUID y mostrarlo en confirmación, historial y comprobantes online/offline; conservar UUID, idempotencia, cola y snapshots [RF-329, RF-331].
+- [ ] D05-T02: Resolver el código bajo RLS y autorización, aceptar UUID anterior y responder explícitamente ante ambigüedad; acreditar aislamiento tenant/sucursal/sesión, reintentos y acceso offline posterior al sync [RF-330, RF-322]. Depende de D05-T01.
+- [ ] D05-T03: Verificar checks obligatorios, flujos de navegador/PWA y trazabilidad SDD; documentar resultados y límites sin cerrar D03-T05 por inferencia [RF-329–RF-331]. Depende de D05-T02.
+
+## D07 — Historial y tendencias de compras — solicitud explícita 2026-10-11
+
+- [x] D07-T01: Historial y tendencias de compras bajo RLS, alcance por sucursal y estados derivados [RF-336, RF-337, RF-338, RF-340]. [Evidencia](d07-purchase-history-evidence.md).
+- [x] D07-T02: Pantalla de historial, selección del detalle y gráficos accesibles con invalidación tras mutaciones [RF-336, RF-337, RF-338, RF-339, RF-340]. [Evidencia](d07-purchase-history-evidence.md).
+
+
+## Presentación de Productos — solicitud explícita 2026-10-12
+
+- [x] T236R [RF-40–RF-43, RF-57–RF-62, RF-145, RF-152–RF-154, RF-221]: Reunir stock y mínimos en el detalle del producto, retirar la pestaña Stock y mostrar inicialmente nombre, precio y stock. Reutilizar operaciones y permisos existentes con regresiones RED/GREEN y verificación Playwright/axe responsive. [Evidencia y limitación de la suite web adicional](t236r-product-stock-evidence.md).
+
+- [x] T236S [RF-46, RF-54–RF-63, RF-145, RF-152–RF-154, RF-160, RF-221]: Reunir acciones de catálogo dentro de Editar, ofrecer Cambiar stock aparte con ajuste vertical y retirar el alta duplicada conservando historial y compensaciones. [Evidencia RED/GREEN y navegador](t236s-product-actions-evidence.md).
+
+- [x] T236T [RF-40–RF-43, RF-145, RF-152–RF-154, RF-221]: Ordenar Productos por nombre, precio y stock en ambos sentidos, con búsqueda compatible, comparación decimal exacta y datos ausentes al final. [Evidencia RED/GREEN y navegador](t236t-product-sort-evidence.md).
+
+- [x] T236U [RF-50–RF-51, RF-145, RF-152–RF-154, RF-221–RF-222]: Agrupación opcional por categorías y Sin categoría, asociación en consulta autorizada y formulario de alta inmediatamente debajo de su botón. [Evidencia](t236u-product-category-groups-evidence.md).
+
+- [x] T236V [RF-50–RF-51, RF-145, RF-152–RF-154, RF-221–RF-222]: Distinguir categorías con fondo destacado y carpetas cerradas al activar agrupación; apertura independiente, teclado y Sin categoría. [Evidencia](t236v-category-folders-evidence.md).
+
+- [x] T236W [RF-341–RF-343, RF-50–RF-51, RF-221–RF-222]: Biblioteca SVG con búsqueda y selector de icono en alta/edición, persistencia versionada y visualización en categorías/carpetas; migración, autorización, idempotencia y auditoría verificadas. [Evidencia](t236w-category-icons-evidence.md).
+- [x] T236X [RF-341–RF-343, RF-221–RF-222]: Cuadrícula de iconos sin nombres visibles, variedad de almacén/kiosco, accesibilidad y ampliación compatible de biblioteca permitida. [Evidencia](t236x-kiosk-icons-evidence.md).
+- [x] T236Y [RF-146–RF-150, RF-152–RF-154, RF-286–RF-287]: Mejorar Reportes con Hoy, semana, mes y rango inclusivo; gráficos lineales completos y accesibles de hasta 31 días, conservación de listado y exportaciones autorizadas y verificación responsive. [Evidencia y fallo ajeno en la suite web ampliada](t236y-reports-ui-evidence.md).
+- [x] T236Z [RF-146–RF-150, RF-152–RF-154, RF-286–RF-287]: Comparar gastos por categoría en un mismo gráfico por moneda, con líneas de colores, nombres creados y tabla accesible; conservar períodos, netos, autorización y exportaciones. [Evidencia](t236z-expense-category-charts-evidence.md).

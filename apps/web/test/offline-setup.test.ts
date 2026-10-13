@@ -7,6 +7,15 @@ import { OfflineSetup } from '../src/offline/offline-setup';
 import { OfflineDatabase } from '../src/offline/offline-database';
 
 beforeEach(() => { vi.spyOn(Date, 'now').mockReturnValue(now); });
+it('D03 notifies mounted receipt views after manual synchronization', async () => {
+  const fixture = await authorizationFixture();
+  await fixture.authorization.install(actor, fixture.signed, fixture.jwt());
+  const setup = new OfflineSetup(fixture.db, actor, branch, true, true);
+  const changed = vi.fn();
+  window.addEventListener('uco:delivery-state', changed);
+  try { await setup.unlock('offline-pin'); await setup.sync(); expect(changed).toHaveBeenCalledTimes(1); }
+  finally { window.removeEventListener('uco:delivery-state', changed); setup.close(); }
+});
 afterEach(async () => { vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear(); await Dexie.delete(`uconext-offline-${org}-${device}`); await Dexie.delete(`uconext-offline-${org}-${branch}`); });
 it('T220A refresh requires complete opaque synchronization and installs a verified grant without changing the PIN', async () => {
   const fixture = await authorizationFixture();

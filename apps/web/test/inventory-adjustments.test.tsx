@@ -48,3 +48,15 @@ it('T114B explains stock rejection without clearing the entered quantity', async
   expect((screen.getByLabelText('Cantidad') as HTMLInputElement).value).toBe('3');
   expect(screen.getByLabelText('Cantidad').getAttribute('aria-invalid')).toBe('true');
 });
+
+it('keeps history and compensation while moving creation into products', async () => {
+  const compensate = vi.fn().mockResolvedValue(undefined);
+  render(<InventoryAdjustments historyOnly organizationId="o1" branchId="b1" role="OWNER"
+    stocks={stocks} adjustments={history} nextCursor={null} onReload={vi.fn()} onCompensate={compensate} />);
+  expect(screen.queryByRole('button', { name: 'Confirmar ajuste' })).toBeNull();
+  expect(screen.queryByRole('textbox', { name: 'Cantidad' })).toBeNull();
+  expect(screen.getByRole('heading', { level: 1, name: 'Historial de ajustes' })).toBeTruthy();
+  await userEvent.click(screen.getByRole('button', { name: /compensar ajuste/i }));
+  await userEvent.click(screen.getByRole('button', { name: /confirmar compensación/i }));
+  expect(compensate).toHaveBeenCalledWith('o1', 'a1', null);
+});

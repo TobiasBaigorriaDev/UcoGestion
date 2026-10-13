@@ -98,6 +98,7 @@ export class ReportsService {
     const args = [context.organizationId, branches, query.from ?? null, query.to ?? null,
       query.status ?? null];
     const joins = `FROM expenses e JOIN organizations o ON o.id = e.organization_id
+      JOIN expense_categories cat ON cat.organization_id = e.organization_id AND cat.id = e.expense_category_id
       LEFT JOIN expense_cancellations ec ON ec.organization_id = e.organization_id
         AND ec.expense_id = e.id`;
     const predicate = `e.organization_id = $1 AND e.branch_id = ANY($2::uuid[])
@@ -109,10 +110,10 @@ export class ReportsService {
       coalesce(sum(e.amount) FILTER (WHERE ec.id IS NULL),0)::numeric(20,2)::text AS net
       ${joins} WHERE ${predicate}`, args);
     const rows = await client.query<{ id: string; branch_id: string;
-      expense_category_id: string; actor_user_id: string; concept: string; amount: string;
+      expense_category_id: string; category_name: string; actor_user_id: string; concept: string; amount: string;
       method: string; currency_code: string; status: string; occurred_at: Date;
       occurred_cursor: string }>(`SELECT
-      e.id, e.branch_id, e.expense_category_id, e.actor_user_id, e.concept,
+      e.id, e.branch_id, e.expense_category_id, cat.name AS category_name, e.actor_user_id, e.concept,
       e.amount::text, e.method, e.currency_code,
       CASE WHEN ec.id IS NULL THEN 'CONFIRMED' ELSE 'CANCELLED' END AS status,
       e.occurred_at,
@@ -125,7 +126,7 @@ export class ReportsService {
     const last = page.at(-1);
     return { dataset: 'expenses', net: totals.rows[0]?.net ?? '0.00',
       items: page.map((row) => ({ id: row.id, branchId: row.branch_id,
-        categoryId: row.expense_category_id, actorUserId: row.actor_user_id,
+        categoryId: row.expense_category_id, categoryName: row.category_name, actorUserId: row.actor_user_id,
         concept: row.concept, amount: row.amount, method: row.method,
         currencyCode: row.currency_code, status: row.status,
         occurredAt: row.occurred_at.toISOString() })),

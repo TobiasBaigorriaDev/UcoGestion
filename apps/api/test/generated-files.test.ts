@@ -4,7 +4,7 @@ import { renderReceiptHtml, renderReceiptPdf } from '../src/modules/sales/receip
 import { renderReportPdf } from '../src/modules/reports/report-pdf.js';
 
 const injected = '<script>window.receiptExecuted=true</script><img src=x onerror="window.receiptExecuted=true">';
-const receipt = { label: 'Comprobante no fiscal', organization: { name: injected }, branch: { name: 'Centro' },
+const receipt = { saleId: '11111111-1111-4111-8111-111111111111', saleCode: 'TESTCODE1234', label: 'Comprobante no fiscal', organization: { name: injected }, branch: { name: 'Centro' },
   customer: { name: 'javascript:alert(1)' }, items: [{ name: injected, quantity: '1.000', unit: 'UNIT', lineTotal: '10.00' }],
   payments: [{ method: 'CASH', appliedAmount: '10.00' }], currency: 'ARS', subtotal: '10.00', discount: '0.00', total: '10.00' };
 

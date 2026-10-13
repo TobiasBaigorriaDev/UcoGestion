@@ -13,7 +13,7 @@ export async function posFixture(configure?: (bootstrap: OfflineBootstrapPayload
     certificate: 'opaque', publication: setup.bootstrap.ingestionKey, trustedSigner: setup.trusted, trustedSigningKeyId: 'trusted',
   });
   const pos = new OfflinePos(setup.db, setup.keys, setup.authorization, sealer, async () => {});
-  return { ...setup, pos, async plaintext(kind: string, id: string): Promise<unknown> {
+  return { ...setup, pos, sealer, async plaintext(kind: string, id: string): Promise<unknown> {
     const record = await setup.db.getEncrypted(actor, kind, id);
     if (!record) throw new Error('Missing encrypted record');
     return JSON.parse(new TextDecoder().decode(await new OfflineRecordCipher().decrypt(setup.keys.dekFor(actor), {

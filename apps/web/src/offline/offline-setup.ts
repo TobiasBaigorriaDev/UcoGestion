@@ -12,6 +12,9 @@ import { OfflineLease } from './offline-lease';
 import { OfflineRecordCipher } from './offline-record-cipher';
 import { OpaqueDelivery } from './opaque-delivery';
 import { readOfflineStatus } from './offline-status';
+import { OfflinePos } from './offline-pos';
+import { OfflineSealer } from './offline-sealer';
+import type { OfflinePosActions } from './offline-pos-actions';
 
 const api = new ApiClient();
 const encoder = new TextEncoder();
@@ -37,7 +40,29 @@ export class OfflineSetup {
   private async status() { return readOfflineStatus(this.db, this.keys, await this.authorization(), this.userId); }
   readonly readStatus = () => this.status();
   readonly unlock = async (pin: string) => { await this.keys.unlock(this.userId, pin); return this.status(); };
-  readonly sync = async () => { await new OpaqueDelivery(this.db).flush(); return this.status(); };
+  readonly sync = async () => {
+    try { await new OpaqueDelivery(this.db).flush(); return await this.status(); }
+    finally { this.notifyState(); }
+  };
+  readonly pos: OfflinePosActions = {
+    workspace: async () => (await this.posController()).workspace(this.userId),
+    open: async input => { const result = await (await this.posController()).open(this.userId, input); this.notifyState(); return result; },
+    prepare: async input => (await this.posController()).prepareSale(this.userId, input),
+    confirm: async input => { const result = await (await this.posController()).confirmSale(this.userId, input); this.notifyState(); return result; },
+    receipt: async saleId => (await this.posController()).receipt(this.userId, saleId),
+  };
+  private notifyState() { window.dispatchEvent(new Event('uco:delivery-state')); }
+  private async posController() {
+    const authorization = await this.authorization();
+    const context = await authorization.read(this.userId);
+    const device = await this.db.device_keys.get('device');
+    const trustedSigner = device?.ackKeys?.[context.bootstrap.ingestionKey.signingKeyId];
+    if (!device?.certificate || !trustedSigner) throw new Error('Prepará este equipo online antes de operar.');
+    return new OfflinePos(this.db, this.keys, authorization, new OfflineSealer(this.db, this.keys, new OfflineLease(this.db), {
+      certificate: device.certificate, publication: context.bootstrap.ingestionKey,
+      trustedSigner, trustedSigningKeyId: context.bootstrap.ingestionKey.signingKeyId,
+    }));
+  }
   readonly authorize = async (pin: string) => {
     if (await this.db.key_envelopes.get(this.userId)) await this.keys.unlock(this.userId, pin);
     else await this.keys.create(this.userId, pin);

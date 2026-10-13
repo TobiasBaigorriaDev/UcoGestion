@@ -6,6 +6,7 @@ import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
 import { compensateAdjustment, confirmAdjustment, type Adjustment, type StockItem } from './inventory-api';
 import styles from '../identity/management.module.css';
+import adjustmentStyles from './inventory-adjustments.module.css';
 
 const reasons = [
   ['CONTEO_FISICO', 'Conteo físico'], ['ROTURA', 'Rotura'], ['PERDIDA', 'Pérdida'],
@@ -17,9 +18,9 @@ const reasonLabels: Record<string, string> = Object.fromEntries([
 const decimal = /^(?:0|[1-9]\d{0,16})(?:\.\d{1,3})?$/;
 type Role = 'OWNER' | 'ADMIN' | 'EMPLOYEE' | 'CASHIER';
 
-export function InventoryAdjustments({ organizationId, branchId, role, stocks, adjustments, nextCursor,
+export function InventoryAdjustments({ compact = false, historyOnly = false, organizationId, branchId, role, stocks, adjustments, nextCursor,
   onReload, onLoadMore, onLoadMoreStocks, onConfirm = confirmAdjustment, onCompensate = compensateAdjustment }: {
-  organizationId: string; branchId: string; role: Role; stocks: StockItem[]; adjustments: Adjustment[];
+  compact?: boolean; historyOnly?: boolean; organizationId: string; branchId: string; role: Role; stocks: StockItem[]; adjustments: Adjustment[];
   nextCursor: string | null; onReload: () => void; onLoadMore?: () => void; onLoadMoreStocks?: () => void;
   onConfirm?: typeof confirmAdjustment; onCompensate?: typeof compensateAdjustment;
 }) {
@@ -32,6 +33,7 @@ export function InventoryAdjustments({ organizationId, branchId, role, stocks, a
   const [error, setError] = useState<ApiProblemError | null>(null);
   const [message, setMessage] = useState('');
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const fieldPrefix = compact ? `adjustment-${stocks[0]?.itemId ?? 'product'}` : 'adjustment';
   const selected = stocks.find((stock) => stock.itemId === itemId);
   const quantityError = error?.fieldErrors.quantity;
   const itemError = error?.fieldErrors.itemId;
@@ -66,38 +68,39 @@ export function InventoryAdjustments({ organizationId, branchId, role, stocks, a
     catch (cause) { setError(problem(cause)); }
     finally { setBusy(false); }
   }
-  return <section className={styles.page} aria-labelledby="adjustment-heading">
-    <header className={styles.heading}><h1 id="adjustment-heading">Ajustes de inventario</h1>
+  return <section className={styles.page} aria-label={compact ? "Cambiar stock" : undefined} aria-labelledby={compact ? undefined : "adjustment-heading"}>
+    {!compact ? <><header className={styles.heading}><h1 id="adjustment-heading">{historyOnly ? "Historial de ajustes" : "Ajustes de inventario"}</h1>
       <p>Registrá cambios con motivo. Los ajustes confirmados se corrigen con una compensación.</p></header>
-    <p><a href="/workspace/inventory">Volver al stock</a></p>
-    <ErrorSummary error={error} fieldIds={{ itemId: 'adjustment-item', quantity: 'adjustment-quantity' }}
+    <p><a href="/workspace/catalog">Volver a productos</a></p>
+    </> : null}
+    <ErrorSummary error={error} fieldIds={{ itemId: `${fieldPrefix}-item`, quantity: `${fieldPrefix}-quantity` }}
       fieldLabels={{ itemId: 'Producto', quantity: 'Cantidad' }} />{message ? <p role="status">{message}</p> : null}
-    {role === 'CASHIER' ? <p role="alert">Tu rol puede consultar stock, pero no confirmar ajustes.</p> :
-      <form className={styles.panel} onSubmit={(event) => void submit(event)} noValidate>
-        <h2>Nuevo ajuste</h2><div className={styles.fields}>
-          <div><label htmlFor="adjustment-item">Producto</label><select id="adjustment-item" value={itemId}
-            aria-invalid={!!itemError} aria-describedby={itemError ? 'adjustment-item-error' : undefined}
+    {historyOnly ? null : role === 'CASHIER' ? <p role="alert">Tu rol puede consultar stock, pero no confirmar ajustes.</p> :
+      <form className={compact ? styles.page : styles.panel} onSubmit={(event) => void submit(event)} noValidate>
+        <h2>Nuevo ajuste</h2><div className={compact ? adjustmentStyles.verticalFields : styles.fields}>
+          {!compact ? <div><label htmlFor={`${fieldPrefix}-item`}>Producto</label><select id={`${fieldPrefix}-item`} value={itemId}
+            aria-invalid={!!itemError} aria-describedby={itemError ? `${fieldPrefix}-item-error` : undefined}
             onChange={(event) => setItemId(event.target.value)} required>
             {stocks.map((stock) => <option key={stock.itemId} value={stock.itemId}>{stock.itemName}</option>)}</select>
-            {itemError ? <p id="adjustment-item-error">{itemError}</p> : null}</div>
-          <div><label htmlFor="adjustment-direction">Tipo de ajuste</label><select id="adjustment-direction"
+            {itemError ? <p id={`${fieldPrefix}-item-error`}>{itemError}</p> : null}</div> : null}
+          <div><label htmlFor={`${fieldPrefix}-direction`}>Tipo de ajuste</label><select id={`${fieldPrefix}-direction`}
             value={direction} onChange={(event) => setDirection(event.target.value as 'INCREASE' | 'DECREASE')}>
             <option value="INCREASE">Ingreso</option><option value="DECREASE">Egreso</option></select></div>
-          <div><label htmlFor="adjustment-quantity">Cantidad</label><input id="adjustment-quantity"
+          <div><label htmlFor={`${fieldPrefix}-quantity`}>Cantidad</label><input id={`${fieldPrefix}-quantity`}
             type="text" inputMode="decimal" value={quantity} onChange={(event) => setQuantity(event.target.value)}
-            aria-invalid={!!quantityError} aria-describedby={quantityError ? 'adjustment-quantity-error' : undefined} />
-            {quantityError ? <p id="adjustment-quantity-error">{quantityError}</p> : null}
+            aria-invalid={!!quantityError} aria-describedby={quantityError ? `${fieldPrefix}-quantity-error` : undefined} />
+            {quantityError ? <p id={`${fieldPrefix}-quantity-error`}>{quantityError}</p> : null}
             <span>{selected?.baseUnit === 'UNIT' ? 'Unidades enteras.' : 'Hasta tres decimales.'}</span></div>
-          <div><label htmlFor="adjustment-reason">Motivo</label><select id="adjustment-reason" value={reason}
+          <div><label htmlFor={`${fieldPrefix}-reason`}>Motivo</label><select id={`${fieldPrefix}-reason`} value={reason}
             onChange={(event) => setReason(event.target.value)}>
             {(role === 'OWNER' || role === 'ADMIN' ? [['INVENTARIO_INICIAL', 'Inventario inicial'] as const, ...reasons] : reasons)
               .map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
-          <div><label htmlFor="adjustment-observation">Observación (opcional)</label><input id="adjustment-observation"
+          <div><label htmlFor={`${fieldPrefix}-observation`}>Observación (opcional)</label><input id={`${fieldPrefix}-observation`}
             value={observation} maxLength={2000} onChange={(event) => setObservation(event.target.value)} /></div>
         </div><button type="submit" disabled={busy || !stocks.length}>{busy ? 'Confirmando…' : 'Confirmar ajuste'}</button>
         {onLoadMoreStocks ? <button type="button" onClick={onLoadMoreStocks}>Cargar más productos</button> : null}
       </form>}
-    <section className={styles.panel} aria-label="Ajustes confirmados"><h2>Historial de ajustes</h2>
+    {!compact ? <section className={styles.panel} aria-label="Ajustes confirmados"><h2>Historial de ajustes</h2>
       {adjustments.length === 0 ? <p>No hay ajustes confirmados en esta sucursal.</p> :
         <ul className={styles.rows}>{adjustments.map((adjustment) => <li className={styles.row} key={adjustment.id}>
           <strong>{adjustment.itemName}</strong><span>{adjustment.direction === 'INCREASE' ? 'Ingreso' : 'Egreso'} de {adjustment.quantity} · {reasonLabels[adjustment.reason] ?? adjustment.reason}</span>
@@ -110,7 +113,7 @@ export function InventoryAdjustments({ organizationId, branchId, role, stocks, a
               : <button type="button" disabled={busy} onClick={() => setConfirmId(adjustment.id)}>Compensar ajuste de {adjustment.itemName}</button> : null}
         </li>)}</ul>}
       {nextCursor && onLoadMore ? <button type="button" onClick={onLoadMore}>Cargar más ajustes</button> : null}
-    </section>
+    </section> : null}
   </section>;
 }
 

@@ -6,6 +6,7 @@ async page => {
   check(await page.locator('main').count() === 1, 'Generated receipt missing');
   check(await page.locator('script, iframe, object, embed, a').count() === 0, 'Active markup in receipt');
   check(await page.evaluate(() => !window.receiptExecuted), 'Receipt input executed');
+  check((await page.locator('main').innerText()).includes('ID de venta: 123456789ABC'), 'Printed receipt lacks stable ID');
   check((await page.locator('main').innerText()).includes('<script>'), 'Escaped input was not preserved as text');
   await page.evaluate(() => document.fonts.ready);
   return { passed: true, scenarios: ['escaped-script', 'escaped-events', 'no-active-elements', 'no-execution'] };

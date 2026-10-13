@@ -5,9 +5,9 @@ import { PosCart } from '../src/features/sales/pos-cart.js';
 
 const items = [
   { id: 'apple', name: 'Manzana', type: 'PRODUCT' as const, status: 'ACTIVE' as const,
-    baseUnit: 'UNIT' as const, price: '10.00', priceVersion: 1, sku: 'MAN', barcode: '779100' },
+    trackInventory: true, baseUnit: 'UNIT' as const, price: '10.00', priceVersion: 1, sku: 'MAN', barcode: '779100' },
   { id: 'juice', name: 'Jugo', type: 'PRODUCT' as const, status: 'ACTIVE' as const,
-    baseUnit: 'FRACTIONAL' as const, price: '3.50', priceVersion: 1, sku: null, barcode: null },
+    trackInventory: true, baseUnit: 'FRACTIONAL' as const, price: '3.50', priceVersion: 1, sku: null, barcode: null },
 ];
 
 describe('T152A POS cart', () => {

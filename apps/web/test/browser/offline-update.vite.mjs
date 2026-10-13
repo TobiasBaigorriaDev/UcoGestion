@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react';
 
 // Serve the unchanged production worker and its public shell in the test origin.
 export default {
+  server: { watch: { ignored: ['**/.playwright-cli/**', '**/output/**'] } },
   resolve: { alias: { react: fileURLToPath(new URL('../../node_modules/react', import.meta.url)),
     'react-dom': fileURLToPath(new URL('../../node_modules/react-dom', import.meta.url)) } },
   plugins: [react(), { name: 'offline-public-assets', configureServer(server) {
@@ -17,7 +18,7 @@ export default {
           const { renderReceiptHtml } = await server.ssrLoadModule('/apps/api/src/modules/sales/receipt-renderer.ts');
           const injected = '<script>window.receiptExecuted=true</script><img src=x onerror="window.receiptExecuted=true">';
           response.setHeader('Content-Type','text/html; charset=utf-8');
-          return response.end(renderReceiptHtml({label:'Comprobante no fiscal',organization:{name:injected},
+          return response.end(renderReceiptHtml({saleId:'11111111-1111-4111-8111-111111111111',saleCode:'123456789ABC',label:'Comprobante no fiscal',organization:{name:injected},
             items:[{name:injected,quantity:'1.000',unit:'UNIT',lineTotal:'10.00'}],
             payments:[],currency:'ARS',subtotal:'10.00',discount:'0.00',total:'10.00'}));
         } catch(error) { return next(error); }

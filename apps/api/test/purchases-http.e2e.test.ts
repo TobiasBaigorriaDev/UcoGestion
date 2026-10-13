@@ -221,4 +221,124 @@ describe('T157 purchase HTTP confirmation', () => {
     const cashier = await identity(cashierEmail);
     await get(cashier.cookie).expect(403);
   });
+
+  it('D07 lists historical products and net purchase trends with protected access', async () => {
+    const owner = await identity(ownerEmail);
+    const createdId = randomUUID();
+    await request(app.getHttpServer()).post('/api/v1/purchases')
+      .set('Origin', 'http://localhost:3000').set('Cookie', owner.cookie)
+      .set('X-Organization-Id', organizationId).set('X-CSRF-Token', owner.csrf)
+      .set('Idempotency-Key', randomUUID()).send({ branchId, supplierId, clientOperationId: createdId,
+        lines: [{ itemId, quantity: '2', unitCost: '7.25' }] }).expect(201);
+    const today = new Date().toISOString().slice(0, 10);
+    const history = await request(app.getHttpServer()).get('/api/v1/purchases')
+      .query({ branchId, from: today, to: today, limit: 25 })
+      .set('Cookie', owner.cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(history.body.items).toContainEqual(expect.objectContaining({ id: createdId,
+      status: 'PENDING_PAYMENT', supplierName: 'Proveedor', total: '14.50',
+      items: [expect.objectContaining({ itemName: 'Producto', quantity: '2.000', lineTotal: '14.50' })] }));
+    const paidId = randomUUID();
+    await request(app.getHttpServer()).post('/api/v1/purchases')
+      .set('Origin', 'http://localhost:3000').set('Cookie', owner.cookie)
+      .set('X-Organization-Id', organizationId).set('X-CSRF-Token', owner.csrf)
+      .set('Idempotency-Key', randomUUID()).send({ branchId, supplierId, clientOperationId: paidId,
+        lines: [{ itemId, quantity: '1', unitCost: '1.00' }] }).expect(201);
+    await request(app.getHttpServer()).post(`/api/v1/purchases/${paidId}/pay`)
+      .set('Origin', 'http://localhost:3000').set('Cookie', owner.cookie)
+      .set('X-Organization-Id', organizationId).set('X-CSRF-Token', owner.csrf)
+      .set('Idempotency-Key', randomUUID()).send({ method: 'TRANSFER', amount: '1.00' }).expect(201);
+    const paidPage = await request(app.getHttpServer()).get('/api/v1/purchases')
+      .query({ branchId, status: 'PAID' }).set('Cookie', owner.cookie)
+      .set('X-Organization-Id', organizationId).expect(200);
+    expect(paidPage.body.items).toContainEqual(expect.objectContaining({ id: paidId, status: 'PAID' }));
+    const pageOne = await request(app.getHttpServer()).get('/api/v1/purchases')
+      .query({ branchId, limit: 1 }).set('Cookie', owner.cookie)
+      .set('X-Organization-Id', organizationId).expect(200);
+    expect(pageOne.body.items).toHaveLength(1);
+    expect(pageOne.body.nextCursor).toEqual(expect.any(String));
+    const pageTwo = await request(app.getHttpServer()).get('/api/v1/purchases')
+      .query({ branchId, limit: 1, cursor: pageOne.body.nextCursor })
+      .set('Cookie', owner.cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(pageTwo.body.items).toHaveLength(1);
+    expect(pageTwo.body.items[0].id).not.toBe(pageOne.body.items[0].id);
+    await request(app.getHttpServer()).get('/api/v1/purchases')
+      .query({ from: today, to: '2024-01-01' }).set('Cookie', owner.cookie)
+      .set('X-Organization-Id', organizationId).expect(400);
+    const trends = await request(app.getHttpServer()).get('/api/v1/purchases/trends')
+      .query({ branchId, from: today, to: today, groupBy: 'HOUR' })
+      .set('Cookie', owner.cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(trends.body.points).toHaveLength(24);
+    const confirmed = history.body.items.find((item: { id: string }) => item.id === createdId);
+    const hour = new Date(confirmed.confirmedAt).getUTCHours();
+    const before = trends.body.points.find((point: { hour: number }) => point.hour === hour);
+    expect(before?.count).toBeGreaterThan(0);
+    expect(trends.body.points.some((point: { amount: string }) => point.amount === '0.00')).toBe(true);
+    const otherBranch = randomUUID();
+    const admin = await createGlobalUser(pool, { email: `purchase-history-admin-${randomUUID()}@example.com`,
+      password: 'correct-password' });
+    const adminMembership = randomUUID();
+    await pool.query("INSERT INTO branches (id, organization_id, name) VALUES ($1, $2, 'Otro local')",
+      [otherBranch, organizationId]);
+    await pool.query("INSERT INTO memberships (id, organization_id, user_id, role) VALUES ($1, $2, $3, 'ADMIN')",
+      [adminMembership, organizationId, admin.id]);
+    await pool.query('INSERT INTO membership_branches (organization_id, membership_id, branch_id) VALUES ($1, $2, $3)',
+      [organizationId, adminMembership, otherBranch]);
+    const scoped = await identity(admin.email);
+    const scopedHistory = await request(app.getHttpServer()).get('/api/v1/purchases')
+      .set('Cookie', scoped.cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(scopedHistory.body.items).not.toContainEqual(expect.objectContaining({ id: createdId }));
+    const scopedTrends = await request(app.getHttpServer()).get('/api/v1/purchases/trends')
+      .query({ from: today, to: today, groupBy: 'HOUR' }).set('Cookie', scoped.cookie)
+      .set('X-Organization-Id', organizationId).expect(200);
+    expect(scopedTrends.body.points.every((point: { count: number }) => point.count === 0)).toBe(true);
+    const isolatedOrganization = randomUUID();
+    await pool.query("INSERT INTO organizations (id, name, base_currency, timezone) VALUES ($1, 'Otro tenant', 'ARS', 'UTC')",
+      [isolatedOrganization]);
+    const ownerUser = await pool.query<{ id: string }>('SELECT user_id AS id FROM memberships WHERE organization_id = $1 AND role = $2',
+      [organizationId, 'OWNER']);
+    await pool.query("INSERT INTO memberships (id, organization_id, user_id, role) VALUES ($1, $2, $3, 'OWNER')",
+      [randomUUID(), isolatedOrganization, ownerUser.rows[0]?.id]);
+    const isolated = await request(app.getHttpServer()).get('/api/v1/purchases')
+      .set('Cookie', owner.cookie).set('X-Organization-Id', isolatedOrganization).expect(200);
+    expect(isolated.body.items).toEqual([]);
+    const isolatedTrends = await request(app.getHttpServer()).get('/api/v1/purchases/trends')
+      .query({ from: today, to: today, groupBy: 'HOUR' }).set('Cookie', owner.cookie)
+      .set('X-Organization-Id', isolatedOrganization).expect(200);
+    expect(isolatedTrends.body.points.every((point: { count: number }) => point.count === 0)).toBe(true);
+    await request(app.getHttpServer()).post(`/api/v1/purchases/${createdId}/cancel`)
+      .set('Origin', 'http://localhost:3000').set('Cookie', owner.cookie)
+      .set('X-Organization-Id', organizationId).set('X-CSRF-Token', owner.csrf)
+      .set('Idempotency-Key', randomUUID()).send({ reason: 'Prueba de historial' }).expect(201);
+    const cancelled = await request(app.getHttpServer()).get('/api/v1/purchases')
+      .query({ branchId, from: today, to: today, status: 'CANCELLED' })
+      .set('Cookie', owner.cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(cancelled.body.items).toContainEqual(expect.objectContaining({ id: createdId, status: 'CANCELLED' }));
+    const afterTrends = await request(app.getHttpServer()).get('/api/v1/purchases/trends')
+      .query({ branchId, from: today, to: today, groupBy: 'HOUR' })
+      .set('Cookie', owner.cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(afterTrends.body.points.find((point: { hour: number }) => point.hour === hour)?.count)
+      .toBe(before.count - 1);
+    const cashier = await identity(cashierEmail);
+    await request(app.getHttpServer()).get('/api/v1/purchases')
+      .set('Cookie', cashier.cookie).set('X-Organization-Id', organizationId).expect(403);
+    await request(app.getHttpServer()).get('/api/v1/purchases/trends')
+      .query({ from: today, to: today }).set('Cookie', cashier.cookie)
+      .set('X-Organization-Id', organizationId).expect(403);
+    const localId = randomUUID();
+    await pool.query("UPDATE organizations SET timezone = 'America/Argentina/Buenos_Aires' WHERE id = $1",
+      [organizationId]);
+    await pool.query(`INSERT INTO purchases(id,organization_id,branch_id,supplier_id,actor_user_id,
+      client_operation_id,confirmation_status,currency_code,total,supplier_snapshot,confirmed_at)
+      VALUES ($1,$2,$3,$4,$5,$1,'PENDING_PAYMENT','ARS','9.00',$6::jsonb,'2026-04-01T01:30:00Z')`,
+    [localId, organizationId, branchId, supplierId, ownerUser.rows[0]?.id,
+      JSON.stringify({ name: 'Proveedor' })]);
+    const localPage = await request(app.getHttpServer()).get('/api/v1/purchases')
+      .query({ branchId, from: '2026-03-31', to: '2026-03-31' })
+      .set('Cookie', owner.cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(localPage.body.items).toContainEqual(expect.objectContaining({ id: localId }));
+    const localTrends = await request(app.getHttpServer()).get('/api/v1/purchases/trends')
+      .query({ branchId, from: '2026-03-31', to: '2026-03-31', groupBy: 'DAY' })
+      .set('Cookie', owner.cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(localTrends.body.points).toContainEqual({ date: '2026-03-31', amount: '9.00', count: 1 });
+  });
 });

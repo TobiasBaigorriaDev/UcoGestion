@@ -112,6 +112,10 @@ Separadores `#E2E8F0` delimitan filas y navegación sin competir con los datos. 
 
 En escritorio, el menú lateral conserva la sección activa y puede desplazarse sin desplazar el contenido principal. En móvil y tablet se abre con “Secciones”, mostrando la ubicación actual antes de desplegarse. Los formularios agrupan campos alineados, mantienen labels persistentes y usan acciones secundarias de menor peso visual en listados.
 
+Catálogo e inventario comparten una entrada en la navegación principal. Dentro de esa sección, una navegación local identifica Productos y, según el rol, Historial de ajustes, Transferencias y Categorías. Productos presenta inicialmente nombre, precio y stock. Seleccionar una fila despliega detalles y dos entradas: Editar y Cambiar stock. Precio, estructura, estado y eliminación se ofrecen dentro de Editar. Cambiar stock abre un formulario vertical de nuevo ajuste; Historial de ajustes conserva consulta y compensaciones sin duplicar el alta. El ajuste de existencias y el mínimo por sucursal se gestionan dentro del producto, conservando motivos, historial y permisos. La ruta anterior de Stock redirige a Productos. La consulta muestra el stock de la sucursal activa junto a cada producto inventariable; nunca interpreta un saldo ausente como cero. Para OWNER/ADMIN también reúne la gestión de ítems: búsqueda, edición, precio, estado y eliminación sujeta al historial. El alta se abre cuando se necesita, inmediatamente debajo de su botón y antes del listado; las acciones menos frecuentes se despliegan por producto. La ruta anterior de ítems conserva enlaces directos y las acciones siguen sujetas a sus permisos propios.
+
+El listado ofrece orden por nombre, precio, stock y alerta de stock bajo configurada. «Agrupar por categorías» es opcional, apagado inicialmente: al activarlo muestra carpetas cerradas con fondo verde suave, borde verde, icono de carpeta, nombre, cantidad de ítems y flecha de apertura. Cada carpeta se abre por separado mediante botón accesible; los productos se muestran debajo con sangría. «Sin categoría» usa la misma presentación y aparece al final. La búsqueda y el orden elegido se conservan dentro de cada grupo; los grupos sin resultados se omiten. Reactivar la agrupación inicia nuevamente todas las carpetas cerradas.
+
 ## Layout
 
 Diseño mobile-first y responsivo integral con espaciados múltiplos de 4px/8px.
@@ -155,6 +159,10 @@ Profundidad basada en desenfoque óptico (`backdrop-filter`) y sombras sutiles m
 - **Radio:** 16px (`rounded-2xl`).
 
 ## Do's and Don'ts
+
+### Iconos de categorías
+
+La categoría de catálogo puede elegir entre 52 iconos SVG Lucide orientados a almacenes y kioscos, con búsqueda y etiquetas accesibles en español, mediante «Elegir icono» en el alta o «Cambiar icono» en la edición. La cuadrícula y la vista previa muestran solamente iconos, sin nombres visibles. Las etiquetas ARIA mantienen el buscador y la identificación con lector de pantalla. Radio buttons accesibles muestran la selección con marca y fondo; al elegir se cierra la biblioteca y retorna el foco a su botón. Los mismos assets locales acompañan nombre y carpeta en Productos. Sin selección se usa carpeta. SVG estático de procedencia y licencia fijadas en `apps/web/public/icons/categories/SOURCE.md`; no se carga biblioteca externa ni contenido SVG del usuario.
 
 ### Do:
 - **Do** garantizar contraste mínimo de 4.5:1 sobre superficies translúcidas.

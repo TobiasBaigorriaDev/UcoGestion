@@ -7,7 +7,7 @@ import { OfflineDatabase } from './offline-database';
 import { OfflineKeys } from './offline-keys';
 import { OfflineRecordCipher } from './offline-record-cipher';
 import { OfflineSealer } from './offline-sealer';
-import { offlineSaleDraftInputSchema, quoteOfflineSale } from './offline-sale';
+import { offlineConfirmedSaleSchema, offlineSaleDraftInputSchema, offlineSaleDraftSchema, quoteOfflineSale } from './offline-sale';
 import { OfflineSales } from './offline-sales';
 
 const openingSchema = z.strictObject({ cashRegisterId: z.uuid(), openingCash: z.string() });
@@ -24,6 +24,62 @@ export class OfflinePos {
   async catalog(userId: string) {
     const { bootstrap } = await this.authorization.read(userId);
     return { configuration: bootstrap.configuration, stock: bootstrap.stock, lastSyncAt: bootstrap.serverTime };
+  }
+
+  /** Presentation reads remain bound to the unlocked identity, including after expiry. */
+  async receipt(userId: string, saleId: string) {
+    z.uuid().parse(saleId);
+    const context = await this.authorization.read(userId);
+    const stored = await this.readRecord(userId, 'sale', saleId);
+    if (stored === undefined) return null; // A definitive ACK may already have removed the payload.
+    const sale = offlineConfirmedSaleSchema.parse(stored);
+    if (sale.id !== saleId || sale.result.id !== saleId || sale.actorUserId !== userId ||
+      sale.organizationId !== this.db.organizationId || sale.deviceId !== this.db.deviceId ||
+      sale.branchId !== context.claims.branchId) throw new Error('Comprobante offline no autorizado.');
+    await this.authorization.read(userId);
+    return { saleId: sale.id, label: sale.receipt.label, branchName: sale.receipt.branchName,
+      localReference: sale.localReference, currency: sale.quote.currency, subtotal: sale.quote.subtotal,
+      discount: sale.quote.discount, total: sale.quote.total, items: sale.quote.lines,
+      payments: sale.payments, occurredAt: sale.occurredAt };
+  }
+
+  async workspace(userId: string) {
+    const context = await this.authorization.read(userId);
+    let canCreate = true;
+    try { await this.authorization.require(userId); } catch { canCreate = false; }
+    const chain = await this.db.meta.get('device-chain');
+    const storedSession = chain?.cashSessionOpen && chain.cashSessionId
+      ? await this.readRecord(userId, 'cash-session', chain.cashSessionId) : undefined;
+    const session = storedSession === undefined ? null : localCashSessionSchema.parse(storedSession);
+    if (session && (session.actorUserId !== userId || session.branchId !== context.claims.branchId ||
+      !context.claims.cashRegisterIds.includes(session.cashRegisterId))) throw new Error('Sesión offline no autorizada.');
+    const records = await this.db.records.filter(row => row.userId === userId &&
+      (row.kind === 'sale' || row.kind === 'sale-draft')).toArray();
+    const pendingSaleIds: string[] = [];
+    let draft: z.infer<typeof offlineSaleDraftSchema> | null = null;
+    for (const record of records) {
+      if (record.kind === 'sale') {
+        const receipt = await this.receipt(userId, record.id);
+        if (receipt) pendingSaleIds.push(receipt.saleId);
+      } else if (!draft && session && !await this.db.getEncrypted(userId, 'sale', record.id) &&
+        !await this.db.delivery_receipts.get(record.id)) {
+        const candidate = offlineSaleDraftSchema.parse(await this.readRecord(userId, record.kind, record.id));
+        if (candidate.id === record.id && candidate.sessionId === session.id) draft = candidate;
+      }
+    }
+    await this.authorization.read(userId);
+    return { organizationId: this.db.organizationId, configuration: context.bootstrap.configuration, session, draft, pendingSaleIds, canCreate };
+  }
+
+  private async readRecord(userId: string, kind: string, id: string): Promise<unknown> {
+    await this.authorization.read(userId);
+    const dek = this.keys.dekFor(userId), ciphertext = await this.db.getEncrypted(userId, kind, id);
+    if (!ciphertext) return undefined;
+    const value: unknown = JSON.parse(new TextDecoder().decode(await this.cipher.decrypt(dek,
+      { organizationId: this.db.organizationId, deviceId: this.db.deviceId, userId, kind, id }, ciphertext)));
+    if (this.keys.dekFor(userId) !== dek) throw new Error('Offline identity changed.');
+    await this.authorization.read(userId);
+    return value;
   }
 
   /** Consumer-final policy for the sale pipeline; confirmation and payments are T197. */

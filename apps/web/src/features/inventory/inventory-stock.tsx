@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
+import { formatStockQuantity } from '../../lib/format-stock-quantity';
 import type { StockItem } from './inventory-api';
 import { saveStockThreshold } from './inventory-api';
 import styles from '../identity/management.module.css';
@@ -11,9 +12,9 @@ import styles from '../identity/management.module.css';
 type Role = 'OWNER' | 'ADMIN' | 'EMPLOYEE' | 'CASHIER';
 const minimumPattern = /^(?:0|[1-9]\d{0,16})(?:\.\d{1,3})?$/;
 
-export function InventoryStock({ organizationId, role, branches, branchId, stocks, nextCursor,
+export function InventoryStock({ compact = false, organizationId, role, branches, branchId, stocks, nextCursor,
   onBranchChange, onReload, onLoadMore, onSaveThreshold = saveStockThreshold }: {
-  organizationId: string; role: Role; branches: { id: string; name: string }[]; branchId: string;
+  compact?: boolean; organizationId: string; role: Role; branches: { id: string; name: string }[]; branchId: string;
   stocks: StockItem[]; nextCursor: string | null; onBranchChange: (id: string) => void;
   onReload: () => void; onLoadMore?: () => void;
   onSaveThreshold?: typeof saveStockThreshold;
@@ -48,26 +49,28 @@ export function InventoryStock({ organizationId, role, branches, branchId, stock
         code: 'THRESHOLD_FAILED', message: 'No pudimos guardar el mínimo. Revisá la conexión e intentá nuevamente.' }));
     } finally { setBusyId(null); }
   }
-  return <section className={styles.page} aria-labelledby="inventory-heading">
-    <header className={styles.heading}><h1 id="inventory-heading">Stock por sucursal</h1>
+  return <section className={styles.page} aria-label={compact ? "Mínimo de stock" : undefined} aria-labelledby={compact ? undefined : "inventory-heading"}>
+    {!compact ? <><header className={styles.heading}><h1 id="inventory-heading">Stock por sucursal</h1>
       <p>Consultá existencias, mínimos y productos que necesitan reposición.</p></header>
     <div className={styles.panel}><label htmlFor="stock-branch">Sucursal</label>
       <select id="stock-branch" value={branchId} onChange={(event) => onBranchChange(event.target.value)}>
         {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
       </select></div>
+    </> : null}
     <ErrorSummary error={error} fieldIds={errorItemId ? { minimum: `minimum-${errorItemId}` } : {}}
       fieldLabels={{ minimum: 'Mínimo' }} />{message ? <p role="status">{message}</p> : null}
-    <section className={styles.panel} aria-label="Existencias">
+    <section className={compact ? styles.page : styles.panel} aria-label="Existencias">
       {stocks.length === 0 ? <p>No hay productos inventariables en esta sucursal.</p> : <>
-        <p role="status">{lowCount === 1 ? '1 producto con stock bajo entre los productos cargados.'
+        {!compact ? <><p role="status">{lowCount === 1 ? '1 producto con stock bajo entre los productos cargados.'
           : `${lowCount} productos con stock bajo entre los productos cargados.`}</p>
         <button type="button" aria-pressed={onlyLow} onClick={() => setOnlyLow((current) => !current)}>
           {onlyLow ? 'Mostrar todos' : `Solo stock bajo (${lowCount})`}</button>
         {visibleStocks.length === 0 ? <p>No hay productos con stock bajo entre los cargados.
           {nextCursor ? ' Cargá más productos para revisar el resto.' : ''}</p> : null}
+        </> : null}
         <ul className={styles.rows}>{visibleStocks.map((item) => <li className={styles.row} key={item.itemId}>
-          <div className={styles.memberTitle}><strong>{item.itemName}</strong><span>Disponible: {item.quantity} {item.baseUnit === 'UNIT' ? 'unidades' : 'unidades fraccionables'}</span></div>
-          <p>{item.threshold === null ? 'Sin mínimo configurado' : `Mínimo: ${item.threshold}`}</p>
+          <div className={styles.memberTitle}><strong>{item.itemName}</strong><span>Disponible: {formatStockQuantity(item.quantity)} {item.baseUnit === 'UNIT' ? 'unidades' : 'unidades fraccionables'}</span></div>
+          <p>{item.threshold === null ? 'Sin mínimo configurado' : `Mínimo: ${formatStockQuantity(item.threshold)}`}</p>
           <p>{item.lowStock ? <strong>Alerta: Stock bajo. Alcanzó o quedó por debajo del mínimo.</strong> : 'Sin alerta de stock bajo.'}</p>
           {role !== 'CASHIER' ? <div className={styles.fields}><div>
             <label htmlFor={`minimum-${item.itemId}`}>Mínimo de {item.itemName}</label>

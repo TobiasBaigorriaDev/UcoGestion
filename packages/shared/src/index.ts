@@ -1,4 +1,5 @@
 import { Decimal } from 'decimal.js';
+export { saleCodeFromId, saleCodeLookup } from './sale-code.js';
 
 // Keep bounded quantity/price products and 128-character discount inputs exact
 // until their final persisted HALF_UP rounding; Decimal's default 20 significant
@@ -220,3 +221,4 @@ export function consumeKnownStock(available: string, quantities: readonly string
 }
 
 export * from './offline-operation-contracts.js';
+export * from './category-icons.js';

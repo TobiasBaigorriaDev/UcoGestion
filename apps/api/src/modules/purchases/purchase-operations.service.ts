@@ -5,6 +5,7 @@ import { validatePositiveMoney } from '@uconext/shared';
 import type { PoolClient } from 'pg';
 
 import { IdempotencyService, toJsonValue } from '../../core/idempotency/idempotency.service.js';
+import { encodeCursor, type Cursor } from '../../core/validation/pagination.js';
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
 import { CashSessionDevicePolicy } from '../cash/index.js';
 import { PurchaseCancellationError, PurchaseCancellationPreparation,
@@ -53,6 +54,112 @@ export class PurchaseOperationsService {
   private readonly sessions = new CashSessionDevicePolicy();
   private readonly cancellations = new PurchaseCancellationPreparation();
   constructor(private readonly transactions: TenantTransaction) {}
+
+  private async requireHistoryRole(client: PoolClient, context: TenantTransactionContext): Promise<void> {
+    const membership = await client.query<{ role: string }>(`SELECT role FROM memberships
+      WHERE organization_id = $1 AND user_id = $2 AND status = 'ACTIVE' AND revoked_at IS NULL`,
+    [context.organizationId, context.userId]);
+    if (!['OWNER', 'ADMIN'].includes(membership.rows[0]?.role ?? '')) {
+      throw new ForbiddenException({ code: 'PURCHASE_HISTORY_FORBIDDEN',
+        title: 'Historial no disponible', detail: 'No tenés permiso para consultar gastos de compras.' });
+    }
+  }
+
+  async list(context: TenantTransactionContext, query: { branchId?: string | undefined;
+    from?: string | undefined; to?: string | undefined; status?: string | undefined;
+    cursor?: Cursor | undefined; limit: number }) {
+    return this.transactions.read(context, async client => {
+      await this.requireHistoryRole(client, context);
+      const result = await client.query<{ id: string; branchId: string; supplierName: string;
+        confirmedAt: string; cursorTime: string; total: string; currency: string;
+        status: 'PAID' | 'PENDING_PAYMENT' | 'CANCELLED' }>(`
+        SELECT p.id, p.branch_id AS "branchId", p.supplier_snapshot->>'name' AS "supplierName",
+          p.confirmed_at::text AS "confirmedAt", p.total::text, p.currency_code AS currency,
+          CASE WHEN c.id IS NOT NULL THEN 'CANCELLED'
+            WHEN pay.id IS NOT NULL OR p.confirmation_status = 'PAID' THEN 'PAID'
+            ELSE 'PENDING_PAYMENT' END AS status,
+          to_char(p.confirmed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "cursorTime"
+        FROM purchases p JOIN organizations o ON o.id = p.organization_id
+        JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = $2
+          AND m.status = 'ACTIVE' AND m.revoked_at IS NULL
+        LEFT JOIN purchase_payments pay ON pay.organization_id = p.organization_id AND pay.purchase_id = p.id
+        LEFT JOIN purchase_cancellations c ON c.organization_id = p.organization_id AND c.purchase_id = p.id
+        WHERE p.organization_id = $1 AND m.role IN ('OWNER', 'ADMIN')
+          AND (m.role = 'OWNER' OR EXISTS (SELECT 1 FROM effective_membership_branch_scope scope
+            WHERE scope.organization_id = m.organization_id AND scope.membership_id = m.id
+              AND scope.branch_id = p.branch_id))
+          AND ($3::uuid IS NULL OR p.branch_id = $3)
+          AND ($4::date IS NULL OR p.confirmed_at >= ($4::date::timestamp AT TIME ZONE o.timezone))
+          AND ($5::date IS NULL OR p.confirmed_at < (($5::date + 1)::timestamp AT TIME ZONE o.timezone))
+          AND ($6::text IS NULL OR $6 = CASE WHEN c.id IS NOT NULL THEN 'CANCELLED'
+            WHEN pay.id IS NOT NULL OR p.confirmation_status = 'PAID' THEN 'PAID' ELSE 'PENDING_PAYMENT' END)
+          AND ($7::timestamptz IS NULL OR (p.confirmed_at, p.id) < ($7::timestamptz, $8::uuid))
+        ORDER BY p.confirmed_at DESC, p.id DESC LIMIT $9`,
+      [context.organizationId, context.userId, query.branchId ?? null, query.from ?? null,
+        query.to ?? null, query.status ?? null, query.cursor?.sortValue ?? null,
+        query.cursor?.id ?? null, query.limit + 1]);
+      const rows = result.rows.slice(0, query.limit);
+      const ids = rows.map(row => row.id);
+      const products = ids.length ? await client.query<{ purchaseId: string; itemName: string;
+        quantity: string; lineTotal: string }>(`SELECT purchase_id AS "purchaseId", item_name AS "itemName",
+          quantity::text, line_total::text AS "lineTotal" FROM purchase_items
+          WHERE organization_id = $1 AND purchase_id = ANY($2::uuid[]) ORDER BY purchase_id, id`,
+      [context.organizationId, ids]) : null;
+      const byPurchase = new Map<string, { itemName: string; quantity: string; lineTotal: string }[]>();
+      for (const { purchaseId, itemName, quantity, lineTotal } of products?.rows ?? []) {
+        const entries = byPurchase.get(purchaseId) ?? [];
+        entries.push({ itemName, quantity, lineTotal }); byPurchase.set(purchaseId, entries);
+      }
+      const last = rows.at(-1);
+      return { items: rows.map(row => ({ id: row.id, branchId: row.branchId,
+        supplierName: row.supplierName, confirmedAt: row.confirmedAt, total: row.total,
+        currency: row.currency, status: row.status, items: byPurchase.get(row.id) ?? [] })),
+      nextCursor: result.rows.length > query.limit && last
+        ? encodeCursor({ id: last.id, sortValue: last.cursorTime }) : null };
+    });
+  }
+
+  async trends(context: TenantTransactionContext, query: { from: string; to: string;
+    branchId?: string | undefined; groupBy?: 'DAY' | 'HOUR' | undefined }) {
+    return this.transactions.read(context, async client => {
+      await this.requireHistoryRole(client, context);
+      const result = await client.query<{ date: string; hour: number | null;
+        amount: string; count: number; currency: string }>(`
+        WITH buckets AS (
+          SELECT generate_series($3::date, $4::date, interval '1 day')::date AS day,
+            NULL::integer AS hour WHERE $6::text = 'DAY'
+          UNION ALL
+          SELECT $3::date AS day, generate_series(0, 23) AS hour WHERE $6::text = 'HOUR'
+        ), allowed AS (
+          SELECT p.id, p.total, (p.confirmed_at AT TIME ZONE o.timezone)::date AS local_day,
+            extract(hour FROM p.confirmed_at AT TIME ZONE o.timezone)::integer AS local_hour
+          FROM purchases p JOIN organizations o ON o.id = p.organization_id
+          JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = $2
+            AND m.status = 'ACTIVE' AND m.revoked_at IS NULL
+          LEFT JOIN purchase_cancellations c ON c.organization_id = p.organization_id AND c.purchase_id = p.id
+          WHERE p.organization_id = $1 AND c.id IS NULL
+            AND p.confirmed_at >= ($3::date::timestamp AT TIME ZONE o.timezone)
+            AND p.confirmed_at < (($4::date + 1)::timestamp AT TIME ZONE o.timezone)
+            AND ($5::uuid IS NULL OR p.branch_id = $5)
+            AND m.role IN ('OWNER', 'ADMIN')
+            AND (m.role = 'OWNER' OR EXISTS (SELECT 1 FROM effective_membership_branch_scope scope
+              WHERE scope.organization_id = m.organization_id AND scope.membership_id = m.id
+                AND scope.branch_id = p.branch_id))
+        )
+        SELECT to_char(buckets.day, 'YYYY-MM-DD') AS date, buckets.hour,
+          coalesce(sum(allowed.total), 0)::numeric(20,2)::text AS amount,
+          count(allowed.id)::integer AS count, o.base_currency AS currency
+        FROM buckets CROSS JOIN organizations o LEFT JOIN allowed ON allowed.local_day = buckets.day
+          AND (buckets.hour IS NULL OR allowed.local_hour = buckets.hour)
+        WHERE o.id = $1 GROUP BY buckets.day, buckets.hour, o.base_currency
+        ORDER BY buckets.day, buckets.hour`,
+      [context.organizationId, context.userId, query.from, query.to, query.branchId ?? null,
+        query.groupBy ?? 'DAY']);
+      return { currency: result.rows[0]?.currency ?? null,
+        points: result.rows.map(({ date, hour, amount, count }) =>
+          ({ date, ...(hour === null ? {} : { hour }), amount, count })) };
+    });
+  }
 
   async detail(context: TenantTransactionContext, purchaseId: string) {
     return this.transactions.read(context, async (client) => {

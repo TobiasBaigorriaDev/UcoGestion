@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { z } from 'zod';
+import { categoryIconSchema } from '@uconext/shared';
 
 import { IfMatchVersion } from '../../core/validation/if-match.js';
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
@@ -16,7 +17,7 @@ import {
 import { CatalogItemLifecycleService, CatalogItemServiceError } from './catalog-item-lifecycle.service.js';
 
 const statusSchema = z.strictObject({ status: z.enum(['ACTIVE', 'INACTIVE']) });
-const createCategorySchema = z.strictObject({ name: z.string().trim().min(1).max(255) });
+const createCategorySchema = z.strictObject({ name: z.string().trim().min(1).max(255), icon: categoryIconSchema.optional() });
 const structuralSchema = z.strictObject({
   type: z.enum(['PRODUCT', 'SERVICE']),
   trackInventory: z.boolean().optional(),

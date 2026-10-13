@@ -7,6 +7,8 @@ async page => {
   await page.goto(url); await page.waitForFunction(() => Boolean(window.posHarness));
   await page.evaluate(() => window.posHarness.initialize());
   const opened = await page.evaluate(() => window.posHarness.open());
+  const confirmedDraft = await page.evaluate(id => window.posHarness.prepare(id),opened.sessionId);
+  const sale = await page.evaluate(id => window.posHarness.confirm(id),confirmedDraft.id);
   const draft = await page.evaluate(id => window.posHarness.prepare(id),opened.sessionId);
   const before = await page.evaluate(() => window.posHarness.state());
   await page.context().setOffline(true);
@@ -14,6 +16,7 @@ async page => {
   check(await page.evaluate(async id => { try { await window.posHarness.confirm(id); return false; } catch { return true; } },draft.id),'Expired grant accepted a sale');
   check(await page.evaluate(async () => { try { await window.posHarness.open(); return false; } catch { return true; } }),'Expired grant accepted opening');
   const expired = await page.evaluate(() => window.posHarness.state());
+  check((await page.evaluate(id => window.posHarness.receipt(id),sale.id)).saleId === confirmedDraft.id,'Expiry changed pending receipt UUID');
   check(JSON.stringify(before.pending)===JSON.stringify(expired.pending),'Expiration modified envelopes');
   check(JSON.stringify(before.head)===JSON.stringify(expired.head),'Expiration consumed sequence');
   await page.context().setOffline(false);
@@ -22,6 +25,7 @@ async page => {
   await page.evaluate(() => window.posHarness.rewind());
   check(await page.evaluate(async id => { try { await window.posHarness.confirm(id); return false; } catch { return true; } },draft.id),'Reload/clock rollback reactivated grant');
   const after = await page.evaluate(() => window.posHarness.state());
+  check((await page.evaluate(id => window.posHarness.receipt(id),sale.id)).saleId === confirmedDraft.id,'Reload after expiry changed receipt UUID');
   check(JSON.stringify(before.pending)===JSON.stringify(after.pending),'Reload altered pending bytes');
   check((await page.evaluate(() => window.posHarness.catalog())).configuration.items.length===1,'Historical catalogue unexpectedly removed');
   return {passed:true,scenarios:['offline-expiration','no-sale','no-opening','byte-preservation','no-sequence-consumption','reload','clock-rollback','historical-catalogue']};

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { saleCodeLookup } from '@uconext/shared';
 
 import { ApiClient } from '../../lib/api/client';
 import type { CartLine } from './pos-cart';
@@ -13,7 +14,7 @@ export type SaleQuote = z.infer<typeof quotedSchema>;
 const contextSchema = z.object({ sessions: z.array(z.object({ id: z.string(), deviceId: z.string(),
   registerName: z.string() })), paymentMethods: z.array(z.string()) });
 export type CheckoutContext = z.infer<typeof contextSchema>;
-const confirmationSchema = z.object({ id: z.string(), total: z.string(), receipt: z.object({ label: z.string() }).passthrough() });
+const confirmationSchema = z.object({ id: z.uuid(), total: z.string(), receipt: z.object({ label: z.string() }).passthrough() });
 export type SaleConfirmation = z.infer<typeof confirmationSchema>;
 const detailSchema = z.object({ id: z.string(), branchId: z.string(), status: z.enum(['CONFIRMED', 'CANCELLED']),
   total: z.string(), currency: z.string(), confirmedAt: z.string(), canCancel: z.boolean(),
@@ -21,6 +22,37 @@ const detailSchema = z.object({ id: z.string(), branchId: z.string(), status: z.
   items: z.array(z.object({ name: z.string(), quantity: z.string(), unitPrice: z.string(), lineTotal: z.string() })),
   payments: z.array(z.object({ method: z.string(), amount: z.string(), change: z.string() })) });
 export type SaleDetail = z.infer<typeof detailSchema>;
+const historySchema = z.object({ items: z.array(detailSchema.pick({ id: true, status: true,
+  total: true, currency: true, confirmedAt: true }).extend({ branchId: z.string().optional() })),
+  nextCursor: z.string().nullable() });
+export type SaleHistoryFilters = { from?: string; to?: string; status?: 'CONFIRMED' | 'CANCELLED' };
+const trendsSchema = z.object({ currency: z.string(), points: z.array(z.object({
+  date: z.iso.date(), hour: z.number().int().min(0).max(23).optional(),
+  amount: z.string(), count: z.number().int().nonnegative() })) });
+export type SaleTrends = z.infer<typeof trendsSchema>;
+
+export async function loadSaleTrends(organizationId: string, filters: {
+  from: string; to: string; branchId?: string | undefined; groupBy?: 'DAY' | 'HOUR' | undefined;
+}): Promise<SaleTrends> {
+  const params = new URLSearchParams({ from: filters.from, to: filters.to });
+  if (filters.branchId) params.set('branchId', filters.branchId);
+  if (filters.groupBy) params.set('groupBy', filters.groupBy);
+  const result = await client.request(`/sales/trends?${params}`, { method: 'GET', organizationId,
+    parse: raw => trendsSchema.parse(raw) });
+  if (!result) throw new Error('Sale trends unavailable');
+  return result;
+}
+
+export async function loadSaleHistory(organizationId: string, branchId: string | undefined,
+  filters: SaleHistoryFilters & { cursor?: string | undefined }) {
+  const query = new URLSearchParams({ limit: '25' });
+  if (branchId) query.set('branchId', branchId);
+  for (const [name, value] of Object.entries(filters)) if (value) query.set(name, value);
+  const result = await client.request(`/sales?${query}`, { method: 'GET', organizationId,
+    parse: (raw) => historySchema.parse(raw) });
+  if (!result) throw new Error('Sale history unavailable');
+  return { ...result, items: result.items.map(item => ({ ...item, branchId: item.branchId ?? branchId ?? '' })) };
+}
 
 export type SaleDiscount = { kind: 'PERCENTAGE' | 'FIXED'; value: string };
 
@@ -60,7 +92,16 @@ export async function confirmSale(organizationId: string, input: {
 }
 
 export async function loadSaleDetail(organizationId: string, id: string): Promise<SaleDetail> {
-  const value = await client.request(`/sales/${encodeURIComponent(id)}`, { method: 'GET', organizationId,
+  let resolvedId = id;
+  if (!z.uuid().safeParse(id).success) {
+    const code = saleCodeLookup(id);
+    if (!code) throw new Error('Invalid sale code');
+    const resolved = await client.request(`/sales/by-code/${encodeURIComponent(code.code)}`,
+      { method: 'GET', organizationId, parse: raw => z.object({ id: z.uuid() }).parse(raw) });
+    if (!resolved) throw new Error('Sale code unavailable');
+    resolvedId = resolved.id;
+  }
+  const value = await client.request(`/sales/${encodeURIComponent(resolvedId)}`, { method: 'GET', organizationId,
     parse: (raw) => detailSchema.parse(raw) });
   if (!value) throw new Error('Sale not available');
   return value;

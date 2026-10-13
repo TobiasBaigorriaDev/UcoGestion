@@ -3,9 +3,9 @@ import { ForbiddenException } from '@nestjs/common';
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
 
 interface Actor { id: string; role: 'OWNER' | 'ADMIN' | 'CASHIER' | 'EMPLOYEE' }
-export interface Item { id: string; name: string; type: 'PRODUCT' | 'SERVICE'; status: 'ACTIVE' | 'INACTIVE'; baseUnit: 'UNIT' | 'FRACTIONAL'; price: string | null; priceVersion: number; sku: string | null; barcode: string | null }
-export interface ManagedItem extends Item { trackInventory: boolean; version: number; categoryId: string | null }
-export interface Category { id: string; name: string }
+export interface Item { id: string; name: string; type: 'PRODUCT' | 'SERVICE'; status: 'ACTIVE' | 'INACTIVE'; trackInventory: boolean; baseUnit: 'UNIT' | 'FRACTIONAL'; price: string | null; priceVersion: number; sku: string | null; barcode: string | null; categoryId: string | null }
+export interface ManagedItem extends Item { version: number }
+export interface Category { id: string; name: string; icon: string | null }
 export interface ManagedCategory extends Category { status: 'ACTIVE' | 'INACTIVE'; version: number }
 type ReadOptions = Readonly<{ mode: 'HISTORICAL'; branchId: string }>;
 
@@ -31,15 +31,15 @@ export class CatalogReadService {
         if (scope.rowCount !== 1) throw forbidden();
       }
       const items = await client.query<Item>(
-        `SELECT id, name, type, status, base_unit AS "baseUnit", price::text AS price,
-                price_version::integer AS "priceVersion", sku, barcode
+        `SELECT id, name, type, status, track_inventory AS "trackInventory", base_unit AS "baseUnit", price::text AS price,
+                price_version::integer AS "priceVersion", sku, barcode, category_id AS "categoryId"
          FROM catalog_items
          WHERE organization_id = $1 AND ($2::boolean OR status = 'ACTIVE')
          ORDER BY name, id`,
         [context.organizationId, !!options],
       );
       const categories = await client.query<Category>(
-        `SELECT id, name FROM catalog_categories WHERE organization_id = $1 AND status = 'ACTIVE' ORDER BY name, id`,
+        `SELECT id, name, icon FROM catalog_categories WHERE organization_id = $1 AND status = 'ACTIVE' ORDER BY name, id`,
         [context.organizationId],
       );
       return { items: items.rows, categories: categories.rows };
@@ -55,7 +55,7 @@ export class CatalogReadService {
       );
       if (!['OWNER', 'ADMIN'].includes(membership.rows[0]?.role ?? '')) throw forbidden();
       const result = await client.query<ManagedCategory>(
-        `SELECT id, name, status, version::integer AS version FROM catalog_categories
+        `SELECT id, name, icon, status, version::integer AS version FROM catalog_categories
          WHERE organization_id = $1 ORDER BY name, id`,
         [context.organizationId],
       );

@@ -14,6 +14,29 @@
 .empty { padding: 16px 0; color: var(--color-text-secondary); }
 .status { color: var(--color-text-secondary); font-weight: 600; }
 .page { display: grid; gap: 24px; max-width: 1280px; margin: 0 auto; }
+.historyFilters { display: grid; gap: 12px; align-items: end; }
+.periodButtons { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 16px; }
+.periodButtons button[aria-pressed='true'] { background: var(--color-primary); color: #fff; }
+.branchFilter { max-width: 360px; margin-bottom: 16px; }
+.trends { margin: 24px 0 32px; padding-top: 20px; border-top: 1px solid var(--color-divider); }
+.trends h3 { margin: 0 0 4px; font-size: var(--text-title); }
+.trends > p { margin: 0 0 20px; color: var(--color-text-secondary); }
+.chartGrid { display: grid; gap: 24px; }
+.historyList { list-style: none; margin: 20px 0; padding: 0; }
+.historyList li { display: grid; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--color-text-disabled); }
+.historyList li > span { display: grid; gap: 4px; }
+.historyList button { text-align: left; display: grid; gap: 4px; min-width: 0; }
+.historyId { overflow-wrap: anywhere; font-weight: 400; }
+.historyTotal { font-variant-numeric: tabular-nums; }
+.historyPagination { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.historyPagination button:disabled { color: var(--color-text-secondary); border-color: var(--color-text-disabled); cursor: not-allowed; }
+.panel:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+@media (min-width: 720px) {
+  .chartGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .historyFilters { grid-template-columns: repeat(3, minmax(0, 1fr)) auto; }
+  .historyList li { grid-template-columns: minmax(140px, 1fr) auto minmax(200px, 1.4fr); align-items: center; }
+}
+@media (forced-colors: active) { .periodButtons button[aria-pressed='true'] { border-color: Highlight; } }
 .page h1 { margin: 0 0 8px; font-size: var(--text-page-title); font-weight: 750; line-height: 1.25; letter-spacing: -.025em; }
 .page header p { margin: 0; color: var(--color-text-secondary); }
 .layout { display: grid; gap: 20px; align-items: start; }
@@ -36,6 +59,15 @@
 .priceChange input { width: auto; min-height: 0; margin-right: 8px; }
 .success { padding: 16px; border-radius: 12px; background: color-mix(in srgb, var(--color-success) 8%, white); color: var(--color-primary); }
 .success a { color: var(--color-primary); font-weight: 700; }
+.success p { margin: 0 0 12px; }
+.saleIdentity { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin: 16px 0; }
+.saleIdentity dl { min-width: 0; margin: 0; }
+.saleIdentity dt { font-weight: 700; margin-bottom: 4px; }
+.saleId { margin: 0; overflow-wrap: anywhere; user-select: all; font-variant-numeric: tabular-nums;
+  font-size: 1.125rem; font-weight: 800; letter-spacing: .08em; }
+.saleIdentity button { min-height: 44px; padding: 8px 16px; border: 1px solid var(--color-primary); border-radius: var(--radius-button); color: var(--color-primary); background: white; font: inherit; font-weight: 600; cursor: pointer; }
+.saleIdentity button:hover { background: var(--color-primary-soft); }
+.saleIdentity button:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 .detailList { padding-left: 20px; line-height: 1.7; }
 .cancellation { margin-top: 24px; padding-top: 20px; border-top: 1px solid color-mix(in srgb, var(--color-text-disabled) 42%, white); }
 .cancellation textarea { width: 100%; min-height: 100px; padding: 10px; color: var(--color-text); border: 1px solid var(--color-text-disabled); border-radius: 8px; font: inherit; }

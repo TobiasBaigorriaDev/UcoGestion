@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { saleCodeFromId } from '@uconext/shared';
 
 import { PosOnline } from '../src/features/sales/pos-online.js';
 
@@ -17,11 +18,14 @@ describe('consecutive POS sales', () => {
     mocks.quoteSale.mockResolvedValue({ quoteFingerprint: 'fingerprint', quote: { currency: 'ARS',
       subtotal: '10.00', discount: '0.00', total: '10.00', lines: [{ itemId: 'item',
         quantity: '1', unitPrice: '10.00', priceVersion: 1, lineTotal: '10.00' }] } });
-    mocks.confirmSale.mockResolvedValue({ id: 'sale', total: '10.00',
+    const firstId = '11111111-1111-4111-8111-111111111111';
+    const secondId = '22222222-2222-4222-8222-222222222222';
+    mocks.confirmSale.mockResolvedValueOnce({ id: firstId, total: '10.00',
+      receipt: { label: 'Comprobante no fiscal' } }).mockResolvedValue({ id: secondId, total: '10.00',
       receipt: { label: 'Comprobante no fiscal' } });
     render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <PosOnline organizationId="org" branchId="branch" role="OWNER" items={[{
-        id: 'item', name: 'Manzana', type: 'PRODUCT', status: 'ACTIVE', baseUnit: 'UNIT',
+        id: 'item', name: 'Manzana', type: 'PRODUCT', status: 'ACTIVE', trackInventory: true, baseUnit: 'UNIT',
         price: '10.00', priceVersion: 1, sku: null, barcode: '779100',
       }]} />
     </QueryClientProvider>);
@@ -34,9 +38,16 @@ describe('consecutive POS sales', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar venta' }));
     await waitFor(() => expect(mocks.confirmSale).toHaveBeenCalledTimes(1));
     await screen.findByText('Venta confirmada');
+    expect(screen.getByText(saleCodeFromId(firstId))).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Copiar ID de venta' })).toBeDefined();
     fireEvent.change(screen.getByLabelText('Buscar producto'), { target: { value: 'Manzana' } });
     fireEvent.click(screen.getByRole('button', { name: 'Agregar Manzana' }));
     expect(screen.queryByLabelText('Importe aplicado 1')).toBeNull();
     expect((screen.getByLabelText('Descuento global') as HTMLInputElement).value).toBe('');
+    fireEvent.click(await screen.findByRole('button', { name: 'Agregar pago' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Confirmar venta' }).hasAttribute('disabled')).toBe(false));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar venta' }));
+    await screen.findByText(saleCodeFromId(secondId));
+    expect(screen.queryByText(saleCodeFromId(firstId))).toBeNull();
   });
 });

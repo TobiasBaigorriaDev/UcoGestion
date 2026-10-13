@@ -13,6 +13,7 @@ async page => {
     if (['POST', 'PATCH'].includes(request.method()) && /\/catalog\/items(?:\/[^/]+)?$/.test(new URL(request.url()).pathname)) mutations.push(request);
   });
   await page.setViewportSize({ width: 1280, height: 900 });
+  await page.getByRole('button', { name: 'Nuevo producto o servicio' }).click();
   await page.getByRole('textbox', { name: 'Nombre del ítem nuevo' }).fill('Producto navegador');
   const initialPrice = page.getByRole('textbox', { name: 'Precio de venta opcional' });
   const alignedFields = await Promise.all(['#item-new-category', '#item-new-price', '#item-new-sku'].map(selector => page.locator(selector).boundingBox()));
@@ -27,6 +28,7 @@ async page => {
   await page.getByRole('button', { name: 'Crear ítem', exact: true }).click();
   check((await createResponse).status() === 201, 'Category assignment on creation failed');
   await page.getByText('Precio: 1500.50', { exact: true }).waitFor();
+  await page.getByText('Producto navegador', { exact: true }).click();
   await page.getByRole('button', { name: 'Editar Producto navegador', exact: true }).click();
   const category = page.getByRole('combobox', { name: 'Categoría de Producto navegador', exact: true });
   check(await category.locator('option:checked').textContent() === 'Almacén navegador', 'Current category is not selected');
@@ -42,6 +44,7 @@ async page => {
   await page.getByText('Categoría: Bebidas navegador', { exact: true }).waitFor();
   await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByText('Producto navegador', { exact: true }).click();
   await page.getByRole('button', { name: 'Editar Producto navegador', exact: true }).click();
   check(await category.locator('option:checked').textContent() === 'Bebidas navegador', 'Assignment did not persist on reload');
   await page.getByText('Precio: 1500.50', { exact: true }).waitFor();

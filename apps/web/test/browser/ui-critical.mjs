@@ -5,8 +5,10 @@ async page => {
   page.on('pageerror', error => pageErrors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') pageErrors.push(message.text()); });
   page.on('response', response => { if (response.status() === 404) pageErrors.push(`404 ${response.url()}`); });
-  const selection = new URL(page.url()).searchParams.get('verifyRoutes')?.split(',');
-  const verifyCards = new URL(page.url()).searchParams.has('verifyCards');
+  const selection = new URL(page.url()).searchParams.get('verifyRoutes')?.split(',')
+    ?? /* __UI_VERIFY_ROUTES__ */ null;
+  const verifyCards = new URL(page.url()).searchParams.has('verifyCards')
+    || /* __UI_VERIFY_CARDS__ */ false;
   const check = (value, message) => { if (!value) throw new Error(message); };
   const org = '11111111-1111-4111-8111-111111111111', branch = '22222222-2222-4222-8222-222222222222';
   const item = '33333333-3333-4333-8333-333333333333';
@@ -95,6 +97,21 @@ async page => {
       throw new Error(`${route}: ${error.message}; visible page: ${(await page.locator('body').innerText()).slice(0, 1000)}`, { cause: error });
     }
     await page.waitForFunction(() => ![...document.querySelectorAll('[role="status"]')].some(e => e.textContent?.startsWith('Cargando')), undefined, { timeout: 20000 });
+    if (route.startsWith('/workspace/catalog') || route.startsWith('/workspace/inventory')) {
+      const primary = page.getByRole('navigation', { name: 'Navegación principal' });
+      const section = page.getByRole('navigation', { name: 'Catálogo e inventario' });
+      check(await primary.getByRole('link', { name: 'Catálogo e inventario' }).getAttribute('aria-current') === 'page',
+        `Main section is not active on ${route}`);
+      check(await primary.getByRole('link', { name: 'Inventario', exact: true }).count() === 0,
+        `Inventory still appears as a separate section on ${route}`);
+      const sectionLabel = route.endsWith('/categories') ? 'Categorías'
+        : route.endsWith('/items') ? 'Productos'
+          : route.endsWith('/adjustments') ? 'Historial de ajustes'
+            : route.endsWith('/transfers') ? 'Transferencias'
+              : 'Productos';
+      check(await section.getByRole('link', { name: sectionLabel }).getAttribute('aria-current') === 'page',
+        `Section destination is not active on ${route}`);
+    }
     for (const width of [1440, 1024, 768, 390]) {
       await page.setViewportSize({ width, height: 1000 }); results.push(await scan(route, width, 'loaded'));
       if (verifyCards) {
@@ -121,10 +138,27 @@ async page => {
         }
         if (route === '/workspace/inventory') {
           const card = page.getByRole('listitem').filter({ hasText: 'Manzanas' });
-          check(await card.count() === 1 && /Disponible: 2.000/.test(await card.innerText()) && /Mínimo: 3.000/.test(await card.innerText()) && /Alerta: Stock bajo/.test(await card.innerText()), 'Stock card lost values or non-color warning');
+          check(await card.count() === 1 && /Disponible: 2 unidades/.test(await card.innerText()) && /Mínimo: 3(?:\s|$)/.test(await card.innerText()) && /Alerta: Stock bajo/.test(await card.innerText()), 'Stock card lost values or non-color warning');
         }
         await page.screenshot({ path: `output/playwright/t226-${route.split('/').at(-1)}-${width}.png`, fullPage: true });
       }
+    }
+    if (route === '/workspace/catalog') {
+      check(await page.getByRole('heading', { name: 'Productos', exact: true }).count() === 1, 'Product workspace missing');
+      await page.getByText(/Disponible en Centro:/).waitFor();
+      check(await page.getByText('Stock bajo').count() === 1, 'Branch stock alert missing from products');
+      check(await page.getByRole('button', { name: 'Editar Manzanas' }).count() === 0, 'Product details start open');
+      await page.getByText('Manzanas', { exact: true }).click();
+      await page.getByRole('button', { name: 'Editar Manzanas' }).waitFor();
+      check(await page.getByRole('button', { name: 'Cambiar precio de Manzanas' }).count() === 0, 'Price action outside editor');
+      await page.getByRole('button', { name: 'Editar Manzanas' }).click();
+      check(await page.getByRole('button', { name: 'Cambiar precio de Manzanas' }).count() === 1, 'Price edit missing');
+      check(await page.getByRole('button', { name: 'Eliminar Manzanas' }).count() === 1, 'Product deletion missing');
+      await page.getByRole('textbox', { name: 'Nombre de Manzanas' }).waitFor();
+      results.push(await scan(route, 390, 'edit-open'));
+      await page.getByRole('button', { name: 'Nuevo producto o servicio' }).click();
+      await page.getByRole('textbox', { name: 'Nombre del ítem nuevo' }).waitFor();
+      results.push(await scan(route, 390, 'create-open'));
     }
     const submit = page.locator('form button[type="submit"]').first();
     if (await submit.count() && await submit.isEnabled()) {

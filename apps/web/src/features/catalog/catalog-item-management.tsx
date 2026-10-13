@@ -11,7 +11,13 @@ import { ApiClient, ApiProblemError } from '../../lib/api/client';
 import { SimilarNameWarning } from './components/similar-name-warning';
 import type { ManagedCategory } from './catalog-category-management';
 import { CatalogSearch, filterCatalogItems } from './components/catalog-search';
+import { CatalogSort, sortCatalogItems, type CatalogOrder } from './components/catalog-sort';
+import { CatalogGrouping, CatalogProductList } from './components/catalog-product-list';
+import { CatalogStockSummary } from './catalog-stock-summary';
+import { CatalogProductStockActions } from './catalog-product-stock-actions';
+import type { StockItem } from '../inventory/inventory-api';
 import styles from '../identity/management.module.css';
+import catalogStyles from './catalog-item-management.module.css';
 
 const itemSchema = z.object({
   id: z.string(),
@@ -220,6 +226,9 @@ export function CatalogItemManagement({
   organizationId,
   items,
   categories = [],
+  branchName,
+  stocks,
+  stockFailed = false,
   onReload,
   onCreate = createCatalogItem,
   onEdit = editCatalogItem,
@@ -232,6 +241,9 @@ export function CatalogItemManagement({
   organizationId: string;
   items: ManagedItem[];
   categories?: ManagedCategory[];
+  branchName?: string | undefined;
+  stocks?: readonly StockItem[] | undefined;
+  stockFailed?: boolean;
   onReload: () => void;
   onCreate?: typeof createCatalogItem;
   onEdit?: typeof editCatalogItem;
@@ -246,7 +258,11 @@ export function CatalogItemManagement({
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState('');
-  const visibleItems = filterCatalogItems(items, query);
+  const [order, setOrder] = useState<CatalogOrder>('name-asc');
+  const [grouped, setGrouped] = useState(false);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [creating, setCreating] = useState(false);
+  const visibleItems = sortCatalogItems(filterCatalogItems(items, query), order, !stockFailed && branchName ? stocks : undefined);
   const form = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
     defaultValues: {
@@ -272,6 +288,7 @@ export function CatalogItemManagement({
       });
       form.reset();
       setSimilar([]);
+      setCreating(false);
       setMessage(values.price === '' ? 'Ítem creado. Podés definir su precio desde el listado.' : 'Ítem creado con precio de venta.');
       onReload();
     } catch (cause) {
@@ -291,12 +308,15 @@ export function CatalogItemManagement({
   return (
     <section className={styles.page} aria-labelledby="items-heading">
       <header className={styles.heading}>
-        <h1 id="items-heading">Administrar ítems</h1>
-        <p>Creá productos o servicios y actualizá sus datos y precios.</p>
+        <h1 id="items-heading">Productos</h1>
+        <p>Consultá y actualizá los productos y servicios de tu organización.</p>
       </header>
-      <ErrorSummary error={error} />
-      {message ? <p role="status">{message}</p> : null}
-      <form className={styles.panel} onSubmit={form.handleSubmit(submit)} noValidate>
+      <button className={catalogStyles.createAction} type="button" aria-expanded={creating}
+        aria-controls="new-catalog-item" onClick={() => setCreating(value => !value)}>
+        {creating ? 'Cerrar alta' : 'Nuevo producto o servicio'}
+      </button>
+      {creating ? <div id="new-catalog-item">
+        <form className={styles.panel} onSubmit={form.handleSubmit(submit)} noValidate>
         <h2>Ítem nuevo</h2>
         <div className={`${styles.fields} ${styles.itemCreateFields}`}>
           <div>
@@ -359,22 +379,36 @@ export function CatalogItemManagement({
         )}
         <SimilarNameWarning similarNames={similar} />
         <button type="submit" disabled={busy}>{busy ? 'Creando…' : 'Crear ítem'}</button>
-      </form>
-      <section className={styles.panel} aria-labelledby="items-list-heading">
+        </form>
+      </div> : null}
+      <ErrorSummary error={error} />
+      {message ? <p role="status">{message}</p> : null}
+
+      <section className={`${styles.panel} ${catalogStyles.catalogList}`} aria-labelledby="items-list-heading">
         <h2 id="items-list-heading">Ítems de la organización</h2>
         <CatalogSearch query={query} onQueryChange={setQuery} total={items.length} matched={visibleItems.length} />
+        <CatalogSort value={order} onChange={setOrder} />
+        <CatalogGrouping checked={grouped} onChange={setGrouped} />
         {visibleItems.length === 0 ? (
           <p>{items.length && query.trim() ? 'No encontramos ítems con esa búsqueda. Probá con otro nombre, SKU o código de barras.' : 'No hay ítems registrados.'}</p>
         ) : (
-          <ul className={styles.rows}>
-            {visibleItems.map((item) => (
-              <li className={styles.row} key={item.id}>
-                <strong>{item.name}</strong>
-                <span>
-                  {item.status === 'ACTIVE' ? 'Activo' : 'Inactivo'} · {item.type === 'PRODUCT' ? 'Producto' : 'Servicio'} · {item.baseUnit === 'UNIT' ? 'Unidad' : 'Fraccionable'} · {item.trackInventory ? 'Control de inventario' : 'Sin control de inventario'}
+          <CatalogProductList items={visibleItems} categories={categories} grouped={grouped} renderItem={(item) => {
+              const stock = stocks?.find(entry => entry.itemId === item.id);
+              return (
+              <li className={`${styles.row} ${catalogStyles.productRow}`} key={item.id}>
+                <details className={catalogStyles.productDetails} open={expanded[item.id] ?? false}
+                  onToggle={event => { const open = event.currentTarget.open; setExpanded(current => ({ ...current, [item.id]: open })); }}>
+                  <summary className={catalogStyles.productSummary}>
+                    <strong>{item.name}</strong>
+                <span className={catalogStyles.productPrice}>{item.price === null ? 'Sin precio' : `Precio: ${item.price}`}</span>
+                <CatalogStockSummary item={item} branchName={branchName} stocks={stocks} failed={stockFailed} />
+                  <svg className={catalogStyles.expandIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+                  </summary>
+                  {expanded[item.id] ? <div className={catalogStyles.detailBody}>
+                <span className={catalogStyles.productMeta}>
+                  {item.status === 'ACTIVE' ? 'Activo' : 'Inactivo'} · {item.type === 'PRODUCT' ? 'Producto' : 'Servicio'} · {item.baseUnit === 'UNIT' ? 'Unidad' : 'Fraccionable'} · {item.trackInventory ? 'Con stock' : 'Sin stock'}
                 </span>
-                <span>{item.price === null ? 'Sin precio' : `Precio: ${item.price}`}</span>
-                <span>Categoría: {categories.find(category => category.id === item.categoryId)?.name ?? (item.categoryId ? 'No disponible' : 'Sin categoría')}</span>
+                <span className={catalogStyles.productMeta}>Categoría: {categories.find(category => category.id === item.categoryId)?.name ?? (item.categoryId ? 'No disponible' : 'Sin categoría')}{item.sku ? ` · SKU ${item.sku}` : ''}</span>
                 <ItemEditor
                   organizationId={organizationId}
                   item={item}
@@ -386,11 +420,15 @@ export function CatalogItemManagement({
                   onDelete={onDelete}
                   onChangeStructure={onChangeStructure}
                 />
+                    {item.status === 'ACTIVE' && item.trackInventory && !stockFailed && branchName && stock ?
+                      <CatalogProductStockActions organizationId={organizationId} role="ADMIN" stock={stock} onReload={onReload} /> : null}
+                  </div> : null}
+                </details>
               </li>
-            ))}
-          </ul>
+            ); }} />
         )}
       </section>
+
     </section>
   );
 }
@@ -416,6 +454,7 @@ function ItemEditor({
   onDelete: typeof deleteCatalogItem;
   onChangeStructure: typeof changeCatalogItemStructure;
 }) {
+  const [editing, setEditing] = useState(false);
   const [mode, setMode] = useState<'closed' | 'edit' | 'price' | 'structure' | 'delete'>('closed');
   const [error, setError] = useState<ApiProblemError | null>(null);
   const [busy, setBusy] = useState(false);
@@ -447,6 +486,7 @@ function ItemEditor({
         categoryId: values.categoryId || null,
       });
       setMode('closed');
+      setEditing(false);
       onReload();
     } catch (cause) {
       setError(explainCatalogError(cause));
@@ -461,6 +501,7 @@ function ItemEditor({
     try {
       await onPrice(organizationId, item.id, item.version, values.price);
       setMode('closed');
+      setEditing(false);
       onReload();
     } catch (cause) {
       setError(explainCatalogError(cause));
@@ -493,6 +534,7 @@ function ItemEditor({
         ...(values.type === 'PRODUCT' ? { trackInventory: values.trackInventory } : { trackInventory: false }),
       });
       setMode('closed');
+      setEditing(false);
       onReload();
     } catch (cause) {
       setError(explainCatalogError(cause));
@@ -507,6 +549,7 @@ function ItemEditor({
     try {
       await onDelete(organizationId, item.id, item.version);
       setMode('closed');
+      setEditing(false);
       onReload();
     } catch (cause) {
       setError(explainCatalogError(cause));
@@ -517,24 +560,28 @@ function ItemEditor({
 
   return (
     <div>
+      <button type="button" aria-expanded={editing} aria-controls={`product-editor-${item.id}`} disabled={busy} onClick={() => {
+        edit.reset({ name: item.name, sku: item.sku ?? '', barcode: item.barcode ?? '', categoryId: item.categoryId ?? '' });
+        price.reset({ price: item.price ?? '' });
+        structure.reset({ type: item.type, baseUnit: item.baseUnit, trackInventory: item.trackInventory });
+        setError(null);
+        setEditing(!editing);
+        setMode(editing ? 'closed' : 'edit');
+      }}>Editar {item.name}</button>
+      {editing ? <div id={`product-editor-${item.id}`} className={catalogStyles.editorBody}>
       <ErrorSummary error={error} />
       <div className={styles.actions}>
-        <button type="button" onClick={() => {
-          edit.reset({ name: item.name, sku: item.sku ?? '', barcode: item.barcode ?? '', categoryId: item.categoryId ?? '' });
-          setMode(mode === 'edit' ? 'closed' : 'edit');
-        }}>
-          Editar {item.name}
-        </button>
-        <button type="button" onClick={() => setMode(mode === 'price' ? 'closed' : 'price')}>
+        {mode !== 'edit' ? <button type="button" disabled={busy} onClick={() => setMode('edit')}>Datos de {item.name}</button> : null}
+        <button type="button" disabled={busy} onClick={() => setMode(mode === 'price' ? 'edit' : 'price')}>
           Cambiar precio de {item.name}
         </button>
-        <button type="button" onClick={() => setMode(mode === 'structure' ? 'closed' : 'structure')}>
+        <button type="button" disabled={busy} onClick={() => setMode(mode === 'structure' ? 'edit' : 'structure')}>
           Cambiar estructura de {item.name}
         </button>
         <button type="button" onClick={() => void toggleStatus()} disabled={busy}>
           {item.status === 'ACTIVE' ? `Desactivar ${item.name}` : `Activar ${item.name}`}
         </button>
-        <button type="button" onClick={() => setMode(mode === 'delete' ? 'closed' : 'delete')}>
+        <button type="button" disabled={busy} onClick={() => setMode(mode === 'delete' ? 'edit' : 'delete')}>
           Eliminar {item.name}
         </button>
       </div>
@@ -626,6 +673,7 @@ function ItemEditor({
           </div>
         </div>
       ) : null}
+      </div> : null}
     </div>
   );
 }

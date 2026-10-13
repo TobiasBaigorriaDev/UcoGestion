@@ -115,7 +115,12 @@ async function run() {
           'async page => { const probe=await page.context().newPage();try {return {version:page.context().browser().version(),userAgent:await probe.evaluate(()=>navigator.userAgent)};}finally {await probe.close();} }')).result);
         const source = await readFile(resolve(root, `apps/web/test/browser/${name}.mjs`), 'utf8');
         const scenarioPath = resolve(directory, `${name}.mjs`);
-        await writeFile(scenarioPath, source.replaceAll('.impeccable/review/', 'output/playwright/captures/'));
+        await writeFile(scenarioPath, source.replaceAll('.impeccable/review/', 'output/playwright/captures/')
+          .replace('/* __UI_VERIFY_ROUTES__ */ null', JSON.stringify(
+            name === 'ui-critical' && process.env.UI_VERIFY_ROUTES
+              ? process.env.UI_VERIFY_ROUTES.split(',') : null))
+          .replace('/* __UI_VERIFY_CARDS__ */ false', JSON.stringify(
+            name === 'ui-critical' && process.env.UI_VERIFY_CARDS === 'true')));
         const result = readScenarioResult(await cli(session, 'run-code', '--filename', scenarioPath));
         results.push({ scenario: name, browser, ...metadata, os: `${platform()} ${release()}`, passed: true, result });
         process.stdout.write(`${browser}: ${name} passed\n`);

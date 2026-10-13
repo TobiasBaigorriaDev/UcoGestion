@@ -37,6 +37,23 @@ export async function loadStocks(organizationId: string, branchId: string, after
   return result;
 }
 
+export async function loadAllStocks(organizationId: string, branchId: string,
+  loadPage: typeof loadStocks = loadStocks): Promise<StockItem[]> {
+  const all: StockItem[] = [];
+  const seenCursors = new Set<string>();
+  let after: string | undefined;
+  do {
+    const page = await loadPage(organizationId, branchId, after);
+    if (page.stocks.some((stock) => stock.branchId !== branchId)) throw new Error('Stock branch mismatch');
+    all.push(...page.stocks);
+    if (!page.nextCursor) return all;
+    if (seenCursors.has(page.nextCursor)) throw new Error('Repeated stock cursor');
+    seenCursors.add(page.nextCursor);
+    after = page.nextCursor;
+  } while (after);
+  return all;
+}
+
 export async function saveStockThreshold(organizationId: string, branchId: string,
   itemId: string, minimum: string | null): Promise<void> {
   await client.request(`/inventory/stocks/${encodeURIComponent(branchId)}/${encodeURIComponent(itemId)}/threshold`, {

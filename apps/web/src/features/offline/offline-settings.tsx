@@ -1,7 +1,7 @@
 'use client';
 import { OrganizationTime } from '../../components/organization-time';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -21,6 +21,7 @@ export interface OfflineSettingsActions {
   readonly refresh: () => Promise<OfflineStatus>;
   readonly sync: () => Promise<OfflineStatus>;
   readonly readStatus?: () => Promise<OfflineStatus>;
+  readonly renderPos?: (status: OfflineStatus) => ReactNode;
 }
 export function OfflineSettings(actions: OfflineSettingsActions) {
   const [status, setStatus] = useState<OfflineStatus | null>(null);
@@ -73,6 +74,7 @@ export function OfflineSettings(actions: OfflineSettingsActions) {
           <button type="submit" disabled={busy}>{busy ? 'Verificando…' : prepared ? 'Desbloquear mi identidad' : 'Autorizar este equipo y crear PIN'}</button>
         </>}
       </form> : <>
+        {actions.renderPos?.(status)}
         <section className={styles.panel} aria-labelledby="offline-validity"><h2 id="offline-validity">Autorización y sincronización</h2>
           <p role="status">{status.expired ? 'Autorización vencida. Conectate y renovala antes de abrir caja o vender.' : 'Autorización vigente para operar sin conexión.'}</p>
           <dl><dt>Vigente hasta</dt><dd><OrganizationTime value={status.expiresAt} timezone={status.timezone} /></dd>

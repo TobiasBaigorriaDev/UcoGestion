@@ -18,6 +18,23 @@ const quote = (total: string) => ({ quoteFingerprint: `fingerprint-${total}`, qu
 describe('T152C POS checkout', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
+  it('D03 preserves the original operation ID and idempotency key after an uncertain response', async () => {
+    mocks.loadCheckoutContext.mockResolvedValue({ sessions: [{ id: 'session', deviceId: 'device', registerName: 'Caja' }], paymentMethods: ['CASH'] });
+    mocks.quoteSale.mockResolvedValue(quote('0.00'));
+    mocks.confirmSale.mockRejectedValueOnce(new Error('Lost response')).mockImplementation(async (_org, input) => ({ id: input.clientOperationId, total: '0.00', receipt: { label: 'Comprobante no fiscal' } }));
+    const onConfirmed = vi.fn();
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <PosCheckout organizationId="org" branchId="branch" role="OWNER" lines={lines} onConfirmed={onConfirmed} />
+    </QueryClientProvider>);
+    const button = screen.getByRole('button', { name: 'Confirmar venta' });
+    await waitFor(() => expect(button.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(button); await screen.findByText('No pudimos confirmar la venta. Intentá nuevamente.');
+    expect(onConfirmed).not.toHaveBeenCalled();
+    fireEvent.click(button); await waitFor(() => expect(onConfirmed).toHaveBeenCalledTimes(1));
+    expect(mocks.confirmSale.mock.calls[1]).toEqual(mocks.confirmSale.mock.calls[0]);
+    expect(onConfirmed.mock.calls[0]?.[0].id).toBe(mocks.confirmSale.mock.calls[0]?.[1].clientOperationId);
+  });
+
   it('requires explicit acceptance and updated payments after PRICE_CHANGED', async () => {
     mocks.loadCheckoutContext.mockResolvedValue({ sessions: [{ id: 'session', deviceId: 'device',
       registerName: 'Caja principal' }], paymentMethods: ['CASH', 'TRANSFER'] });

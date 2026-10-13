@@ -49,6 +49,20 @@ describe('catalog and invitation HTTP contracts', () => {
     if (priorUrl === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = priorUrl;
   });
 
+  it('creates and reads category icons through validated HTTP contracts', async () => {
+    const login = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin', 'http://localhost:3000').send({ email: 'contract-owner@example.com', password: 'correct-password' }).expect(204);
+    const cookie = (login.headers['set-cookie'] as string[] | undefined)?.[0]?.split(';')[0] ?? '';
+    const csrf = await request(app.getHttpServer()).get('/api/v1/auth/csrf').set('Cookie', cookie).expect(200);
+    const create = (icon: string) => request(app.getHttpServer()).post('/api/v1/catalog/categories')
+      .set('Cookie', cookie).set('X-Organization-Id', organizationId).set('Origin', 'http://localhost:3000')
+      .set('X-CSRF-Token', csrf.body.csrfToken as string).set('Idempotency-Key', randomUUID()).send({ name: 'Icono HTTP', icon });
+    await create('unknown-icon').expect(400);
+    const created = await create('coffee').expect(201);
+    expect(created.body).toMatchObject({ icon: 'coffee', version: 1 });
+    const categories = await request(app.getHttpServer()).get('/api/v1/catalog/categories').set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
+    expect(categories.body.categories).toContainEqual(created.body);
+  });
+
   it.each(['CASHIER', 'EMPLOYEE'])('RF-49 revalidates %s membership and denies price changes over HTTP', async role => {
     const user = await createGlobalUser(pool, { email: `${role.toLowerCase()}-price@example.com`, password: 'correct-password' });
     const id = randomUUID();
@@ -82,7 +96,7 @@ describe('catalog and invitation HTTP contracts', () => {
     const login = await request(app.getHttpServer()).post('/api/v1/auth/login').set('Origin', 'http://localhost:3000').send({ email: 'contract-owner@example.com', password: 'correct-password' }).expect(204);
     const cookie = (login.headers['set-cookie'] as string[] | undefined)?.[0]?.split(';')[0] ?? '';
     const catalog = await request(app.getHttpServer()).get('/api/v1/catalog/items').set('Cookie', cookie).set('X-Organization-Id', organizationId).expect(200);
-    expect(catalog.body.items).toEqual([expect.objectContaining({ name: 'Visible', status: 'ACTIVE' })]);
+    expect(catalog.body.items).toEqual([expect.objectContaining({ name: 'Visible', status: 'ACTIVE', trackInventory: false })]);
     expect(JSON.stringify(catalog.body)).not.toMatch(/cost|margin/i);
   });
 
@@ -103,9 +117,9 @@ describe('catalog and invitation HTTP contracts', () => {
       await headers(path).set('If-Match', '1').set('Idempotency-Key', randomUUID()).send(body).expect(400);
     }
     const key = randomUUID();
-    const edited = await headers(path).set('If-Match', '1').set('Idempotency-Key', key).send({ name: 'Renombrada HTTP' }).expect(200);
-    expect(edited.body).toEqual({ id, name: 'Renombrada HTTP', status: 'ACTIVE', version: 2 });
-    const replay = await headers(path).set('If-Match', '1').set('Idempotency-Key', key).send({ name: 'Renombrada HTTP' }).expect(200);
+    const edited = await headers(path).set('If-Match', '1').set('Idempotency-Key', key).send({ name: 'Renombrada HTTP', icon: 'cup-soda' }).expect(200);
+    expect(edited.body).toEqual({ id, name: 'Renombrada HTTP', status: 'ACTIVE', version: 2, icon: 'cup-soda' });
+    const replay = await headers(path).set('If-Match', '1').set('Idempotency-Key', key).send({ name: 'Renombrada HTTP', icon: 'cup-soda' }).expect(200);
     expect(replay.body).toEqual(edited.body);
     const conflict = await headers(path).set('If-Match', '1').set('Idempotency-Key', randomUUID()).send({ name: 'Otro' }).expect(409);
     expect(conflict.headers['content-type']).toContain('application/problem+json');

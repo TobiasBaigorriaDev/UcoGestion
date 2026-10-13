@@ -2,6 +2,8 @@
 
 > D01 (§6.4) y D02 (§11.1.1) están resueltas e incorporadas al spec. Plan aprobado por la autorización explícita de completar todo lo necesario para dejar el proyecto listo para build.
 
+> **D03 (§22), aprobado el 2026-10-11:** el usuario respondió «apruebo» a la propuesta de RF-317–RF-323 y su diseño, incluida la superficie POS offline y comprobante HTML local. Habilita las tareas D03 con TDD; no cierra pendientes previos.
+
 ## 1. Objetivo y restricciones
 
 Implementar el spec cerrado como un SaaS web/PWA multi-tenant, con PostgreSQL como fuente de verdad, POS online y continuidad offline limitada. El diseño será un monolito modular TypeScript desplegado como aplicaciones web, API y worker del mismo repositorio y artefacto backend. No se introducen microservicios, event sourcing, CQRS distribuido, Redis ni Kubernetes.
@@ -249,6 +251,8 @@ Ninguno de estos mecanismos concede `BYPASSRLS` a `uco_app` ni permite enumerar 
 Login/reset y provisioning tienen políticas explícitas separadas. `sync/push` con sesión vigente y el canal `delivery/push` sin sesión del actor convergen en la misma ingestión histórica de §11.3.1. El segundo exige certificado firmado, challenge de un solo uso y prueba de posesión del dispositivo; su guard solo admite entrega y ACK mínimo. Ninguna ruta omite RLS. Las pruebas comprueban que la excepción no alcanza lectura ni mutaciones ordinarias.
 
 Los maestros globales tenant —catálogo, clientes, proveedores— no se filtran por sucursal para OWNER/ADMIN. Sus operaciones asociadas sí. CASHIER/EMPLOYEE reciben DTOs proyectados sin campos prohibidos; no se confía en ocultar columnas desde React.
+
+La vista Productos muestra el saldo de la sucursal activa para ítems inventariables. `GET /api/v1/catalog/items` proyecta `trackInventory` para distinguir ítems sin control de stock; la cantidad se consulta mediante el endpoint existente `GET /api/v1/inventory/stocks` bajo el scope de sucursal. La web reúne todas sus páginas antes de presentar saldos y trata una fila ausente o una consulta fallida como stock no disponible, nunca como cero. La clave de consulta incluye organización y sucursal.
 
 ### 7.4 Seguridad web
 
@@ -893,3 +897,211 @@ Cada etapa se divide luego en tareas verticales TDD; ninguna etapa autoriza rela
 | RF-314 | Entrega opaca offline D02 | §7.3, §8.2, §11.1.1–§11.3.1; cifrado híbrido, canal delivery, RLS y pruebas de revocación |
 | RF-315 | Entrega opaca offline D02 | §7.3, §8.2, §11.1.1–§11.3.1; cifrado híbrido, canal delivery, RLS y pruebas de revocación |
 | RF-316 | Entrega opaca offline D02 | §7.3, §8.2, §11.1.1–§11.3.1; cifrado híbrido, canal delivery, RLS y pruebas de revocación |
+| RF-317 | ID visible en confirmación (D03 aprobado) | §22.2–§22.3; `sale-confirmation.tsx`, POS online/offline; D03-A01, A04, A11 |
+| RF-318 | Copia accesible del ID (D03 aprobado) | §22.3; `sale-confirmation.tsx`; D03-A01, A02, A04, A11 |
+| RF-319 | ID en comprobante (D03 aprobado) | §22.2–§22.3; vista autorizada de recibo, renderer API y comprobante local; D03-A03, A04, A06, A11 |
+| RF-320 | Identidad estable (D03 aprobado) | §22.2, §22.4; confirmación, Dexie, importer y delivery existentes; D03-A04–A06, A09, A10 |
+| RF-321 | Consulta guiada por ID (D03 aprobado) | §22.3–§22.4; `sale-lookup.tsx`, API de detalle; D03-A07, A11 |
+| RF-322 | Alcance autorizado (D03 aprobado) | §7, §22.2–§22.4; lectura tenant, RBAC, branch/session scope, retiro de identidad; D03-A08–A10 |
+| RF-323 | Disponibilidad después de sync (D03 aprobado) | §11, §22.3–§22.4; confirmación/comprobante local y consulta online; D03-A04, A06, A07, A09, A10 |
+| RF-329 | ID visible corto (D05 solicitado) | §24; `sale-code.ts`, confirmación, historial y comprobantes; D05-A01, A03 |
+| RF-330 | Consulta por código (D05 solicitado) | §24; resolver autorizado y `SaleLookup`; D05-A02, A03 |
+| RF-331 | Identidad técnica intacta (D05 solicitado) | §24; UUID/idempotencia/offline y snapshots existentes; D05-A01, A03 |
+| RF-336 | Historial de compras (D07 solicitado) | §25; `purchases` list, snapshots de proveedor/productos, UI y pruebas PostgreSQL/navegador |
+| RF-337 | Filtros y paginación de compras (D07 solicitado) | §25; fechas locales, estado, sucursal y cursor; pruebas HTTP/UI |
+| RF-338 | Tendencias de compras (D07 solicitado) | §25; agregados por hora/día, anuladas excluidas y gráfico accesible; pruebas HTTP/navegador |
+| RF-339 | Detalle y actualización (D07 solicitado) | §25; `PurchaseLookup`, invalidación de Query; pruebas UI/navegador |
+| RF-340 | Autorización y accesibilidad (D07 solicitado) | §25; RLS, rol y branch scope, estados accesibles; pruebas PostgreSQL/Supertest/axe |
+
+## 22. D03 — ID de venta recuperable — APROBADO
+
+### 22.1 Alcance y evidencia de revisión
+
+Mostrar y copiar el ID visible derivado del UUID original de venta en confirmación online/offline y reproducirlo en el comprobante para usarlo en «Ventas → Consultar venta». D05 (§24) actualiza la presentación y consulta aprobadas en D03 a 12 caracteres, sin alterar el UUID técnico. No requiere excepción constitucional, numeración fiscal, buscador por referencia local ni consulta administrativa offline.
+
+Revisión del estado actual:
+
+- `SalesOperationsService.confirm` persiste `sales.id = clientOperationId` y devuelve `id`; `PosCheckout` conserva ID/clave en reintentos de transporte. `PosOnline` muestra éxito/total y acciones de comprobante, pero no el ID.
+- `OfflineSales.confirm` persiste `id = draft.id`, devuelve ese ID en replay y sella venta/sobre atómicamente. `OfflineSaleImporter` inserta el mismo `sale.id`, conserva `localReference` y devuelve `reference = sale.id`. No hay necesidad de generar una identidad al sincronizar.
+- `receiptLines` omite el ID y los snapshots actuales no tienen un campo de ID. Los endpoints JSON, HTML y PDF llaman a la lectura autorizada `SalesOperationsService.receipt`.
+- `SaleLookup` ya explica dónde encontrar el ID y valida UUID; falta vincular la ayuda al campo y acreditar el recorrido desde el comprobante.
+- `OfflineWorkspace` expone únicamente `OfflineSettings`. El motor de venta offline está ejercitado por harness, pero esa evidencia no acredita una pantalla de confirmación operable. D03 debe conectar el motor existente a la superficie «POS sin conexión» para cumplir RF-117 y RF-317–RF-319, sin declarar suficiente un harness.
+
+La preparación de D03 modifica solo spec y plan. Se preservan los cambios previos del repositorio, incluidos los de catálogo, diseño, dashboard y tareas. La evidencia anterior no prueba todavía los criterios D03-A01–A11.
+
+### 22.2 Identidad, contratos e historial
+
+| Frontera | Diseño propuesto |
+| --- | --- |
+| Confirmación online | Conservar request `clientOperationId`, `Idempotency-Key` y respuesta `{ id, total, receipt }`. El ID visible proviene de `result.id` confirmado, nunca de un UUID generado al renderizar. |
+| Confirmación offline | Conservar schemas v1/v2, `draft.id`, `sale.id`, `result.id`, `operationId` y `localReference`. La vista se construye después del commit local desde el registro cifrado de la identidad desbloqueada. No agregar campos a payloads firmados ni reescribir pendientes. |
+| Comprobante API | Exponer `saleId: UUID` técnico y `saleCode` visible en una vista de lectura, derivados de `sales.id` en la misma consulta tenant autorizada que obtiene `receipt_snapshot`. JSON, HTML y PDF usan esa vista; el ID no se toma de un parámetro sin comprobar la venta. Actualizar tipo público del servicio, validación del contrato y snapshot OpenAPI si corresponde. |
+| Comprobante local | Construir un DTO de presentación desde `sale.id`, `sale.receipt`, `sale.quote` y pagos persistidos mediante una API pública del controlador offline. Incluir ID y estado «Confirmada sin conexión · Pendiente de sincronización». No importar módulos internos de API en web. |
+| Consulta | Mantener `GET /api/v1/sales/:id` y rutas `/:id/receipt`, `/:id/receipt/print`, `/:id/receipt.pdf` para UUIDs completos; agregar resolución autorizada del código visible según §24. No consultar por `OFF-…`, hash, ID de recibo o clave idempotente. |
+| Historial anterior | Componer `saleId` en lectura sin UPDATE de snapshots, respuestas idempotentes guardadas, bytes cifrados o hashes. Los comprobantes regenerados obtienen el ID original. Una copia ya impresa/descargada antes del cambio no puede actualizarse retrospectivamente. |
+| Persistencia | No se prevén migraciones PostgreSQL/IndexedDB ni dependencias nuevas para mostrar el ID. Conservar append-only, RLS, FKs, locks, atomicidad, auditoría y reglas de limpieza tras ACK. |
+
+El recibo de confirmación guardado en idempotencia puede seguir con su forma anterior: la identidad autoritativa de esa respuesta es `id`. No actualizar respuestas históricas para añadir `saleId`. El DTO del endpoint de lectura se compone de manera independiente. Componer/renderizar/copiar un ID no crea otra operación comercial, movimiento, outbox ni evento `sale.confirmed`.
+
+Los reintentos de resultado incierto mantienen payload, clave e ID. No convertir automáticamente una confirmación online incierta en una venta offline. `PRICE_CHANGED` es un rechazo previo al commit y conserva su flujo aprobado de aceptación explícita y nueva clave; no es un replay de venta confirmada. La ingestión histórica conserva ID aun con incidencia de stock, caja `CONFLICTED` o datos tardíos legítimos.
+
+Toda lectura backend mantiene transacción contextualizada/RLS y autorización vigente por organización, rol y sucursal; conservar además RF-24/RF-144 para CASHIER y sus sesiones permitidas. Las pruebas deben incluir ventas ajenas en otra sesión, incluso con actor conocido. Si la revisión revela una brecha, comenzar con una regresión PostgreSQL/Supertest y aplicar la garantía existente sin ampliar permisos. El filtro visual de sucursal no constituye autorización.
+
+### 22.3 Superficies y archivos previstos
+
+| Archivo/componente | Responsabilidad y cambio previsto |
+| --- | --- |
+| `apps/web/src/features/sales/sale-confirmation.tsx` (nuevo) | Presentación reutilizable de confirmación, código visible de 12 caracteres seleccionable, botón «Copiar ID de venta», resultado anunciado con `role=status` y fallback manual. No generar IDs ni realizar mutaciones. |
+| `apps/web/src/features/sales/pos-online.tsx`, `pos-checkout.tsx`, `pos.module.css` | Usar la confirmación reutilizable; preservar intención/replay y ventas consecutivas. CSS localizado para código legible en móvil y foco visible, conforme a DESIGN.md. |
+| `apps/web/src/features/sales/sale-lookup.tsx` | Ayuda para ingresar los 12 caracteres del comprobante con `aria-describedby`; aceptar también UUID anterior y mantener estados y permisos existentes. |
+| `apps/web/src/features/sales/sales-api.ts` | Validar el ID de confirmación como UUID; mantener compatibilidad con recibos históricos de respuesta. |
+| `apps/api/src/modules/sales/sales-operations.service.ts`, `receipt-renderer.ts` | Vista de recibo con `saleId` y `saleCode` obtenidos en lectura autorizada; línea «ID de venta: …» con código visible compartida por HTML/PDF. No modificar snapshots comerciales para presentar identidad. |
+| `apps/api/src/modules/sales/sales.controller.ts`, contratos/OpenAPI existentes | Mantener rutas y autorización. Reflejar solo la ampliación aditiva del DTO de lectura; validar UUID y conservar Problem Details y respuesta no privada ante denegación. |
+| `apps/web/src/offline/offline-setup.ts`, `offline-pos.ts` | Exponer operaciones de POS y lectura del comprobante propio mediante controlador público que coordina las claves/autorización/sealer existentes. No entregar DEK, DB o datos ajenos a componentes de presentación. |
+| `apps/web/src/features/offline/offline-workspace.tsx`, `offline-settings.tsx`, `offline-pos-workspace.tsx` (nuevo) | Conectar el POS local preparado/desbloqueado, reutilizar carrito/reglas de pago y confirmar por `OfflinePos.confirmSale`. Mostrar confirmación/ID y comprobante local reales. Bloquear/retirar vistas al lock, logout, cambio de contexto o revocación conocida. No simular ventas desde el harness. |
+| `apps/web/src/features/sales/offline-receipt-actions.tsx` (nuevo) | Mostrar comprobante local con el mismo ID, abrir HTML imprimible y descargar ese HTML sin red. Escape de texto y ninguna credencial en el artefacto. El PDF existente queda disponible online después de sync; no llamar a endpoints privados sin conexión. |
+| Tests de §22.4 y `ops/browser/run.mjs` | Incorporar regresiones y un escenario integrado en gates de navegador; no sustituir garantías por mocks de repositorios o fixtures que simulen sync. |
+
+La superficie local permite consumidor final y exclusivamente las operaciones de POS ya autorizadas. La carga inicial puede requerir la preparación/autenticación online existente; una pestaña preparada debe operar sin red y recuperar pendientes tras reapertura/desbloqueo sin crear otra venta. No ampliar permisos de lectura offline después de revocación ni retener el payload más allá de la limpieza D02 para facilitar la UI.
+
+El botón de copia usa el portapapeles disponible por acción del usuario y maneja rechazo/API ausente. El ID permanece como texto seleccionable completo; el aviso manual no confirma una copia fallida. La confirmación local explica: «Podés consultar esta venta online con este ID cuando se sincronice». Consultar venta continúa siendo online-only; pendiente no implica que el servidor ya pueda devolverla.
+
+### 22.4 Pruebas y unidades TDD aprobadas
+
+La aprobación habilita a `sdd-build` para ejecutar las tareas D03 de forma atómica y secuencial. Su estado y evidencia se registran en `tasks.md`.
+
+| Unidad | RED requerido antes del cambio mínimo | Archivos/suites y criterios |
+| --- | --- | --- |
+| D03-T01: confirmación online y copia | ID ausente en éxito; copia exacta, teclado, rechazo/API ausente y segunda venta sin ID anterior. | `apps/web/test/pos-consecutive-sales.test.tsx`, nuevo `sale-confirmation.test.tsx`, `pos-checkout.test.tsx`; Testing Library + axe; A01, A02, A05, A11. |
+| D03-T02: identidad en recibo autorizado | HTML/PDF/JSON no contienen el ID de venta; snapshot antiguo permanece inmutable tras regeneración. | `apps/api/test/sales-http.e2e.test.ts`, nuevo `receipt-renderer.test.ts`; extraer texto de PDF, no solo buscarlo en bytes comprimidos; Testcontainers + PostgreSQL runtime/Supertest; A03, A08, A11. |
+| D03-T03: confirmación y comprobante locales operables | La UI offline no permite completar el recorrido real; éxito solo después del sellado dual, copia y artefacto local con ID original. | Nuevo `apps/web/test/offline-pos-workspace.test.tsx`; `offline-sale-confirmation.test.ts`, `offline-pos.test.ts`, `receipt-actions.test.tsx`; browser real con IndexedDB/Web Crypto; A04, A06, A09, A11. |
+| D03-T04: sync estable y consulta guiada | Recorrido venta offline → comprobante/ID → entrega real → consulta por ID no acreditado. Negativas de tenant/sucursal/sesión y revocación con ID conocido. | `apps/web/test/sale-lookup.test.tsx`, `apps/api/test/historical-ingestion.integration.test.ts`, `sales-http.e2e.test.ts`, nuevo `apps/api/test/sale-id-browser.e2e.ts` integrado al gate; A05–A10. |
+| D03-T05: resiliencia y cierre de evidencia | Aserciones faltantes de ID/recibo en reload, cierre de pestaña, ACK perdido, update, expiración/revocación y conflictos. Agregar regresiones antes de cualquier corrección necesaria. | `apps/web/test/browser/offline-pos.mjs`, `offline-update.mjs`, `offline-expiry.mjs`, `offline-resilience.mjs`, `receipt-safety.mjs`; `offline-migration.test.ts`, `offline-revocation.test.ts`, ingestión PostgreSQL; A06, A09, A10, A11. |
+
+Añadir fast-check para secuencias variables de replay: cada replay devuelve la identidad inicial y no crea efectos nuevos. Esas propiedades unitarias complementan las transacciones reales, no prueban aislamiento/atomicidad por sí solas. Fake IndexedDB se limita al nivel unitario; los escenarios de navegador usan almacenamiento y criptografía reales, y los recorridos de sincronización/consulta usan API y PostgreSQL reales.
+
+La matriz negativa incluye OWNER/ADMIN en y fuera de scope, CASHIER en sesión permitida/ajena, EMPLOYEE, tenant distinto, membresía revocada y ausencia de sesión autenticada, para detalle y las tres versiones del recibo. No entregar recibos mediante ACK ni reactivar acceso para recuperar un ID. Validar que el replay no duplica venta, pagos, ledgers, auditoría ni jobs; provocar rollback real en fallo de persistencia/auditoría y de sellado local.
+
+Comandos de cierre tras implementar: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e:critical`. Ejecutar además `pnpm test:e2e:nightly` con `BROWSER=chromium`, `firefox` y `webkit` para offline, y `pnpm test:e2e:catalog` porque el recorrido integrado propuesto se incorpora a `vitest.browser.config.mts`. Las ejecuciones focalizadas usan los configs existentes de Vitest antes del gate raíz. Aplicar las skills `impeccable` y `playwright` durante diseño/verificación UI conforme a AGENTS.md.
+
+Registrar comandos, resultados RED/GREEN, versiones de navegador y artefactos en evidencia D03; ejecutar `sdd-check` para RF-317–RF-323 y regresiones vinculadas. Verificar explícitamente atomicidad, idempotencia, auditoría única, observabilidad existente sin secretos/labels de ID, errores y reintentos. Sin tests skip ni mocks de persistencia para esas garantías. Un check impedido o fallido se informa como pendiente, no como aprobado; WebKit no acredita Safari real ni cierra pendientes previos del gate T236.
+
+### 22.5 Trazabilidad complementaria y riesgos
+
+Las filas RF-317–RF-323 están agregadas a §21. D03 complementa la trazabilidad aprobada sin borrar filas anteriores:
+
+| RF existentes | Relación con D03 | Verificación |
+| --- | --- | --- |
+| RF-81–RF-83, RF-267–RF-270 | ID global distinto de referencia local, comprobante reproducible e historial intacto. | A01, A03, A04, A06; T01–T03. |
+| RF-114–RF-122, RF-131–RF-134, RF-275–RF-279 | Confirmación local, replay, sincronización legítima, rollback y preservación de pendientes. | A04–A06, A09, A10; T03–T05. |
+| RF-02, RF-04, RF-21–RF-25, RF-144, RF-151, RF-285 | ID no autoriza; validación backend tenant/rol/sucursal/sesión. | A08, A09; T02, T04, T05. |
+| RF-152–RF-154 | ID legible y controles accesibles/responsive. | A02, A07, A11; T01–T04. |
+| RF-128–RF-129, RF-173–RF-177, RF-309–RF-316 | Identidad retirada, cifrado dual, ACK mínimo y limpieza segura. | A04, A06, A09, A10; T03–T05. |
+
+| Riesgo | Mitigación propuesta |
+| --- | --- |
+| Confundir UUID con `OFF-…` o regenerarlo al sincronizar | Etiqueta única «ID de venta», referencia local adicional y aserciones de igualdad en todas las fronteras. |
+| Renderizar el ID de la URL sin autorizar | Componer `saleId` desde la fila autorizada bajo RLS; negativas reales en detalle/JSON/HTML/PDF. |
+| Reescribir snapshots/respuestas históricas o sobres firmados | DTO de lectura derivado, sin migración ni resellado; comparación de snapshot/bytes previos tras replay y update. |
+| Presentar como consultable una venta pendiente | Estado local explícito y ayuda de disponibilidad después de sync; nunca inventar respuesta del servidor. |
+| Portapapeles bloqueado o UUID recortado | Fallback manual seleccionable, anuncio accesible y prueba responsive/teclado. |
+| Superficie offline actualmente incompleta | T03 conecta el motor real y T04 exige recorrido con API/PostgreSQL; no aceptar prueba de harness como entrega UI. |
+| Exponer un comprobante de identidad retirada o conservarlo después de ACK | Control público offline ligado a identidad, retiro de vistas/URLs temporales, respeto a limpieza D02; ningún recibo en delivery/ACK. |
+| Comprobantes locales descargados fuera de la PWA | Acción explícita del usuario; no persistir copias privadas adicionales en Cache Storage ni añadir credenciales al artefacto. |
+
+**Aprobación recibida:** el usuario aprobó explícitamente D03 completo en spec y plan §22 el 2026-10-11 («apruebo»), incluida la integración mínima de la superficie POS offline y el comprobante local HTML imprimible/descargable; PDF online tras sincronización. Se habilita generar tareas y comenzar TDD. No cerrar T236 ni otras tareas pendientes con esta aprobación.
+
+
+## 23. D04 — Historial de ventas autorizado por solicitud del usuario
+
+Alcance: RF-324–RF-328, junto con RF-02/04/24/144/151/322. Incremento vertical con TDD, sin mutaciones nuevas ni cambios de roles.
+
+`GET /api/v1/sales` exige `branchId` UUID; admite exclusivamente `from`, `to`, `status`, `cursor` y `limit` (1–100, predeterminado 25). Fechas ISO locales inclusivas, intervalo UTC calculado en PostgreSQL según `organizations.timezone`. Estado derivado de `sale_cancellations`, sin reescribir ventas. Lectura bajo `TenantTransaction.read`, RLS y los mismos predicados de membresía/branch/actor/titular del detalle. Fuera de scope devuelve página vacía sin datos; membresía revocada es rechazada por el guard existente.
+
+Cursor opaco existente con fecha UTC a precisión de microsegundos e ID; orden `(confirmed_at DESC, id DESC)`, comparación estricta y `limit + 1`. Conserva el índice tenant/sucursal/fecha existente; no requiere migración. No congela un snapshot entre páginas: nuevos registros anteriores al cursor aparecen al volver a la primera página.
+
+`SaleHistory` usa TanStack Query por organización/sucursal/filtros/cursor. `SaleLookup` conserva búsqueda por ID, detalle, anulación y comprobante; selección reinicia formulario de anulación y cambios de contexto remountan estado. Fechas inválidas, carga, vacío, reintento y navegación por teclado son explícitos. Anular invalida detalle e historial.
+
+| RF | Implementación | Evidencia |
+| --- | --- | --- |
+| RF-324/325/327 | SalesController.list, SalesOperationsService.list | sales-http.e2e.test.ts: PostgreSQL runtime, filtros, empate a microsegundos, cursores y negativos tenant/branch/rol/sesión/revocación |
+| RF-326/328 | SaleHistory, SaleLookup, sales-api | sale-lookup.test.tsx; escenario sales-history.mjs con Nest/PostgreSQL reales |
+
+Rollback D04: quitar exclusivamente endpoint/método list, metadatos/snapshot asociados, contrato cliente de historial, SaleHistory y su conexión/estilos, más pruebas y documentación D04. Preservar las modificaciones D03 y previas. Sin cambio de datos, ledgers, auditoría, idempotencia ni offline; observabilidad y errores usan infraestructura HTTP existente.
+
+### D06 — Tendencias y filtros en Ventas
+
+RF-332–RF-335 amplían D04 con presets locales Hoy/semana calendario/mes calendario. `SaleHistory` comparte período y sucursal entre listado y tendencias, conserva la consulta por ID y reinicia paginación al cambiar filtros. El selector incluye una sucursal o todas las autorizadas; el backend revalida membresía, rol, sucursal y propiedad de sesión de CASHIER dentro de la transacción tenant, bajo RLS.
+
+`GET /api/v1/sales/trends?from&to&branchId?&groupBy?` acepta fechas locales inclusivas con máximo 31 días. `groupBy=HOUR` exige un solo día y entrega 24 intervalos horarios locales; `DAY` agrupa fechas para semana y mes. SQL excluye anuladas y completa intervalos vacíos con cero. Devuelve importes decimales como texto y conteos enteros; la UI usa geometría exacta basada en enteros para los gráficos de líneas y ofrece tabla de valores sin depender del color. Para períodos en curso, la web recorta los puntos y filas de la tabla en la hora o fecha actual de la organización, conserva los intervalos transcurridos en cero y actualiza ese límite al avanzar el reloj o volver a la pestaña. Los períodos históricos conservan todos sus puntos. El listado `GET /sales` admite `branchId` opcional para todas las sucursales autorizadas y agrega `branchId` a cada fila. La web tolera la respuesta anterior sin `branchId` cuando consulta una sucursal concreta y usa esa sucursal como contexto. No hay migración ni mutación comercial.
+
+| RF | Implementación y verificación |
+| --- | --- |
+| RF-332–RF-333 | `sale-history.tsx`, `sales.controller.ts`, `sales-operations.service.ts`; pruebas de UI y PostgreSQL para período, alcance y tenant. |
+| RF-334–RF-335 | `GET /sales/trends`, `sales-api.ts`, `sale-history.tsx`, gráficos y valores accesibles; integración con días vacíos, anulaciones, filtro de sucursal y tenant; pruebas UI de corte horario y diario según zona horaria. |
+
+## 24. D05 — ID de venta visible de 12 caracteres
+
+La solicitud del usuario del 2026-10-11 y su elección posterior de 10–12 caracteres actualizan RF-317–RF-323 y agregan RF-329–RF-331. El UUID sigue siendo PK, `clientOperationId`, identidad de la cola offline y parámetro de las rutas existentes. El código visible usa Crockford Base32 de 60 bits tomados de los primeros 12 y últimos 3 dígitos hexadecimales del UUID v4. Así evita los bits fijos de versión y variante, permite derivación idéntica en navegador y API y no cambia los datos históricos.
+
+`packages/shared/src/sale-code.ts` contiene codificación y normalización. La UI presenta y copia 12 caracteres en mayúsculas; la entrada ignora espacios/guiones, distingue el UUID completo anterior y tolera `O/0`, `I/L/1`. La lectura de comprobante JSON agrega `saleCode` derivado de la fila autorizada; HTML/PDF y comprobante local usan el mismo código. El historial muestra el código y conserva el UUID como clave interna.
+
+`GET /api/v1/sales/by-code/:code` resuelve solo ventas visibles bajo la misma transacción tenant, RLS y predicados de rol, sucursal, actor y titular de sesión que el detalle. El rango por prefijo UUID usa el índice de PK existente; el sufijo completa los 60 bits. Se limita a dos coincidencias: ninguna responde 404, una devuelve solo el UUID para llamar al detalle autorizado y dos responden `SALE_CODE_AMBIGUOUS` sin elegir ni enumerar ventas. Un código de 60 bits puede repetirse excepcionalmente; el historial por fecha permite recuperar la venta en ese caso. No se agrega una secuencia online que rompa ventas offline.
+
+| RF | Superficie | Verificación requerida |
+| --- | --- | --- |
+| RF-329, RF-331 | shared, confirmación, historial, comprobantes API/local | Código estable y coincidente online/offline/replay/sync, reimpresión histórica sin UPDATE; sin efectos comerciales nuevos. |
+| RF-330 | resolver API, `SaleLookup`, `sales-api` | Código normalizado y UUID anterior, 404/400/409, negativas reales tenant/sucursal/sesión y revocación. |
+
+Riesgo residual: la abreviación no es una identidad matemática única. Ante colisión se informa el conflicto y se usa el historial autorizado; nunca se retorna la primera coincidencia. Revertir D05 restaura la presentación de UUID completo y elimina exclusivamente el resolver, la utilidad y el contrato aditivo `saleCode`, sin migración de datos ni cambio de sobres.
+
+## 25. D07 — Historial y tendencias de Compras
+
+RF-336–RF-340 agregan lecturas a `purchases` sin migración ni mutaciones comerciales. `GET /api/v1/purchases` lista documentos con snapshots de proveedor y productos, estado derivado de pago/anulación, fechas locales inclusivas y cursor `(confirmed_at, id)`; `GET /api/v1/purchases/trends` agrega por hora o día hasta 31 días y excluye anuladas. Ambas consultas usan `TenantTransaction.read`, RLS y predicados de membresía/branch para OWNER y ADMIN. CASHIER y EMPLOYEE no reciben datos financieros agregados. Los importes viajan como strings decimales.
+
+La web añade `PurchaseHistory` a Compras, con filtros y gráficos equivalentes a Ventas y selección que abre el detalle actual. TanStack Query separa claves por organización, sucursal, filtros y cursor e invalida después de confirmar, pagar o anular. Fecha/hora se presenta en la zona horaria de la organización. Tests PostgreSQL/Supertest cubren tenant, rol, sucursal, anulación, períodos y paginación; Testing Library y Playwright cubren estados, productos, selección, filtros y gráficos accesibles.
+
+
+### Presentación de Productos — solicitud explícita del 2026-10-12
+
+T236R reúne consulta y operación de stock en Productos [RF-40–RF-43, RF-57–RF-62, RF-145, RF-152–RF-154, RF-221]. El listado presenta nombre, precio y stock; seleccionar una fila revela metadatos y acciones. `CatalogProductStockActions` reutiliza `InventoryAdjustments` e `InventoryStock` en modo compacto para ajustar cantidades con motivo y configurar mínimos. CASHIER conserva consulta; EMPLOYEE conserva ajustes autorizados; OWNER/ADMIN mantienen gestión de catálogo. La ruta `/workspace/inventory` redirige a Productos y desaparece la pestaña Stock. Cambiar organización/sucursal desmonta los formularios. No cambia contratos, reglas de autorización, transacciones ni persistencia.
+
+
+### T236S — Acciones de producto y ajuste vertical — solicitud explícita del 2026-10-12
+
+Refinamiento de T236R [RF-46, RF-54–RF-63, RF-145, RF-152–RF-154, RF-160, RF-221]. El detalle ofrece Editar y Cambiar stock. `ItemEditor` expone precio, estructura, estado y eliminación únicamente dentro de su panel abierto; las operaciones conservan versiones y restricciones existentes. `CatalogProductStockActions` abre un panel mediante botón con aria-expanded; el formulario compacto de ajuste usa una sola columna en todos los tamaños. La ruta de ajustes usa `historyOnly`: conserva historial/compensaciones de RF-63 y elimina el alta duplicada; se presenta como Historial de ajustes. Sin cambios de contratos, datos, roles, transacciones o arquitectura.
+
+### T236T — Orden del listado de Productos — solicitud explícita del 2026-10-12
+
+Ampliación solicitada: «Stock bajo primero» prioriza el indicador `lowStock` de la API, derivado de saldo menor o igual al mínimo configurado por sucursal. Después aparecen saldos sin alerta y finalmente productos sin saldo aplicable; cada grupo usa nombre e ID como desempate. No se sustituye el mínimo configurado por una cantidad fija. Comparte búsqueda, recarga y tratamiento de sucursal/error con los órdenes existentes.
+
+Refinamiento de presentación [RF-40–RF-43, RF-145, RF-152–RF-154, RF-221]. Gestión y consulta comparten un selector nativo de nombre A–Z/Z–A, precio y stock menor/mayor. Se aplica al resultado de la búsqueda sobre los datos cargados, con nombre A–Z por defecto. Valores monetarios y cantidades se comparan exactamente mediante enteros BigInt escalados; sin coerción a number. Valores ausentes siempre al final; empates por nombre en español e ID. Stock usa solamente saldos disponibles de productos activos que controlan inventario en la sucursal seleccionada; ante error o ausencia de sucursal no se reutilizan saldos. La recarga recalcula el orden seleccionado y el cambio de contexto conserva el desmontaje existente. No modifica API, permisos, persistencia ni operaciones comerciales. [Evidencia](t236t-product-sort-evidence.md).
+
+### T236U — Categorías opcionales y alta encima del listado — solicitud explícita del 2026-10-12
+
+Refinamiento posterior T236V solicitado el mismo día [RF-50–RF-51, RF-145, RF-152–RF-154, RF-221–RF-222]: la vista agrupada inicia categorías como carpetas cerradas, con fondo y borde de tokens verdes, icono, nombre, cantidad y flecha. Botones con aria-expanded/aria-controls abren y cierran cada categoría independientemente, también con teclado. Cada carpeta monta productos al abrirse; reactivar agrupación reinicia carpetas cerradas. Se mantiene búsqueda, orden y Sin categoría; sin cambios de contratos, API o datos. [Evidencia](t236v-category-folders-evidence.md).
+
+Refinamiento de presentación [RF-50–RF-51, RF-145, RF-152–RF-154, RF-221–RF-222]. Checkbox «Agrupar por categorías» desactivado inicialmente: gestión y consulta agrupan resultados de búsqueda por categoría, con nombres en orden alfabético y «Sin categoría» al final. Cada grupo conserva el orden de productos seleccionado; categorías sin resultados no aparecen. Asociaciones con categorías no disponibles se identifican separadamente para no presentarlas como ausentes. `CatalogProductList` comparte estructura semántica de secciones, encabezados y listas. `CatalogReadService.read` expone `categoryId` nullable ya existente en el modelo, bajo la misma transacción tenant y autorización, para acreditar asociación en la consulta; sin migración, mutación, ampliación de roles ni datos financieros. El formulario de alta se inserta inmediatamente después de su botón y antes del listado. [Evidencia](t236u-product-category-groups-evidence.md).
+
+### T236W — Biblioteca SVG de categorías — solicitud explícita del 2026-10-12
+
+[RF-341–RF-343, RF-50–RF-51, RF-221–RF-222]. Selección de 20 iconos Lucide SVG, vendorizados en `apps/web/public/icons/categories` desde revisión fijada con licencia ISC y procedencia. Sin dependencia npm ni CDN; responsabilidad limitada a assets de presentación estáticos. Selector accesible, buscador en español y vista previa para crear/editar categorías de catálogo; gastos no cambian. Identificadores permitidos en shared/Zod y CHECK PostgreSQL, nunca contenido SVG del usuario.
+
+Migración versionada `0111_catalog_category_icons`: columna nullable icon, CHECK de biblioteca, grants por columna INSERT/UPDATE bajo RLS vigente. Creación/edición conservan transacción tenant, locks, versión, epoch y auditoría; hash idempotente incluye icon cuando se envía, omisión en edición conserva el actual y null lo restablece. Payloads omitidos y respuestas idempotentes anteriores siguen siendo válidos. Lecturas activas y gestionadas proyectan icon; carpetas y listado muestran el elegido. Sin reescritura de documentos/snapshots ni cambios offline. [Evidencia](t236w-category-icons-evidence.md).
+### T236X — Iconos sin nombres y variedad para almacenes/kioscos — solicitud explícita del 2026-10-12
+
+[RF-341–RF-343, RF-221–RF-222]. Refinamiento del selector: cuadrícula de 52 iconos sin nombres visibles ni nombre en la vista previa, manteniendo labels ARIA, búsqueda en español, selección nativa y retorno de foco. Añade 32 assets del mismo commit Lucide/ISC fijado (bebidas, snacks, alimentos, congelados, limpieza, higiene, cigarrillos, diarios, pilas y recargas). Sin dependencias nuevas; conserva identificadores existentes y los nombres de las categorías. Migración aditiva versionada `0112_catalog_category_kiosk_icons` amplía el CHECK junto al enum shared y schema Drizzle. Sin cambios de flujos comerciales, permisos ni reglas transaccionales. [Evidencia](t236x-kiosk-icons-evidence.md).
+
+### T236Y — Períodos y gráficos en Reportes — solicitud explícita del 2026-10-12
+
+[RF-146–RF-150, RF-152–RF-154, RF-286–RF-287]. Refinamiento de T184C solicitado por el usuario: Hoy, semana desde lunes, mes calendario y rango personalizado inclusivo, interpretados en la zona horaria vigente del negocio. Se conserva Todo el historial. La web convierte Hasta al día siguiente para respetar el contrato existente de reportes con límite final exclusivo; consulta, CSV y PDF comparten filtros aplicados.
+
+`ReportsWorkspace` conserva datasets y permisos; incorpora tendencias de importes no anulados para ventas/compras/gastos, cantidad de operaciones para estos y cantidad de sesiones/aperturas o movimientos para caja/inventario. Inventario actual conserva su consulta de estado presente sin fabricar historial. Se reutiliza `TrendChart` con encabezado configurable, tabla accesible y geometría exacta; dinero se suma mediante `sumMoney` y monedas históricas se grafican separadamente. Hora local para un día, día local para hasta 31 días, ceros transcurridos y corte en el presente actualizado por reloj/foreground.
+
+Los gráficos consultan todas las páginas autorizadas del período usando el endpoint existente, separadas de la paginación visible. No muestran resultados parciales ante fallo, cursor repetido o más de 200 páginas; ofrecen reintento o acotar filtros. Cancelación de la consulta interrumpe solicitudes posteriores. No constituye un snapshot transaccional entre páginas: se conserva la consistencia de lectura vigente del reporte. Sin migraciones, dependencias, mutaciones nuevas ni modificación de autorización, auditoría, idempotencia u offline. [Evidencia](t236y-reports-ui-evidence.md).
+
+### T236Z — Gastos por categoría en un gráfico compartido — solicitud explícita del 2026-10-12
+
+[RF-146–RF-150, RF-152–RF-154, RF-286–RF-287]. Refinamiento de Reportes/Gastos: un gráfico por moneda histórica con todas las categorías que tienen gastos no anulados en el período. Cada categoría usa su ID como identidad, su nombre como leyenda, color y patrón de línea propios; tabla accesible con una columna por categoría. Suma exacta mediante sumMoney, escala común, hora/día local, ceros transcurridos y límite/paginación de T236Y. Se conserva el gráfico de cantidad de operaciones y los filtros existentes.
+
+El dataset de gastos agrega `categoryName` a través de un JOIN por `(organization_id, expense_category_id)` a `expense_categories`, dentro de la misma transacción read-only, autorización y RLS. No filtra categorías inactivas ni modifica gastos históricos. Contrato aditivo de lectura, sin migración ni nuevas dependencias; columnas CSV/PDF vigentes y escrituras permanecen intactas. Respuestas antiguas sin nombre muestran «Categoría no disponible» y conservan el agrupamiento por ID. [Evidencia](t236z-expense-category-charts-evidence.md).

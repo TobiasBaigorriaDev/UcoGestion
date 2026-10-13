@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
 import { BadRequestException, Body, ConflictException, Controller, ForbiddenException,
-  Get, Param, Post, Req, UnauthorizedException } from '@nestjs/common';
+  Get, Param, Post, Query, Req, UnauthorizedException } from '@nestjs/common';
 import { z } from 'zod';
+import { ApiQuery } from '@nestjs/swagger';
 
 import { IdempotencyKeyReusedError, IdempotencyReplayForbiddenError,
   IdempotencyReplayPendingError } from '../../core/idempotency/idempotency.service.js';
 import { requireIdempotencyKey } from '../../core/validation/idempotency-key.js';
+import { parseCursorPageQuery } from '../../core/validation/pagination.js';
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
 import type { TenantTransactionContext } from '../../database/tenant-transaction.js';
 import { CashSessionDeviceError } from '../cash/index.js';
@@ -35,6 +37,48 @@ interface PurchasesRequest {
 @Controller('purchases')
 export class PurchasesController {
   constructor(private readonly purchases: PurchaseOperationsService) {}
+
+  @Get()
+  @ApiQuery({ name: 'branchId', required: false, type: String })
+  @ApiQuery({ name: 'from', required: false, type: String, description: 'Fecha local inicial inclusiva (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'to', required: false, type: String, description: 'Fecha local final inclusiva (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'status', required: false, enum: ['PAID', 'PENDING_PAYMENT', 'CANCELLED'] })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async list(@Req() request: PurchasesRequest, @Query() raw: Record<string, unknown>) {
+    let page;
+    try {
+      page = parseCursorPageQuery(raw, ['branchId', 'from', 'to', 'status']);
+      if (page.filters.branchId && !z.uuid().safeParse(page.filters.branchId).success) throw new Error();
+      for (const date of [page.filters.from, page.filters.to]) {
+        if (date && !z.iso.date().safeParse(date).success) throw new Error();
+      }
+      if (page.filters.from && page.filters.to && page.filters.from > page.filters.to) throw new Error();
+      if (page.filters.status && !['PAID', 'PENDING_PAYMENT', 'CANCELLED'].includes(page.filters.status)) throw new Error();
+      if (page.cursor && !z.iso.datetime({ offset: true }).safeParse(page.cursor.sortValue).success) throw new Error();
+    } catch { throw new BadRequestException({ code: 'PURCHASE_HISTORY_QUERY_INVALID',
+      title: 'Filtros inválidos', detail: 'Revisá fechas, estado y paginación del historial.' }); }
+    return this.purchases.list(this.context(request), { branchId: page.filters.branchId,
+      from: page.filters.from, to: page.filters.to, status: page.filters.status,
+      cursor: page.cursor, limit: page.limit });
+  }
+
+  @Get('trends')
+  @ApiQuery({ name: 'from', required: true, type: String })
+  @ApiQuery({ name: 'to', required: true, type: String })
+  @ApiQuery({ name: 'branchId', required: false, type: String })
+  @ApiQuery({ name: 'groupBy', required: false, enum: ['DAY', 'HOUR'] })
+  async trends(@Req() request: PurchasesRequest, @Query() raw: Record<string, unknown>) {
+    const parsed = z.strictObject({ from: z.iso.date(), to: z.iso.date(),
+      branchId: z.uuid().optional(), groupBy: z.enum(['DAY', 'HOUR']).optional() }).safeParse(raw);
+    if (!parsed.success || parsed.data.from > parsed.data.to ||
+      (Date.parse(parsed.data.to) - Date.parse(parsed.data.from)) / 86_400_000 > 30 ||
+      (parsed.data.groupBy === 'HOUR' && parsed.data.from !== parsed.data.to)) {
+      throw new BadRequestException({ code: 'PURCHASE_TRENDS_QUERY_INVALID',
+        title: 'Período inválido', detail: 'Elegí hasta 31 días y una sucursal válida.' });
+    }
+    return this.purchases.trends(this.context(request), parsed.data);
+  }
 
   @Get(':id')
   async detail(@Req() request: PurchasesRequest, @Param('id') id: string) {

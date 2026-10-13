@@ -81,7 +81,7 @@ export function InventoryTransfers({ organizationId, role, branches, originBranc
   return <section className={styles.page} aria-labelledby="transfer-heading">
     <header className={styles.heading}><h1 id="transfer-heading">Transferencias de stock</h1>
       <p>Mové productos entre sucursales autorizadas. Una corrección posterior crea una transferencia compensatoria.</p></header>
-    <p><a href="/workspace/inventory">Volver al stock</a></p>
+    <p><a href="/workspace/catalog">Volver a productos</a></p>
     <ErrorSummary error={error} fieldIds={fieldIds} fieldLabels={fieldLabels} />
     {message ? <p role="status">{message}</p> : null}
     {role === 'CASHIER' ? <p role="alert">Tu rol no puede confirmar transferencias.</p> :
