@@ -176,7 +176,9 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
 
   if (memberships.isPending) return <main><p role="status">Cargando contexto de trabajo…</p></main>;
   const preservePosContext = page === 'pos' && !!memberships.data && memberships.error instanceof ApiProblemError && memberships.error.status === 0;
-  if (memberships.error && !preservePosContext) return <main><ErrorSummary error={memberships.error instanceof ApiProblemError ? memberships.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar tus organizaciones.' })} /><button type="button" onClick={() => void memberships.refetch()}>Reintentar</button></main>;
+  if (memberships.error && !preservePosContext) return <main><ErrorSummary error={memberships.error instanceof ApiProblemError ? memberships.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar tus organizaciones.' })} />{memberships.error instanceof ApiProblemError && memberships.error.status === 401
+    ? <a className={styles.loginLink} href="/login">Iniciar sesión</a>
+    : <button type="button" onClick={() => void memberships.refetch()}>Reintentar</button>}</main>;
   if (!activeId) return <main><OrganizationSelector organizations={memberships.data ?? []} onSuccess={() => undefined} /></main>;
   const organizations = memberships.data ?? [];
   const current = organizations.find((item) => item.organizationId === activeId);

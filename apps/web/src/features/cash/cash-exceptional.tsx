@@ -51,8 +51,8 @@ export function CashExceptional({organizationId,branchId,actorUserId,role,sessio
   const manager=role==='OWNER' || role==='ADMIN';
   const final=session.status==='CLOSED_WITH_UNRECOVERED_DEVICE';
   const partition=`${organizationId}:${actorUserId}:${session.id}`;
-  if(final)return <section className={styles.rows} aria-label="Cierre excepcional y datos tardíos"><h2>Cierre por dispositivo irrecuperable</h2>
-    <p>Completitud operativa desconocida (UNKNOWN), permanente. La revisión no convierte este cierre en normal.</p>
+  if(final)return <section className={styles.rows} aria-label="Cierre excepcional y datos tardíos"><h2>Cierre especial: se perdió el equipo de la caja</h2>
+    <p>Puede haber ventas de ese equipo que nunca llegaron. El cierre queda marcado así para siempre, aunque se revise.</p>
     <p>Dispositivo asociado: {session.deviceId}</p>
     {session.exceptionalClosure?<><p>Esperado conocido del snapshot original: {session.exceptionalClosure.expectedCashKnown} {session.currencyCode}</p>
       <p>{session.exceptionalClosure.countedCash===null?'Contado original: no registrado.':`Contado original: ${session.exceptionalClosure.countedCash} ${session.currencyCode}`}</p>
@@ -71,17 +71,17 @@ export function CashExceptional({organizationId,branchId,actorUserId,role,sessio
       onCommand={onCommand} onReload={onReload}/>:<p>No se recibieron datos tardíos.</p>}
   </section>;
   if(session.deviceStatus==='UNRECOVERABLE' && ['OPEN','CLOSING','CONFLICTED'].includes(session.status))return <section className={styles.rows} aria-label="Cierre excepcional">
-    <h2>Dispositivo irrecuperable</h2><p>El cierre normal está bloqueado. La información puede tener operaciones desconocidas.</p>
+    <h2>Se perdió el equipo de esta caja</h2><p>No se puede cerrar de la forma habitual, porque pueden faltar ventas de ese equipo.</p>
     <p>Esperado conocido ahora: {session.expectedCash} {session.currencyCode}. La caja quedará disponible tras el cierre, conservando la incertidumbre histórica.</p>
     {manager?<ExceptionalClose key={session.id} session={session} partition={partition} onCommand={onCommand} onReload={onReload}/>
-      :<p>Solo OWNER o ADMIN con alcance puede confirmar el cierre excepcional.</p>}
+      :<p>Solo el dueño o un administrador de esta sucursal puede confirmar este cierre.</p>}
   </section>;
   if(session.status!=='CONFLICTED')return null;
-  return <section className={styles.rows} aria-label="Conciliación de sesión en conflicto"><h2>Sesión en conflicto</h2>
-    <p>Esta sesión no admite cierre normal. La conciliación conserva separadas las sesiones, ventas y operaciones; no genera compensaciones automáticas.</p>
+  return <section className={styles.rows} aria-label="Conciliación de sesión en conflicto"><h2>Turno con conflicto</h2>
+    <p>Esta caja tuvo dos turnos abiertos a la vez, por ejemplo uno con conexión y otro sin conexión. No se cierra de la forma habitual: se concilia dejando cada turno con sus ventas, sin ajustes automáticos.</p>
     {manager && localDeviceId===session.deviceId?<CashReconciliation key={session.id} session={session} partition={partition} onPrepare={onPrepare}
       onRead={onRead} onCommand={onCommand} onFinish={onFinish} onReload={onReload}/>
-      :<p>OWNER o ADMIN con alcance debe conciliar desde el dispositivo asociado. Si es irrecuperable, primero debe declararlo en la administración de dispositivos.</p>}
+      :<p>La concilia el dueño o un administrador de esta sucursal, desde el equipo donde se abrió el turno. Si ese equipo se perdió, primero tiene que quedar declarado como perdido; hoy eso lo hace el soporte técnico.</p>}
   </section>;
 }
 
@@ -162,6 +162,6 @@ function CashLateReview({session,manager,partition,onCommand,onReload}:{session:
         {...form.register('confirm')}/>Revisé las operaciones recuperadas hasta la secuencia indicada, conservando el cierre excepcional.</label></div>
       <p id="cash-late-confirm-error">{form.formState.errors.confirm?.message ?? 'Se registra una revisión independiente, sin nuevos movimientos.'}</p>
       <button disabled={action.busy} type="submit">Confirmar revisión de datos tardíos</button>
-    </form>:<p>Revisión pendiente de OWNER o ADMIN con alcance.</p>}
+    </form>:<p>Falta que el dueño o un administrador de esta sucursal lo revise.</p>}
   </>;
 }

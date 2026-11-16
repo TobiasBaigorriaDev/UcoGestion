@@ -146,6 +146,14 @@ Separadores `#D9DDD1` delimitan filas y navegación sin competir con los datos. 
 - Los importes aceptan el formato argentino (`5.000`, `5.000,50`).
 - «Preparar o abrir POS sin conexión» es una acción secundaria al pie.
 
+**Turno de caja.**
+- Bajo el título está «Ver turnos»: Abiertos o en cierre, Cerrados y Con diferencias para revisar.
+- Le sigue el resumen del turno: caja, estado en una píldora (Abierto, Cerrando, Con conflicto, Cerrado), «Efectivo esperado en la caja» en 2rem Bosque, apertura e inicial.
+- Un equipo no habilitado muestra un aviso cálido con «Habilitar este equipo» para OWNER/ADMIN. A CASHIER le indica que se lo pida al dueño o a un administrador.
+- «Abrir turno» y «Ingresar o retirar efectivo» aceptan importes argentinos.
+- El cierre es una lista numerada de cuatro pasos (pendiente, actual en Bosque, hecho con tilde SVG): Empezar el cierre, Revisar ventas pendientes, Contar el efectivo y Confirmar el cierre. Muestra «En la caja debería haber $ …» y, mientras se escribe, «Faltan $ …», «Sobran $ …» o «El efectivo coincide». «Cancelar el cierre» devuelve la caja a abierta.
+- «Caja cerrada» resume Esperado, Contado y Diferencia.
+
 **Formato.** El dinero se muestra siempre como `$ 1.800,00` (`formatMoney`). Las cantidades agrupan miles (`22.000`). Los roles, medios de pago y estados de turno se muestran en español.
 
 Catálogo e inventario comparten una entrada en la navegación principal. Dentro de esa sección, una navegación local identifica Productos y, según el rol, Historial de ajustes, Transferencias y Categorías. Productos presenta inicialmente nombre, precio y stock. Seleccionar una fila despliega detalles y dos entradas: Editar y Cambiar stock. Precio, estructura, estado y eliminación se ofrecen dentro de Editar. Cambiar stock abre un formulario vertical de nuevo ajuste; Historial de ajustes conserva consulta y compensaciones sin duplicar el alta. El ajuste de existencias y el mínimo por sucursal se gestionan dentro del producto, conservando motivos, historial y permisos. La ruta anterior de Stock redirige a Productos. La consulta muestra el stock de la sucursal activa junto a cada producto inventariable; nunca interpreta un saldo ausente como cero. Para OWNER/ADMIN también reúne la gestión de ítems: búsqueda, edición, precio, estado y eliminación sujeta al historial. El alta se abre cuando se necesita, inmediatamente debajo de su botón y antes del listado; las acciones menos frecuentes se despliegan por producto. La ruta anterior de ítems conserva enlaces directos y las acciones siguen sujetas a sus permisos propios.

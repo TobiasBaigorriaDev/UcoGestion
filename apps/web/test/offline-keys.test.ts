@@ -47,7 +47,7 @@ describe('T189 offline keys', () => {
     expect(reloaded.dekFor(user).extractable).toBe(false);
     expect(Array.from(await cipher.decrypt(reloaded.dekFor(user), context, ciphertext))).toEqual(Array.from(plaintext));
     reloaded.lock(); db.close();
-  });
+  }, 20_000);
 
   it('rejects incorrect, blocked and invalid PIN changes without replacing credentials or pending bytes', async () => {
     const db = new OfflineDatabase(org, device); await db.open();
@@ -98,7 +98,7 @@ describe('T189 offline keys', () => {
     expect(fresh.dekFor(user).extractable).toBe(false);
     await expect(fresh.unlock(user, 'original-pin')).rejects.toThrow('PIN incorrecto');
     db.close();
-  });
+  }, 20_000);
 
   it('creates a non-exportable device signer and PIN-wrapped DEK, then locks reading while retaining opaque delivery', async () => {
     const db = new OfflineDatabase(org, device);

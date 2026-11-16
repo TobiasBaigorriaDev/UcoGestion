@@ -1196,3 +1196,12 @@ Verificación:
 - pruebas de componentes por cada conducta nueva;
 - gate crítico de navegador (axe, foco y desborde en 1440/1024/768/390);
 - lint, typecheck y suite web.
+
+### 26.1 D08 fase 2 — Turno de caja
+
+- La pantalla se llama «Turno de caja».
+- Arriba muestra el turno seleccionado: caja, estado, efectivo esperado, apertura e inicial.
+- Siguen «Abrir turno» e «Ingresar o retirar efectivo». El filtro «Ver turnos» queda bajo el título.
+- Un equipo sin dispositivo autorizado muestra la acción «Habilitar este equipo» (`/workspace/offline`) para OWNER/ADMIN, que son los roles que autoriza el backend; CASHIER recibe la indicación de pedírselo.
+- El cierre se presenta en cuatro pasos sobre los mismos comandos: «Empezar el cierre», «Revisar ventas pendientes», contar y «Confirmar cierre». También está «Cancelar el cierre».
+- Los importes se aceptan como `2.500,50` y se muestran como `$ 2.500,50`.

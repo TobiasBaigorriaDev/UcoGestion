@@ -484,3 +484,14 @@ Plan §26. Solo presentación; los contratos y permisos se conservan.
   - sin conexión como acción secundaria, conservando RF-346/347 [RF-152–RF-154, RF-346, RF-347].
 - [x] D08-T04: Formato es-AR de dinero y cantidades, etiquetas traducidas de rol y medio de pago, y «Turno de caja» [RF-152–RF-154].
 - [x] D08-T05: Tokens cálidos sin vidrio operativo, DESIGN.md actualizado, gate de navegador y suite web.
+
+### D08 — fase 2: turno de caja (solicitud explícita 2026-11-16)
+
+Solo cambia la presentación. Los comandos, las claves de reintento, los locks, la sincronización final y las reglas de cierre (RF-84–RF-95, RF-155) no cambian.
+
+- [x] D08-T06: Turno de caja con resumen del efectivo esperado y estado en español. Cuando el equipo no está habilitado, ofrecer una salida por rol: OWNER/ADMIN lo habilitan desde «Este equipo sin conexión» y CASHIER recibe la indicación a quién pedírselo [RF-84–RF-95, RF-116].
+- [x] D08-T07: Cierre guiado en lenguaje de comercio:
+  - empezar, revisar ventas pendientes, contar y confirmar;
+  - «Faltan/Sobran $» antes de confirmar y cancelación explícita del cierre;
+  - los mismos comandos `begin-close`, `final-sync`, `close` y `abort-close` [RF-155].
+- [x] D08-T08: Importes de caja en formato argentino (entrada y salida), pruebas y gate de navegador.

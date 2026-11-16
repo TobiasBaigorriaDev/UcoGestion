@@ -45,30 +45,31 @@ async page=>{
     results.set(key,result);return route.fulfill({status:201,json:result});
   });
   await page.goto('http://127.0.0.1:4179/apps/web/test/browser/cash-operations.html');
-  await page.getByRole('button',{name:'Congelar y comenzar cierre'}).click();await page.getByRole('alert').waitFor();
-  await page.reload();await page.getByRole('button',{name:'Abortar cierre'}).waitFor();
+  await page.getByRole('button',{name:'Empezar el cierre'}).click();await page.getByRole('alert').waitFor();
+  await page.reload();await page.getByRole('button',{name:'Cancelar el cierre'}).waitFor();
   check(await page.getByRole('textbox',{name:'Efectivo contado'}).count()===0,'Count before final sync');
-  await page.getByRole('button',{name:'Abortar cierre'}).click();await page.getByRole('alert').waitFor();
-  check(await page.getByRole('button',{name:'Congelar y comenzar cierre'}).count()===0,'Lost abort response thawed');
-  await page.getByRole('button',{name:'Abortar cierre'}).click();await page.getByRole('button',{name:'Congelar y comenzar cierre'}).waitFor();
+  await page.getByRole('button',{name:'Cancelar el cierre'}).click();await page.getByRole('alert').waitFor();
+  check(await page.getByRole('button',{name:'Empezar el cierre'}).count()===0,'Lost abort response thawed');
+  await page.getByRole('button',{name:'Cancelar el cierre'}).click();await page.getByRole('button',{name:'Empezar el cierre'}).waitFor();
   check(results.has(firstAbortKey),'Abort retry missing');
-  await page.getByRole('button',{name:'Congelar y comenzar cierre'}).click();
+  await page.getByRole('button',{name:'Empezar el cierre'}).click();
   loseAbort=true;
-  await page.getByRole('button',{name:'Abortar cierre'}).click();await page.getByRole('alert').waitFor();
-  await page.reload();await page.getByRole('button',{name:'Congelar y comenzar cierre'}).click();
-  await page.getByRole('button',{name:'Verificar sincronización final'}).click();
+  await page.getByRole('button',{name:'Cancelar el cierre'}).click();await page.getByRole('alert').waitFor();
+  await page.reload();await page.getByRole('button',{name:'Empezar el cierre'}).click();
+  await page.getByRole('button',{name:'Revisar ventas pendientes'}).click();
   await page.getByRole('textbox',{name:'Efectivo contado'}).fill('8.00');
   await page.getByRole('button',{name:'Confirmar cierre'}).click();await page.getByText('Explicá la diferencia antes de cerrar.').waitFor();
-  await page.getByRole('textbox',{name:'Motivo del cierre'}).fill('Sobrante contado');
+  await page.getByRole('textbox',{name:'Motivo de la diferencia'}).fill('Sobrante contado');
   await page.addScriptTag({path:'apps/web/node_modules/axe-core/axe.min.js'});
   for(const width of [1440,390]){
     await page.setViewportSize({width,height:1000});await page.evaluate(()=>document.fonts.ready);
-    check((await page.evaluate(async()=>window.axe.run())).violations.length===0,'Closing accessibility');
+    const violations=(await page.evaluate(async()=>window.axe.run())).violations.map(v=>v.id+':'+v.nodes.map(n=>n.target.join(' ')).join('|'));
+    check(violations.length===0,'Closing accessibility '+JSON.stringify(violations));
     check(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Closing overflow');
     await page.screenshot({path:`.impeccable/review/cash-closing-${width}.png`,fullPage:true});
   }
   await page.getByRole('button',{name:'Confirmar cierre'}).focus();await page.keyboard.press('Enter');
-  await page.getByText('Diferencia: 1.00 ARS').waitFor();
+  await page.getByRole('region',{name:'Caja cerrada'}).getByText('$ 1,00',{exact:true}).waitFor();
   await page.getByRole('textbox',{name:'Nota de revisión'}).fill('Revisado por segundo responsable');
   await page.getByRole('button',{name:'Confirmar revisión de diferencia'}).click();
   await page.getByText('Diferencia revisada. El cierre y sus importes se conservan.').waitFor();
@@ -76,7 +77,7 @@ async page=>{
   await page.screenshot({path:'.impeccable/review/cash-reviewed-mobile.png',fullPage:true});
   await page.context().setOffline(true);await page.getByRole('heading',{name:'Esta pantalla necesita conexión'}).waitFor();
   await page.context().setOffline(false);await page.reload();
-  await page.getByRole('combobox',{name:'Mostrar sesiones'}).selectOption('FINAL');
-  await page.getByText('Diferencia: 1.00 ARS').waitFor();
+  await page.getByRole('combobox',{name:'Ver turnos'}).selectOption('FINAL');
+  await page.getByRole('region',{name:'Caja cerrada'}).getByText('$ 1,00',{exact:true}).waitFor();
   return {passed:true,scenarios:['real-checkpoint-signature','lost-begin-reload','lost-abort-retry','lost-abort-reload','fresh-attempt-key','final-sync-count','reason','review','keyboard','axe-desktop-mobile','network-return']};
 }

@@ -19,11 +19,11 @@ it('T218B loads another authorized page and the final-session view without keepi
       nextCursor:isFinal || next ? null:'next-page'});
   }));
   render(<RemoteProvider><CashWorkspace organizationId={org} branchId={branch} role="OWNER"/></RemoteProvider>);
-  await screen.findByRole('option',{name:'Primera · Abierta'});
-  await userEvent.click(screen.getByRole('button',{name:'Cargar más sesiones'}));
-  await screen.findByRole('option',{name:'Segunda · Abierta'});
-  await userEvent.selectOptions(screen.getByRole('combobox',{name:'Mostrar sesiones'}),'FINAL');
-  await screen.findByRole('option',{name:'Histórica · Finalizada'});
-  expect(screen.queryByRole('option',{name:'Primera · Abierta'})).toBeNull();
-  expect(screen.getByText('Diferencia: 0.00 ARS')).toBeTruthy();
+  await screen.findByRole('heading',{name:'Primera'});
+  await userEvent.click(screen.getByRole('button',{name:'Cargar más turnos'}));
+  await screen.findByRole('option',{name:'Segunda · Abierto'});
+  await userEvent.selectOptions(screen.getByRole('combobox',{name:'Ver turnos'}),'FINAL');
+  await screen.findByRole('heading',{name:'Histórica'});
+  expect(screen.queryByRole('option',{name:'Primera · Abierto'})).toBeNull();
+  expect(screen.getByText('Diferencia').nextElementSibling?.textContent).toBe('$ 0,00');
 });
