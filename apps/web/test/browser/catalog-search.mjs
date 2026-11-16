@@ -154,7 +154,9 @@ async page => {
   }
   for (const name of ['Cambiar precio de Café molido', 'Cambiar estructura de Café molido', 'Desactivar Café molido', 'Eliminar Café molido']) check(await managedList.getByRole('button', { name, exact: true }).count() === 0, `Action outside editor: ${name}`);
   await managedList.getByRole('button', { name: 'Editar Café molido', exact: true }).click();
-  for (const name of ['Cambiar precio de Café molido', 'Cambiar estructura de Café molido', 'Desactivar Café molido', 'Eliminar Café molido']) await managedList.getByRole('button', { name, exact: true }).waitFor();
+  await managedList.getByRole('textbox', { name: 'Precio nuevo de Café molido' }).waitFor();
+  await managedList.getByRole('combobox', { name: 'Tipo estructural de Café molido' }).waitFor();
+  await managedList.getByRole('combobox', { name: 'Estado de Café molido' }).waitFor();
   await managedList.getByRole('textbox', { name: 'Nombre de Café molido' }).waitFor();
   await managedList.getByRole('button', { name: 'Editar Café molido', exact: true }).click();
   await search.fill('inexistente');

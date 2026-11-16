@@ -138,7 +138,7 @@ it('filters managed items by name, SKU or barcode and retains editing actions', 
     await user.clear(search);
     await user.type(search, query);
     expect(list.getByRole('button', { name: 'Editar Café molido' })).toBeTruthy();
-    expect(list.getByRole('button', { name: 'Activar Café molido' })).toBeTruthy();
+    expect(list.getByRole('combobox', { name: 'Estado de Café molido' })).toBeTruthy();
     expect(list.queryByRole('button', { name: 'Editar Yerba' })).toBeNull();
     expect(list.getByRole('status').textContent).toBe('1 de 2 ítems');
   }
@@ -218,7 +218,7 @@ it('creates products with nonstructural fields, warns on names, and edits price 
   await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios de Yerba' }));
   expect(edit).toHaveBeenCalledWith('org', 'item-a', 2, expect.objectContaining({ name: 'Yerba nueva' }));
   if (screen.getByRole('button', { name: 'Editar Yerba' }).getAttribute('aria-expanded') !== 'true') await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Cambiar precio de Yerba' }));
+
   await userEvent.clear(screen.getByRole('textbox', { name: 'Precio nuevo de Yerba' }));
   await userEvent.type(screen.getByRole('textbox', { name: 'Precio nuevo de Yerba' }), '150.00');
   await userEvent.click(screen.getByRole('button', { name: 'Guardar precio de Yerba' }));
@@ -226,12 +226,12 @@ it('creates products with nonstructural fields, warns on names, and edits price 
   expect((await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toEqual([]);
 }, 15000);
 
-it('keeps structural controls out of nonstructural editing', async () => {
+it('shows structural controls alongside product data', async () => {
   render(<CatalogItemManagement organizationId="org" items={[item]} onReload={vi.fn()}
     onCreate={vi.fn()} onEdit={vi.fn()} onPrice={vi.fn()} onLookupSimilar={vi.fn()} />);
   await openProduct('Yerba');
   await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
-  expect(screen.queryByRole('checkbox', { name: 'Controlar inventario de Yerba' })).toBeNull();
+  expect(screen.getByRole('checkbox', { name: 'Controlar inventario' })).toBeTruthy();
   expect(screen.getByText('Producto · Unidad · Control de inventario')).toBeTruthy();
 });
 
@@ -247,18 +247,19 @@ it('supports status toggle, physical deletion and structural change', async () =
   await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
 
   // Status toggle
-  await userEvent.click(screen.getByRole('button', { name: 'Desactivar Yerba' }));
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Estado de Yerba' }), 'INACTIVE');
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar estado de Yerba' }));
   expect(changeStatus).toHaveBeenCalledWith('org', 'item-a', 2, 'INACTIVE');
 
   // Deletion flow with confirmation
-  await userEvent.click(screen.getByRole('button', { name: 'Eliminar Yerba' }));
+  await userEvent.click(screen.getByText('Eliminar Yerba', { selector: 'summary' }));
   expect(screen.getByText('¿Confirmás eliminar definitivamente Yerba?')).toBeTruthy();
   await userEvent.click(screen.getByRole('button', { name: 'Confirmar eliminación de Yerba' }));
   expect(deleteItem).toHaveBeenCalledWith('org', 'item-a', 2);
 
   // Structural change
   await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Cambiar estructura de Yerba' }));
+
   await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo estructural de Yerba' }), 'SERVICE');
   await userEvent.click(screen.getByRole('button', { name: 'Guardar estructura de Yerba' }));
   expect(changeStructure).toHaveBeenCalledWith('org', 'item-a', 2, {
@@ -295,7 +296,7 @@ it('displays differentiated D01 error messages for delete and structural change'
     onDelete={deleteItemBlockedHistory} />);
   await openProduct('Yerba');
   await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Eliminar Yerba' }));
+  await userEvent.click(screen.getByText('Eliminar Yerba', { selector: 'summary' }));
   await userEvent.click(screen.getByRole('button', { name: 'Confirmar eliminación de Yerba' }));
   expect(await screen.findByText(/referencias históricas y solo puede desactivarse/i)).toBeTruthy();
   unmount1();
@@ -305,7 +306,7 @@ it('displays differentiated D01 error messages for delete and structural change'
     onDelete={deleteItemBlockedOffline} />);
   await openProduct('Yerba');
   await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Eliminar Yerba' }));
+  await userEvent.click(screen.getByText('Eliminar Yerba', { selector: 'summary' }));
   await userEvent.click(screen.getByRole('button', { name: 'Confirmar eliminación de Yerba' }));
   expect(await screen.findByText(/operaciones offline pendientes y solo puede desactivarse/i)).toBeTruthy();
   unmount2();
@@ -315,7 +316,7 @@ it('displays differentiated D01 error messages for delete and structural change'
     onChangeStructure={changeStructureBlockedHistory} />);
   await openProduct('Yerba');
   await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Cambiar estructura de Yerba' }));
+
   await userEvent.click(screen.getByRole('button', { name: 'Guardar estructura de Yerba' }));
   expect(await screen.findByText(/referencias históricas y no permite cambios estructurales/i)).toBeTruthy();
   unmount3();
@@ -325,7 +326,7 @@ it('displays differentiated D01 error messages for delete and structural change'
     onChangeStructure={changeStructureBlockedOffline} />);
   await openProduct('Yerba');
   await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Cambiar estructura de Yerba' }));
+
   await userEvent.click(screen.getByRole('button', { name: 'Guardar estructura de Yerba' }));
   expect(await screen.findByText(/operaciones offline pendientes bajo la configuración actual/i)).toBeTruthy();
   unmount4();
@@ -352,7 +353,7 @@ async function openProduct(name: string) {
   if (!label.closest('details')?.open) await userEvent.click(label);
 }
 
-it('keeps price, structure, status and deletion inside product editing', async () => {
+it('shows price, structure and status fields together in the product questionnaire without action navigation', async () => {
   render(<CatalogItemManagement organizationId="org" items={[item]} onReload={vi.fn()} />);
   await openProduct('Yerba');
   for (const name of ['Cambiar precio de Yerba', 'Cambiar estructura de Yerba', 'Desactivar Yerba', 'Eliminar Yerba']) {
@@ -360,11 +361,13 @@ it('keeps price, structure, status and deletion inside product editing', async (
   }
   await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
   for (const name of ['Cambiar precio de Yerba', 'Cambiar estructura de Yerba', 'Desactivar Yerba', 'Eliminar Yerba']) {
-    expect(screen.getByRole('button', { name })).toBeTruthy();
+    expect(screen.queryByRole('button', { name })).toBeNull();
   }
   if (screen.getByRole('button', { name: 'Editar Yerba' }).getAttribute('aria-expanded') !== 'true') await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Cambiar precio de Yerba' }));
   expect(screen.getByRole('textbox', { name: 'Precio nuevo de Yerba' })).toBeTruthy();
+  expect(screen.getByRole('textbox', { name: 'Nombre de Yerba' })).toBeTruthy();
+  expect(screen.getByRole('combobox', { name: 'Tipo estructural de Yerba' })).toBeTruthy();
+  expect(screen.getByRole('combobox', { name: 'Estado de Yerba' })).toBeTruthy();
   await userEvent.click(screen.getByRole('button', { name: 'Editar Yerba' }));
   expect(screen.queryByRole('textbox', { name: 'Precio nuevo de Yerba' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Eliminar Yerba' })).toBeNull();
