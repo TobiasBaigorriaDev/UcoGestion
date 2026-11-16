@@ -38,6 +38,7 @@ import { AuditWorkspace } from '../insights/audit-workspace';
 import { ReportsWorkspace } from '../insights/reports-workspace';
 import { OnlineOnlyBoundary } from '../../offline/online-only-boundary';
 import { OfflineWorkspace } from '../offline/offline-workspace';
+import { PosConnectionBoundary } from '../../offline/pos-connection-boundary';
 
 type WorkspacePage =
   | 'home'
@@ -87,7 +88,7 @@ export function Workspace({ page = 'home' }: { page?: WorkspacePage }) {
     {failed || localStorage.getItem('uco:logout-pending') ? <p role="alert">Falta confirmar el cierre de sesión con el servidor. Recuperá la conexión y reintentá.</p> : null}
     <button type="button" disabled={busy} onClick={() => void exit()}>Confirmar cierre de sesión</button><a href="/login">Iniciar sesión</a></section>;
   const content = <RemoteProvider><WorkspaceContent page={page} /></RemoteProvider>;
-  return <><div className={styles.sessionBar} role="region" aria-label="Cuenta"><button type="button" onClick={() => void exit()}>Cerrar sesión</button></div>{page === 'offline' ? content : <OnlineOnlyBoundary>{content}</OnlineOnlyBoundary>}</>;
+  return <><div className={styles.sessionBar} role="region" aria-label="Cuenta"><button type="button" onClick={() => void exit()}>Cerrar sesión</button></div>{page === 'offline' || page === 'pos' ? content : <OnlineOnlyBoundary>{content}</OnlineOnlyBoundary>}</>;
 }
 
 function WorkspaceContent({ page }: { page: WorkspacePage }) {
@@ -172,9 +173,10 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
   }
 
   if (memberships.isPending) return <main><p role="status">Cargando contexto de trabajo…</p></main>;
-  if (memberships.error) return <main><ErrorSummary error={memberships.error instanceof ApiProblemError ? memberships.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar tus organizaciones.' })} /><button type="button" onClick={() => void memberships.refetch()}>Reintentar</button></main>;
+  const preservePosContext = page === 'pos' && !!memberships.data && memberships.error instanceof ApiProblemError && memberships.error.status === 0;
+  if (memberships.error && !preservePosContext) return <main><ErrorSummary error={memberships.error instanceof ApiProblemError ? memberships.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar tus organizaciones.' })} /><button type="button" onClick={() => void memberships.refetch()}>Reintentar</button></main>;
   if (!activeId) return <main><p>Elegí una organización para continuar.</p><a href="/organizations/select">Seleccionar organización</a></main>;
-  const organizations = memberships.data;
+  const organizations = memberships.data ?? [];
   const current = organizations.find((item) => item.organizationId === activeId);
   const catalogBranchName = branches.data?.branches.find((branch) => branch.id === activeBranchId)?.name;
   if (requiresTimezone && settings.error) return <main><ErrorSummary error={settings.error instanceof ApiProblemError ? settings.error : new ApiProblemError({status:0,code:'SETTINGS_LOAD_FAILED',message:'No pudimos cargar la zona horaria de la organización.'})} /><button type="button" onClick={() => void settings.refetch()}>Reintentar</button></main>;
@@ -259,10 +261,11 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
         ? <p role="alert">No tenés permiso para confirmar ventas.</p>
         : !activeBranchId
         ? <p>Seleccioná una sucursal para vender.</p>
-        : catalog.error
+        : catalog.error && !(catalog.data && catalog.error instanceof ApiProblemError && catalog.error.status === 0)
           ? <><ErrorSummary error={catalog.error instanceof ApiProblemError ? catalog.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar el catálogo.' })} /><button type="button" onClick={() => void catalog.refetch()}>Reintentar</button></>
-          : catalog.data && current ? <PosOnline key={`${activeId}:${activeBranchId}`} organizationId={activeId}
-            branchId={activeBranchId} role={current.role} items={catalog.data.items} />
+          : catalog.data && current ? <PosConnectionBoundary key={`${activeId}:${activeBranchId}`} offlinePos={<OfflineWorkspace organizationId={activeId} branchId={activeBranchId} role={current.role} />}>
+            <PosOnline organizationId={activeId} branchId={activeBranchId} role={current.role} items={catalog.data.items} />
+          </PosConnectionBoundary>
             : <p role="status">Cargando productos…</p>
       : page === 'catalog-items' || (page === 'catalog' && catalogManager) ? current?.role !== 'OWNER' && current?.role !== 'ADMIN'
         ? <p role="alert">No tenés permiso para administrar ítems.</p>
@@ -318,7 +321,7 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
           loadHistory={(branchId) => loadCatalog(activeId, branchId)} /> : <p role="status">Cargando catálogo…</p>
       : page === 'customers' ? customers.error
         ? <><ErrorSummary error={customers.error instanceof ApiProblemError ? customers.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar los clientes.' })} /><button type="button" onClick={() => void customers.refetch()}>Reintentar</button></>
-        : customers.data && current ? <CustomerManagement organizationId={activeId} role={current.role} customers={customers.data} onReload={() => void customers.refetch()} /> : <p role="status">Cargando clientes…</p>
+        : customers.data && current ? <CustomerManagement organizationId={activeId} branchId={activeBranchId ?? undefined} role={current.role} customers={customers.data} onReload={() => void customers.refetch()} /> : <p role="status">Cargando clientes…</p>
       : page === 'suppliers' ? suppliers.error
         ? <><ErrorSummary error={suppliers.error instanceof ApiProblemError ? suppliers.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar los proveedores.' })} /><button type="button" onClick={() => void suppliers.refetch()}>Reintentar</button></>
         : suppliers.data && current ? <SupplierManagement organizationId={activeId} role={current.role} suppliers={suppliers.data} onReload={() => void suppliers.refetch()} /> : <p role="status">Cargando proveedores…</p>

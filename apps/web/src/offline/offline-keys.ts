@@ -3,6 +3,7 @@ import { argon2id } from 'hash-wasm';
 import { assertOfflineIdentity } from './offline-revocation';
 import { OfflineDatabase } from './offline-database';
 import { observeRetirement } from './identity-retirement-events';
+import { bytes } from './offline-crypto';
 
 const PIN_BACKOFF_THRESHOLD = 5;
 const PIN_LIMIT = 10;
@@ -103,6 +104,44 @@ export class OfflineKeys {
           : 0 });
       throw new Error(failures >= PIN_LIMIT ? 'PIN bloqueado. Reautenticación online requerida.' : 'PIN incorrecto.');
     }
+  }
+
+  async changePin(userId: string, currentPin: string, newPin: string): Promise<void> {
+    if (newPin.length < 8) throw new Error('El PIN debe tener al menos 8 caracteres.');
+    if (newPin === currentPin) throw new Error('Elegí un PIN distinto del actual.');
+    const requestedGeneration = this.generation;
+    const original = await this.db.key_envelopes.get(userId);
+    if (requestedGeneration !== this.generation) throw new Error('Identidad offline bloqueada.');
+    await this.unlock(userId, currentPin);
+    const generation = this.generation;
+    try {
+      const device = await this.db.device_keys.get('device');
+      if (!original || !device) throw new Error('Credencial offline no disponible.');
+      const oldKek = await derivePinKey(currentPin, original.salt);
+      const pinWrapped = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(original.wrappedDek.slice(0, 12)) },
+        device.wrappingKey, bytes(original.wrappedDek.slice(12)));
+      // Temporary extractability permits wrapKey without exporting raw DEK bytes.
+      // The active runtime DEK from unlock remains non-exportable.
+      const dek = await crypto.subtle.unwrapKey('raw', pinWrapped, oldKek, 'AES-KW',
+        { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const kek = await derivePinKey(newPin, salt);
+      const wrapped = await crypto.subtle.wrapKey('raw', dek, kek, 'AES-KW');
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, device.wrappingKey, wrapped);
+      const wrappedDek = new Uint8Array(iv.length + ciphertext.byteLength);
+      wrappedDek.set(iv); wrappedDek.set(new Uint8Array(ciphertext), iv.length);
+      await this.db.transaction('rw', [this.db.key_envelopes, this.db.device_keys, this.db.meta, this.db.pin_attempts], async () => {
+        await assertOfflineIdentity(this.db, userId, true);
+        const current = await this.db.key_envelopes.get(userId);
+        const equal = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((value, index) => value === b[index]);
+        if (!current || current.version !== original.version || !equal(current.wrappedDek, original.wrappedDek)
+          || !equal(current.salt, original.salt)) throw new Error('El PIN cambió en otra pestaña. Desbloqueá con el PIN vigente.');
+        if ((await this.db.pin_attempts.get(userId))?.locked) throw new Error('PIN bloqueado. Reautenticación online requerida.');
+        if (generation !== this.generation) throw new Error('Identidad offline bloqueada.');
+        await this.db.key_envelopes.put({ ...current, wrappedDek, salt, version: PIN_VERSION });
+      });
+    } catch (error) { this.lock(); throw error; }
   }
 
   canCreate(): boolean { return this.unlocked !== undefined; }
