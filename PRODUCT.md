@@ -28,7 +28,7 @@ Next.js App Router con React para web; NestJS y PostgreSQL como autoridad; las m
 
 ## Brand Commitments
 
-UcoNext usa el sistema “El Mostrador Digital de la Cordillera”, Plus Jakarta Sans, verde Bosque para acciones principales y superficies glass moderadas que degradan de forma segura en dispositivos modestos (definido en DESIGN.md).
+UcoNext usa el sistema “El Mostrador Digital de la Cordillera”: Plus Jakarta Sans, verde Bosque para acciones principales, fondos neutros cálidos y superficies sólidas livianas para dispositivos modestos (definido en DESIGN.md; rediseño D08 del 2026-11-16).
 
 ## Evidence on Hand
 

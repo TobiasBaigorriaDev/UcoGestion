@@ -53,3 +53,6 @@
 
 .action:hover { filter: brightness(0.92); }
 .action:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.offlineEntry { display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: center; margin: 1.5rem 0 0; color: var(--color-text-secondary); font-size: var(--text-label); }
+.secondaryAction { min-height: 44px; padding: .5rem .875rem; border: 1px solid var(--color-control-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: inherit; font-weight: 600; cursor: pointer; }
+.secondaryAction:hover { border-color: var(--color-primary); color: var(--color-primary); }

@@ -96,7 +96,7 @@ async page => {
   failure = false; empty = false;
   for (const nextRole of ['CASHIER', 'EMPLOYEE']) {
     role = nextRole; await page.goto('http://localhost:3000/workspace');
-    await page.getByRole('heading', { name: nextRole === 'CASHIER' ? 'Mis sesiones de caja' : 'Catálogo e inventario', exact: true }).waitFor();
+    await page.getByRole('heading', { name: nextRole === 'CASHIER' ? 'Mis turnos de caja' : 'Catálogo e inventario', exact: true }).waitFor();
     check(await page.getByRole('region', { name: 'Medios de pago', exact: true }).count() === 0, 'Restricted role must not show global charts');
     if (nextRole === 'EMPLOYEE') check(await page.getByRole('button', { name: 'Este mes', exact: true }).count() === 0, 'Employee must not expose sales filters');
     await scan(nextRole);

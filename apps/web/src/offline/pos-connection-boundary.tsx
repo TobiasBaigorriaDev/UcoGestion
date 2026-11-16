@@ -27,8 +27,9 @@ export function PosConnectionBoundary({ children, offlinePos }: { children: Reac
       {online ? <button className={styles.action} type="button" onClick={() => setLocal(false)}>Volver al POS online</button> : null}
     </div> : null}
     <div className={styles.mode} ref={onlineView} tabIndex={-1} hidden={!online || local} inert={!online || local}>
-      <button className={styles.action} type="button" onClick={() => setLocal(true)}>Preparar o abrir POS sin conexión</button>
       {children}
+      <p className={styles.offlineEntry}>¿Se cortó internet o vas a vender sin conexión?{' '}
+        <button className={styles.secondaryAction} type="button" onClick={() => setLocal(true)}>Preparar o abrir POS sin conexión</button></p>
     </div>
     <div className={styles.mode} hidden={!local} inert={!local}>{offlinePos}</div>
   </>;

@@ -3,14 +3,14 @@
   --color-primary: #166534;
   --color-vibrant: #22c55e;
   --color-accent: #15803d;
-  --color-background: #f8fafc;
+  --color-background: #f4f5f0;
   --color-surface: #ffffff;
   --color-glass: rgb(255 255 255 / 78%);
   --color-glass-strong: rgb(255 255 255 / 90%);
   --color-glass-border: rgb(255 255 255 / 50%);
-  --color-text: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #5b677a;
+  --color-text: #1c2118;
+  --color-text-secondary: #485043;
+  --color-text-muted: #575f52;
   --color-text-disabled: #94a3b8;
   --color-on-primary: #ffffff;
   --color-on-vibrant: #052e16;
@@ -19,9 +19,11 @@
   --color-danger: #ef4444;
   --color-danger-text: #b42318;
   --color-focus: #166534;
-  --color-divider: #e2e8f0;
-  --color-control-border: #7b899c;
-  --color-primary-soft: #edf6ef;
+  --color-divider: #d9ddd1;
+  --color-control-border: #7a8471;
+  --color-primary-soft: #e7f1e9;
+  --color-sidebar: #eceee6;
+  --shadow-raised: 0 1px 2px rgb(28 33 24 / 6%), 0 4px 12px rgb(28 33 24 / 5%);
 
   --font-sans: var(--font-plus-jakarta), 'Plus Jakarta Sans', sans-serif;
   --text-display: clamp(2rem, 5vw, 3.5rem);

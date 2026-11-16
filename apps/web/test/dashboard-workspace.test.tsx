@@ -50,7 +50,7 @@ describe('dashboard por rol', () => {
       paymentMethods: [{ method: 'CASH', total: '125.00' }],
       topItems: [{ itemId: 'i1', name: 'Manzanas', quantity: '2.000', total: '125.00' }],
       lowStock: [], cashSessions: [], cashSummary: [] });
-    withQuery(<DashboardWorkspace organizationId="o1" role="OWNER" timezone="America/Argentina/Buenos_Aires" branches={[{ id: 'b1', name: 'Centro' }]}
+    withQuery(<DashboardWorkspace organizationId="o1" role="OWNER" timezone="America/Argentina/Buenos_Aires" branches={[{ id: 'b1', name: 'Centro' }, { id: 'b2', name: 'Norte' }]}
       load={load} />);
     expect(await screen.findByText('Resultado operativo')).toBeDefined();
     expect(screen.getByText('Manzanas')).toBeDefined();

@@ -32,8 +32,9 @@ describe('UcoNext design tokens', () => {
     expect(token('color-primary')).toBe('#166534');
     expect(token('color-vibrant')).toBe('#22c55e');
     expect(token('color-accent')).toBe('#15803d');
-    expect(token('color-background')).toBe('#f8fafc');
-    expect(token('color-text')).toBe('#0f172a');
+    expect(token('color-background')).toBe('#f4f5f0');
+    expect(token('color-sidebar')).toBe('#eceee6');
+    expect(token('color-text')).toBe('#1c2118');
     expect(token('font-sans')).toContain('plus jakarta sans');
     expect(token('font-sans')).toContain('var(--font-plus-jakarta)');
     expect(token('radius-button')).toBe('12px');
@@ -42,7 +43,12 @@ describe('UcoNext design tokens', () => {
   it('keeps text on solid action colors at 4.5:1 or higher', () => {
     expect(contrast(token('color-on-primary'), token('color-primary'))).toBeGreaterThanOrEqual(4.5);
     expect(contrast(token('color-on-vibrant'), token('color-vibrant'))).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(token('color-text-muted'), token('color-background'))).toBeGreaterThanOrEqual(4.5);
+    for (const surface of ['color-background', 'color-sidebar', 'color-surface', 'color-primary-soft']) {
+      for (const text of ['color-text', 'color-text-secondary', 'color-text-muted', 'color-primary']) {
+        expect(contrast(token(text), token(surface)), text + ' on ' + surface).toBeGreaterThanOrEqual(4.5);
+      }
+      expect(contrast(token('color-control-border'), token(surface)), 'control border on ' + surface).toBeGreaterThanOrEqual(3);
+    }
   });
 
   it('keeps secondary text readable over the strongest glass on a dark backdrop', () => {

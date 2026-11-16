@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { ApiClient, ApiProblemError } from '../../lib/api/client';
 import { ErrorSummary } from '../../components/error-summary';
+import { roleLabel } from '../../lib/format';
 import styles from './identity.module.css';
 import { useIdentityContext } from './identity-context';
 import { retireAllOfflineIdentities } from '../../offline/offline-identity';
@@ -109,13 +110,22 @@ export function OrganizationSelector({ organizations, select = selectOrganizatio
     catch (cause) { setError(errorFor(cause)); }
     finally { setBusyId(null); }
   }
+  const only = organizations.length === 1 ? organizations[0] : undefined;
+  const attempted = useRef(false);
+  useEffect(() => {
+    if (!only || attempted.current) return;
+    attempted.current = true;
+    void choose(only.organizationId);
+    // Automatic entry runs once; a failure leaves the explicit button below.
+  }, [only]);
+  if (only && !error) return <p role="status" className={styles.form}>Entrando a {only.organizationName}…</p>;
   return <section className={styles.form} aria-labelledby="organization-heading">
     <h1 id="organization-heading">Elegí una organización</h1>
     <p>Podés cambiarla más adelante desde el contexto de trabajo.</p>
     <ErrorSummary error={error} />
     {organizations.length === 0 ? <p>No tenés organizaciones activas. Contactá a quien administra tu cuenta.</p> : <ul className={styles.list}>{organizations.map((organization) => <li key={organization.organizationId}>
       <button type="button" disabled={busyId !== null} onClick={() => void choose(organization.organizationId)}>
-        {organization.organizationName} <span>{organization.role}</span>{busyId === organization.organizationId ? ' · Seleccionando…' : ''}
+        {organization.organizationName} <span>{roleLabel(organization.role)}</span>{busyId === organization.organizationId ? ' · Seleccionando…' : ''}
       </button>
     </li>)}</ul>}
   </section>;

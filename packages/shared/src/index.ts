@@ -45,6 +45,18 @@ export const parseCanonicalDecimal = (value: unknown): CanonicalDecimal => {
   return value as CanonicalDecimal;
 };
 
+const currencySymbols: Readonly<Record<string, string>> = { ARS: '$', USD: 'US$' };
+
+/** Argentine money presentation ($ 1.800,00); exact over the canonical decimal string, never a float. */
+export const formatMoneyForDisplay = (value: string, currency = 'ARS'): string => {
+  const match = /^(-?)(0|[1-9]\d*)(?:\.(\d{1,2}))?$/.exec(value);
+  if (!match) throw new TypeError('Invalid money amount');
+  const [, sign = '', whole = '0', fraction = ''] = match;
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const symbol = currencySymbols[currency] ?? currency;
+  return `${sign}${symbol} ${grouped},${fraction.padEnd(2, '0')}`;
+};
+
 /** Spanish quantity presentation only; stored and editable precision stays intact. */
 export const formatQuantityForDisplay = (value: string): string => {
   const quantity = new CalculationDecimal(parseCanonicalDecimal(value));

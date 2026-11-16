@@ -1,16 +1,19 @@
 ---
 name: UcoNext
-description: Clean Glassmorphism design system for PyME commercial digitalization
+description: Warm shop-counter design system for PyME commercial management
 colors:
   primary: "#166534"
   primary-vibrant: "#22C55E"
   primary-emerald: "#15803D"
-  bg-light: "#F8FAFC"
-  surface-glass: "rgba(255, 255, 255, 0.78)"
-  surface-border: "rgba(255, 255, 255, 0.50)"
-  text-primary: "#0F172A"
-  text-secondary: "#475569"
-  text-muted: "#5B677A"
+  bg-light: "#F4F5F0"
+  surface: "#FFFFFF"
+  sidebar: "#ECEEE6"
+  primary-soft: "#E7F1E9"
+  divider: "#D9DDD1"
+  control-border: "#7A8471"
+  text-primary: "#1C2118"
+  text-secondary: "#485043"
+  text-muted: "#575F52"
   text-disabled: "#94A3B8"
   text-on-vibrant: "#052E16"
   success: "#16A34A"
@@ -71,15 +74,15 @@ Los reportes PDF usan Helvetica y Helvetica-Bold, fuentes estándar incorporadas
 
 **Creative North Star: "El Mostrador Digital de la Cordillera"**
 
-UcoNext combina una estética moderna *Clean Glassmorphism* inspirada en iOS/macOS con la calidez y practicidad del comercio del Valle de Uco y Mendoza. Las superficies translúcidas con desenfoque de fondo (`backdrop-filter: blur(14px)`), los bordes con brillo sutil y las sombras suaves generan profundidad sin saturar la pantalla ni sobrecargar procesadores en teléfonos móviles.
+UcoNext es la herramienta del mostrador de un almacén del Valle de Uco: verde Bosque como identidad y fondos neutros cálidos (piedra verdosa, no crema). Las superficies son sólidas, con borde fino y una sombra corta. No hay vidrio ni desenfoque en superficies operativas (rediseño D08, 2026-11-16). Funciona igual de rápido en teléfonos modestos que en una notebook.
 
-El sistema está concebido bajo una filosofía estricta de *simplicidad funcional sobre complejidad técnica*, garantizando que cualquier comerciante pueda operar o evaluar el sistema sin frustraciones directamente en el mostrador del negocio.
+El sistema prioriza la *simplicidad funcional sobre la complejidad técnica*. La pantalla dice qué hacer a continuación («¿Qué querés hacer?») y habla el idioma del negocio, no el del sistema: «Turno de caja», «Fiado», «Dueño», `$ 1.800,00`.
 
 **Key Characteristics:**
-- Superficies translúcidas con desenfoque (`glass-card`).
-- Paleta verde regional inspirada en la producción y la cordillera del Valle de Uco.
+- Navegación agrupada por tarea (Vender, Caja, Stock, Clientes y proveedores, Dinero y Ajustes), con iconos de trazo y una barra inferior en el teléfono.
+- Mostrador pensado para la fila: botones de producto, Enter para agregar, +/− por unidad, total grande y cobro en un toque.
 - Mobile-first estricto (80% del uso en teléfonos celulares).
-- Tipografía geométrica de alta legibilidad para cifras y precios (*Plus Jakarta Sans*).
+- Plus Jakarta Sans con números tabulares para precios y totales.
 
 ## Colors
 
@@ -91,12 +94,14 @@ La paleta cromática se estructura en tonos verdes de contraste y neutros limpio
 - **Esmeralda (Accent)** (`#15803D`): Estados hover y transiciones de interacción.
 
 ### Neutral
-- **Background Light** (`#F8FAFC`): Fondo general de la aplicación.
-- **Surface Glass** (`rgba(255, 255, 255, 0.78)`): Fondo de tarjetas y paneles translúcidos.
-- **Surface Border** (`rgba(255, 255, 255, 0.50)`): Borde perimetral de 1px con brillo sutil.
-- **Text Primary** (`#0F172A`): Títulos principales y textos críticos con alto contraste.
-- **Text Secondary** (`#475569`): Descripciones y explicaciones.
-- **Text Muted** (`#5B677A`): Texto auxiliar y placeholders legibles sobre fondos claros.
+- **Piedra (Background)** (`#F4F5F0`): Fondo general de la aplicación.
+- **Surface** (`#FFFFFF`): Paneles, tarjetas, encabezado y barra inferior.
+- **Sidebar** (`#ECEEE6`): Segunda capa neutra del menú lateral en escritorio.
+- **Primary Soft** (`#E7F1E9`): Ítem activo del menú, estado «Caja abierta», hover y total del cobro.
+- **Text Primary** (`#1C2118`): Títulos y textos críticos (≥14:1 sobre cualquier superficie).
+- **Text Secondary** (`#485043`): Descripciones y explicaciones (≥7:1).
+- **Text Muted** (`#575F52`): Texto auxiliar y placeholders (≥5,6:1 incluso sobre Sidebar).
+- **Aviso cálido** (`#FDF6E7` con borde `#E7C58A`): «No hay una caja abierta», precio actualizado. Siempre acompañado de texto y acción.
 - **Text Disabled** (`#94A3B8`): Solo estados deshabilitados o marcas decorativas que no transmiten información necesaria; no se usa para placeholders ni texto operativo.
 
 ### Named Rules
@@ -118,9 +123,30 @@ La paleta cromática se estructura en tonos verdes de contraste y neutros limpio
 
 ### Superficies operativas
 
-Separadores `#E2E8F0` delimitan filas y navegación sin competir con los datos. Controles usan borde `#7B899C` para distinguir su superficie y estado de foco. La superficie `#EDF6EF` acompaña hover y selección con texto Bosque, conservando la regla de Manzana. Estos valores viven en `packages/ui` como `--color-divider`, `--color-control-border` y `--color-primary-soft`.
+Separadores `#D9DDD1` delimitan filas y navegación sin competir con los datos. Los controles usan el borde `#7A8471` (≥3:1). La superficie `#E7F1E9` acompaña hover y selección con texto Bosque, conservando la regla de Manzana. Estos valores viven en `packages/ui` como `--color-divider`, `--color-control-border`, `--color-primary-soft` y `--color-sidebar`. Las pruebas de tokens verifican el contraste de cada texto sobre cada superficie.
 
-En escritorio, el menú lateral conserva la sección activa y puede desplazarse sin desplazar el contenido principal. En móvil y tablet se abre con “Secciones”, mostrando la ubicación actual antes de desplegarse. Los formularios agrupan campos alineados, mantienen labels persistentes y usan acciones secundarias de menor peso visual en listados.
+**Navegación.**
+- Los grupos son Inicio, Vender (Mostrador, Ventas), Caja (Turno de caja, Cajas registradoras, Este equipo sin conexión), Stock (Productos, Compras), Clientes y proveedores, Dinero (Gastos, Reportes) y Ajustes (Negocio, Sucursales, Usuarios, Medios de pago, Categorías de gasto, Auditoría). Cada ítem tiene un icono Lucide de trazo 1,8 en `currentColor`.
+- La visibilidad por rol replica la del backend: EMPLOYEE no ve venta ni caja.
+- En escritorio, el menú lateral queda fijo debajo del encabezado. En el teléfono, una barra inferior ofrece tres destinos diarios (Inicio, Mostrador, Turno de caja; para EMPLOYEE: Inicio, Productos, Compras) y «Más» abre el menú completo; Escape lo cierra y devuelve el foco.
+- El ítem activo usa Primary Soft y texto Bosque en negrita, sin borde lateral de color.
+- Cuando hay una sola organización o sucursal, el encabezado las muestra como texto, sin selector. Con una sola organización se entra automáticamente.
+- Los formularios agrupan campos alineados, mantienen labels persistentes y usan acciones secundarias de menor peso visual en listados.
+
+**Inicio.** Arranca con el estado de caja: «Caja abierta: …» en Primary Soft, o «No hay una caja abierta» con el enlace «Abrir turno de caja». Sigue «¿Qué querés hacer?», con Vender como acción principal y accesos por rol. Después vienen el período y las métricas. El selector de sucursal del resumen aparece solo si hay más de una.
+
+**Mostrador.**
+- La búsqueda agrega el primer resultado con Enter. Los botones de producto muestran nombre y precio.
+- El carrito va antes que la grilla de productos.
+- Hay botones +/− para unidades enteras y agregar otra vez suma una unidad. Las unidades fraccionables se escriben.
+- El cobro muestra la caja como texto si hay una sola y el total en 2rem.
+- «¿Cómo paga?» ofrece un botón por medio de pago que cubre todo el total. «Agregar pago» divide el pago.
+- Cliente, fiado y descuento quedan plegados en «Cliente, fiado o descuento».
+- Una barra fija repite el total junto a «Confirmar venta».
+- Los importes aceptan el formato argentino (`5.000`, `5.000,50`).
+- «Preparar o abrir POS sin conexión» es una acción secundaria al pie.
+
+**Formato.** El dinero se muestra siempre como `$ 1.800,00` (`formatMoney`). Las cantidades agrupan miles (`22.000`). Los roles, medios de pago y estados de turno se muestran en español.
 
 Catálogo e inventario comparten una entrada en la navegación principal. Dentro de esa sección, una navegación local identifica Productos y, según el rol, Historial de ajustes, Transferencias y Categorías. Productos presenta inicialmente nombre, precio y stock. Seleccionar una fila despliega detalles y dos entradas: Editar y Cambiar stock. Precio, estructura, estado y eliminación se ofrecen dentro de Editar. Cambiar stock abre un formulario vertical de nuevo ajuste; Historial de ajustes conserva consulta y compensaciones sin duplicar el alta. El ajuste de existencias y el mínimo por sucursal se gestionan dentro del producto, conservando motivos, historial y permisos. La ruta anterior de Stock redirige a Productos. La consulta muestra el stock de la sucursal activa junto a cada producto inventariable; nunca interpreta un saldo ausente como cero. Para OWNER/ADMIN también reúne la gestión de ítems: búsqueda, edición, precio, estado y eliminación sujeta al historial. El alta se abre cuando se necesita, inmediatamente debajo de su botón y antes del listado; las acciones menos frecuentes se despliegan por producto. La ruta anterior de ítems conserva enlaces directos y las acciones siguen sujetas a sus permisos propios.
 
@@ -134,17 +160,18 @@ Diseño mobile-first y responsivo integral con espaciados múltiplos de 4px/8px.
 
 ## Elevation & Depth
 
-Profundidad basada en desenfoque óptico (`backdrop-filter`) y sombras sutiles multidireccionales, evitando sombras duras artificiales.
+La profundidad viene de superficies sólidas con borde fino y sombras cortas con desplazamiento; no se usa desenfoque. El encabezado y la barra inferior se separan del contenido con un borde de 1px.
 
 ### Shadow Vocabulary
-- **Glass Ambient** (`0 8px 32px 0 rgba(15, 23, 42, 0.05)`): Profundidad natural de tarjetas glassmorphic en reposo.
-- **Glass Hover** (`0 12px 40px 0 rgba(22, 101, 52, 0.12)`): Elevación interactiva al pasar el cursor o enfocar.
+- **Raised** (`0 1px 2px rgb(28 33 24 / 6%), 0 4px 12px rgb(28 33 24 / 5%)`): Paneles y accesos rápidos en reposo (`--shadow-raised`).
+- **Bar** (`0 -4px 16px rgb(28 33 24 / 6%)`): Barra inferior móvil y barra de confirmación del cobro.
+- `--shadow-glass` y `.uco-glass` quedan solo en la primitiva de diálogo de `packages/ui`; las superficies operativas no los usan.
 
 ## Shapes
 
 - Esquinas suaves y amplias con radio de 16px (`rounded-2xl`) a 24px (`rounded-3xl`) en tarjetas principales.
 - Botones con radio de 12px (`rounded-xl`).
-- Bordes finos de 1px semitransparentes que definen el corte del cristal contra el fondo.
+- Bordes finos de 1px en Divider que definen cada superficie contra el fondo Piedra.
 
 ## Components
 
@@ -152,7 +179,7 @@ Profundidad basada en desenfoque óptico (`backdrop-filter`) y sombras sutiles m
 - **Shape:** Radio de 12px (`rounded-xl`).
 - **Primary:** Fondo `#166534`, texto blanco, sombra suave, padding `14px 28px`.
 - **Hover:** Transición a `#15803D` con escala sutil `scale-[0.98]` en activo.
-- **Secondary Glass:** Fondo `rgba(255, 255, 255, 0.80)`, borde `1px solid rgba(226, 232, 240, 0.8)`, texto `#0F172A`.
+- **Secondary:** Fondo Surface, borde Control Border, texto Text Primary; hover con borde y texto Bosque.
 - **Touch target:** Área interactiva mínima de 44×44px, aun cuando el contenido visual sea menor.
 
 ### Forms and feedback
@@ -160,13 +187,13 @@ Profundidad basada en desenfoque óptico (`backdrop-filter`) y sombras sutiles m
 - Labels persistentes; el placeholder nunca sustituye al label y usa `text-muted` con opacidad 1.
 - Errores junto al campo y en un resumen enfocable, enlazados mediante semántica ARIA.
 - Estados de carga, vacío, éxito, advertencia, conflicto, offline y permiso denegado usan icono/texto además de color.
-- El foco visible debe conservar contraste de al menos 3:1 contra superficies sólidas o glass.
+- El foco visible debe conservar contraste de al menos 3:1 contra cada superficie. Los `input type="date"` usan `:focus-within`, porque Chromium no aplica `:focus-visible` al host.
 
-### Cards (.glass-card)
-- **Fondo:** `rgba(255, 255, 255, 0.78)` con `backdrop-filter: blur(14px)`.
-- **Borde:** `1px solid rgba(255, 255, 255, 0.5)`.
-- **Sombra:** `0 8px 32px 0 rgba(15, 23, 42, 0.05)`.
-- **Radio:** 16px (`rounded-2xl`).
+### Panels
+- **Fondo:** Surface `#FFFFFF`.
+- **Borde:** `1px solid` Divider.
+- **Sombra:** Raised.
+- **Radio:** 16px (`--radius-card`).
 
 ## Do's and Don'ts
 
@@ -175,12 +202,13 @@ Profundidad basada en desenfoque óptico (`backdrop-filter`) y sombras sutiles m
 La categoría de catálogo puede elegir entre 52 iconos SVG Lucide orientados a almacenes y kioscos, con búsqueda y etiquetas accesibles en español, mediante «Elegir icono» en el alta o «Cambiar icono» en la edición. La cuadrícula y la vista previa muestran solamente iconos, sin nombres visibles. Las etiquetas ARIA mantienen el buscador y la identificación con lector de pantalla. Radio buttons accesibles muestran la selección con marca y fondo; al elegir se cierra la biblioteca y retorna el foco a su botón. Los mismos assets locales acompañan nombre y carpeta en Productos. Sin selección se usa carpeta. SVG estático de procedencia y licencia fijadas en `apps/web/public/icons/categories/SOURCE.md`; no se carga biblioteca externa ni contenido SVG del usuario.
 
 ### Do:
-- **Do** garantizar contraste mínimo de 4.5:1 sobre superficies translúcidas.
+- **Do** garantizar contraste mínimo de 4.5:1 para texto y 3:1 para bordes de controles sobre cada superficie.
 - **Do** diseñar primero para la experiencia en teléfono móvil de una mano.
-- **Do** verificar contraste sobre el color compuesto final que produce la transparencia, no solo sobre el token RGBA aislado.
+- **Do** escribir en el idioma del comercio y mostrar el próximo paso (por ejemplo, «Abrir turno de caja») en lugar de explicar el sistema.
 
 ### Don't:
-- **Don't** saturar la interfaz con desenfoques excesivos que degraden los FPS en dispositivos móviles modestos.
+- **Don't** usar vidrio, desenfoque ni bordes laterales de color como decoración.
+- **Don't** mostrar códigos internos (`CASH`, `OWNER`, `OPEN`) ni importes con punto decimal (`1800.00`).
 - **Don't** usar el color verde vibrante `#22C55E` como fondo decorativo estático.
 
 ### Cuestionario de edición de productos

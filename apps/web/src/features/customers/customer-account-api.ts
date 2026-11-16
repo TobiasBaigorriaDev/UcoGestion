@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ApiClient } from '../../lib/api/client';
+import { formatMoney } from '../../lib/format';
 
 const client = new ApiClient();
 const money = z.string().regex(/^(?:0|[1-9]\d{0,17})\.\d{2}$/);
@@ -16,8 +17,7 @@ export function canonicalAccountAmount(value: string) {
   return `${whole}.${fraction.padEnd(2, '0')}`;
 }
 export function formatAccountAmount(value: string, currency: string) {
-  const [whole = '0', fraction = '00'] = value.split('.');
-  return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${fraction} ${currency}`;
+  return formatMoney(value, currency);
 }
 async function csrf() {
   const value = await client.request('/auth/csrf', { method: 'GET', parse: raw => z.object({ csrfToken: z.string() }).parse(raw) });

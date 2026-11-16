@@ -7,7 +7,7 @@ import { AppShell } from '../../components/app-shell';
 import { OrganizationTimezone } from '../../components/organization-time';
 import { ApiProblemError } from '../../lib/api/client';
 import { ErrorSummary } from '../../components/error-summary';
-import { loadMemberships, selectOrganization, logout } from './auth-flow';
+import { loadMemberships, logout, OrganizationSelector, selectOrganization } from './auth-flow';
 import styles from './management.module.css';
 import { useIdentityContext } from './identity-context';
 import { loadOrganizationSettings, OrganizationSettings } from './organization-settings';
@@ -34,11 +34,13 @@ import { SaleLookup } from '../sales/sale-lookup';
 import { PurchaseWorkspace } from '../purchases/purchase-workspace';
 import { ExpensePage } from '../expenses/expense-page';
 import { DashboardWorkspace } from '../insights/dashboard-workspace';
+import { HomeActions } from '../insights/home-actions';
 import { AuditWorkspace } from '../insights/audit-workspace';
 import { ReportsWorkspace } from '../insights/reports-workspace';
 import { OnlineOnlyBoundary } from '../../offline/online-only-boundary';
 import { OfflineWorkspace } from '../offline/offline-workspace';
 import { PosConnectionBoundary } from '../../offline/pos-connection-boundary';
+import { workspaceCurrentPath, workspaceNavigation } from './workspace-navigation';
 
 type WorkspacePage =
   | 'home'
@@ -175,42 +177,17 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
   if (memberships.isPending) return <main><p role="status">Cargando contexto de trabajo…</p></main>;
   const preservePosContext = page === 'pos' && !!memberships.data && memberships.error instanceof ApiProblemError && memberships.error.status === 0;
   if (memberships.error && !preservePosContext) return <main><ErrorSummary error={memberships.error instanceof ApiProblemError ? memberships.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar tus organizaciones.' })} /><button type="button" onClick={() => void memberships.refetch()}>Reintentar</button></main>;
-  if (!activeId) return <main><p>Elegí una organización para continuar.</p><a href="/organizations/select">Seleccionar organización</a></main>;
+  if (!activeId) return <main><OrganizationSelector organizations={memberships.data ?? []} onSuccess={() => undefined} /></main>;
   const organizations = memberships.data ?? [];
   const current = organizations.find((item) => item.organizationId === activeId);
+  const navigation = workspaceNavigation(current?.role);
   const catalogBranchName = branches.data?.branches.find((branch) => branch.id === activeBranchId)?.name;
   if (requiresTimezone && settings.error) return <main><ErrorSummary error={settings.error instanceof ApiProblemError ? settings.error : new ApiProblemError({status:0,code:'SETTINGS_LOAD_FAILED',message:'No pudimos cargar la zona horaria de la organización.'})} /><button type="button" onClick={() => void settings.refetch()}>Reintentar</button></main>;
   if (requiresTimezone && !settings.data) return <main><p role="status">Cargando zona horaria…</p></main>;
   return <OrganizationTimezone.Provider value={settings.data?.timezone ?? 'UTC'}><AppShell organizations={organizations.map((item) => ({ id: item.organizationId, name: item.organizationName, branches: item.organizationId === activeId ? branches.data?.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => ({ id: branch.id, name: branch.name })) ?? [] : [] }))}
     activeOrganizationId={activeId} activeBranchId={activeBranchId} onOrganizationChange={(id) => void changeOrganization(id)} onBranchChange={setActiveBranchId}
-    navigation={[
-      { href: '/workspace', label: 'Inicio' },
-      { href: '/workspace/catalog', label: 'Catálogo e inventario' },
-      ...(current?.role === 'EMPLOYEE' ? [] : [
-        { href: '/workspace/pos', label: 'POS' },
-        { href: '/workspace/sales', label: 'Ventas' },
-      ]),
-      ...(current?.role === 'CASHIER' ? [] : [{ href: '/workspace/purchases', label: 'Compras' }]),
-      ...(current?.role === 'EMPLOYEE' ? [] : [{ href: '/workspace/expenses', label: 'Gastos' }]),
-      { href: '/workspace/reports', label: 'Reportes' },
-      { href: '/workspace/branches', label: 'Sucursales' },
-      { href: '/workspace/customers', label: 'Clientes' },
-      { href: '/workspace/suppliers', label: 'Proveedores' },
-      { href: '/workspace/cash-registers', label: 'Cajas' },
-      { href: '/workspace/cash-sessions', label: 'Sesiones de caja' },
-      { href: '/workspace/offline', label: 'POS sin conexión' },
-      ...(current?.role === 'OWNER' || current?.role === 'ADMIN'
-        ? [
-            { href: '/workspace/users', label: 'Usuarios' },
-            { href: '/workspace/expense-categories', label: 'Categorías de gasto' },
-            { href: '/workspace/payment-methods', label: 'Medios de pago' },
-            { href: '/workspace/audit', label: 'Auditoría' },
-          ]
-        : []),
-      { href: '/workspace/settings', label: 'Configuración' },
-    ]}
-    currentPath={page === 'home' ? '/workspace' : isCatalogInventoryPage(page)
-      ? '/workspace/catalog' : `/workspace/${page}`}>
+    navigation={navigation.groups} primaryNavigation={navigation.primary}
+    currentPath={workspaceCurrentPath(page)}>
       {switchError ? <ErrorSummary error={switchError} /> : null}
       {branches.error ? <><ErrorSummary error={branches.error instanceof ApiProblemError ? branches.error : new ApiProblemError({ status: 0, code: 'LOAD_FAILED', message: 'No pudimos cargar las sucursales.' })} /><button type="button" onClick={() => void branches.refetch()}>Reintentar sucursales</button></> : null}
       {(page === 'catalog' || page === 'catalog-items') && catalogStocks.error ? <>
@@ -361,6 +338,7 @@ function WorkspaceContent({ page }: { page: WorkspacePage }) {
         : page === 'home' && current ? settings.error
           ? <><ErrorSummary error={settings.error instanceof ApiProblemError ? settings.error : new ApiProblemError({ status: 0, code: 'SETTINGS_LOAD_FAILED', message: 'No pudimos cargar la zona horaria de la organización.' })} /><button type="button" onClick={() => void settings.refetch()}>Reintentar</button></>
           : settings.data ? <DashboardWorkspace key={activeId} organizationId={activeId}
+          actions={<HomeActions organizationId={activeId} branchId={activeBranchId} role={current.role} />}
           role={current.role} timezone={settings.data.timezone} currency={settings.data.currency} branches={branches.data?.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => ({ id: branch.id, name: branch.name })) ?? []} />
           : <p role="status">Cargando zona horaria…</p>
         : <section><h1>{current?.organizationName}</h1><p>Organización activa.</p></section>}
