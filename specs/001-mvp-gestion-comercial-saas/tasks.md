@@ -379,13 +379,13 @@ Delta T236J: RF-269 verificado para captura nueva y preservación histórica seg
 Alcance exclusivo autorizado: RF-03, RF-21, RF-23, RF-29, RF-93, RF-116, RF-220 y RF-285. [Pruebas, regresiones, comandos y límites](t236k-authorization-evidence.md). Se conserva la trazabilidad del plan y el estado pendiente de T236.
 
 - [x] T236K1 [RF-03]: cambio de organización mediante API real, retiro de contexto/sucursal/claves/lectura privada y segunda pestaña, cola opaca preservada; tenant/membresías inactivos denegados.
-- [ ] T236K2 [RF-21]: cuatro roles persistidos × ocho familias más cotización POS; corrección precedida de RED. Falta matriz exhaustiva de acciones/lecturas/HTTP.
-- [ ] T236K3 [RF-23]: membresías, invitaciones y cajas con scopes negativos y revalidación; corregidas mutaciones globales sobre scopes mixtos. Faltan operaciones administrativas/comerciales restantes.
-- [ ] T236K4 [RF-29]: diez comandos tras desactivación real, más venta con branch inactiva; historial y rollback comprobados. Falta matriz completa de operaciones nuevas y contratos HTTP.
+- [ ] T236K2 [RF-21]: cuatro roles persistidos × ocho familias más cotización POS; corrección precedida de RED. Falta matriz exhaustiva de acciones/lecturas/HTTP. Matriz de rutas 2026-11-16: todas las rutas protegidas rechazan sesión, tenant y membresía inválidos sin escrituras; falta rol × comando con payload válido. [Evidencia 2026-11-16](pre-production-closure-2026-11-16-evidence.md).
+- [ ] T236K3 [RF-23]: membresías, invitaciones y cajas con scopes negativos y revalidación; corregidas mutaciones globales sobre scopes mixtos. Faltan operaciones administrativas/comerciales restantes. Matriz de rutas 2026-11-16: todas las rutas protegidas rechazan sesión, tenant y membresía inválidos sin escrituras; falta rol × comando con payload válido. [Evidencia 2026-11-16](pre-production-closure-2026-11-16-evidence.md).
+- [ ] T236K4 [RF-29]: diez comandos tras desactivación real, más venta con branch inactiva; historial y rollback comprobados. Falta matriz completa de operaciones nuevas y contratos HTTP. Matriz de rutas 2026-11-16: todas las rutas protegidas rechazan sesión, tenant y membresía inválidos sin escrituras; falta rol × comando con payload válido. [Evidencia 2026-11-16](pre-production-closure-2026-11-16-evidence.md).
 - [x] T236K5 [RF-93]: apertura/movimientos/cierre firmado de OWNER/ADMIN permitidos y denegados según membresía real, tenant, scope e inactividad.
 - [x] T236K6 [RF-116]: navegador integrado sin login previo/dispositivo/bootstrap/sync; solo autorización verificada habilita operación offline. Backend añade roles/scopes/tenant/inactividad.
 - [x] T236K7 [RF-220]: ADMIN administra maestros globales y luego es rechazado en compra/venta fuera de scope; rol/tenant/inactividad negativos sin efectos.
-- [ ] T236K8 [RF-285]: IDs cruzados rechazados en ajustes/compras/ventas/transferencias y positivos locales; faltan relaciones y endpoints restantes.
+- [x] T236K8 [RF-285]: IDs cruzados rechazados en ajustes/compras/ventas/transferencias y positivos locales; faltan relaciones y endpoints restantes. Invariante del esquema efectivo: toda FK entre tablas tenant incluye organization_id. [Evidencia 2026-11-16](pre-production-closure-2026-11-16-evidence.md).
 
 ## Mejora de interfaz autorizada — 2026-10-11
 
@@ -409,7 +409,7 @@ Bloque autorizado: D03-T01–D03-T05, secuencial con TDD, conforme a plan §22. 
 - [x] D03-T02: Derivar saleId desde la lectura autorizada y reproducirlo en JSON/HTML/PDF, incluidos snapshots anteriores sin reescritura; probar negativas tenant/sucursal/sesión con PostgreSQL y HTTP reales [RF-319, RF-322, RF-81–RF-83, RF-24, RF-267–RF-270]. Depende de D03-T01.
 - [x] D03-T03: Conectar motor POS offline existente a pantalla operable y comprobante HTML local imprimible/descargable, con ID, copia y estado pendiente; conservar sellado dual e identidad [RF-317–RF-320, RF-322, RF-323, RF-117, RF-309–RF-316]. Depende de D03-T02.
 - [x] D03-T04: Asociar ayuda al campo de consulta y acreditar recorrido confirmado/comprobante → ID → sincronización real → consulta autorizada, con negativos de scope y revocación [RF-320–RF-323, RF-02, RF-04, RF-24, RF-144, RF-151]. Depende de D03-T03.
-- [ ] D03-T05: Verificar IDs en resiliencia offline, actualización, expiración/revocación, ACK perdido y conflictos; ejecutar checks raíz, motores Playwright y sdd-check D03 con evidencia y límites [RF-317–RF-323, RF-275–RF-279, RF-309–RF-316]. Depende de D03-T04.
+- [x] D03-T05: Verificar IDs en resiliencia offline, actualización, expiración/revocación, ACK perdido y conflictos; ejecutar checks raíz, motores Playwright y sdd-check D03 con evidencia y límites [RF-317–RF-323, RF-275–RF-279, RF-309–RF-316]. Depende de D03-T04. Nightly multimotor en CI y escenario real con ACK perdido. [Evidencia 2026-11-16](pre-production-closure-2026-11-16-evidence.md).
 
 
 ## D04 — Historial de ventas — solicitud explícita 2026-10-11
@@ -420,9 +420,9 @@ Bloque autorizado: D03-T01–D03-T05, secuencial con TDD, conforme a plan §22. 
 
 ## D05 — ID visible corto — solicitud explícita 2026-10-11
 
-- [ ] D05-T01: Derivar el código de 12 caracteres desde el UUID y mostrarlo en confirmación, historial y comprobantes online/offline; conservar UUID, idempotencia, cola y snapshots [RF-329, RF-331].
-- [ ] D05-T02: Resolver el código bajo RLS y autorización, aceptar UUID anterior y responder explícitamente ante ambigüedad; acreditar aislamiento tenant/sucursal/sesión, reintentos y acceso offline posterior al sync [RF-330, RF-322]. Depende de D05-T01.
-- [ ] D05-T03: Verificar checks obligatorios, flujos de navegador/PWA y trazabilidad SDD; documentar resultados y límites sin cerrar D03-T05 por inferencia [RF-329–RF-331]. Depende de D05-T02.
+- [x] D05-T01: Derivar el código de 12 caracteres desde el UUID y mostrarlo en confirmación, historial y comprobantes online/offline; conservar UUID, idempotencia, cola y snapshots [RF-329, RF-331]. [Evidencia 2026-11-16](pre-production-closure-2026-11-16-evidence.md).
+- [x] D05-T02: Resolver el código bajo RLS y autorización, aceptar UUID anterior y responder explícitamente ante ambigüedad; acreditar aislamiento tenant/sucursal/sesión, reintentos y acceso offline posterior al sync [RF-330, RF-322]. Depende de D05-T01. [Evidencia 2026-11-16](pre-production-closure-2026-11-16-evidence.md).
+- [x] D05-T03: Verificar checks obligatorios, flujos de navegador/PWA y trazabilidad SDD; documentar resultados y límites sin cerrar D03-T05 por inferencia [RF-329–RF-331]. Depende de D05-T02. Verificado con CI verde y nightly Chromium/Firefox/WebKit. [Evidencia 2026-11-16](pre-production-closure-2026-11-16-evidence.md).
 
 ## D07 — Historial y tendencias de compras — solicitud explícita 2026-10-11
 
@@ -468,4 +468,4 @@ Bloque autorizado: D03-T01–D03-T05, secuencial con TDD, conforme a plan §22. 
 - [x] T236AJ [RF-04, RF-21, RF-23, RF-144–RF-150]: Ampliar evidencia de 15 rutas de lectura con cuatro roles reales, tenant/scope y desactivación tras login; 64 pruebas HTTP/PostgreSQL PASS, lint/typecheck. No cierra T236K2/K3 ni la matriz restante. [Evidencia](production-readiness.md).
 - [x] T236AK [RF-124]: Verificar conflicto de apertura offline firmada con sesión online incompatible, conservar todas las operaciones del fixture en ambas sesiones y probar rollback, ACK, auditoría y replay; corregir timestamp inválido del fixture v1 sin cambiar vigencia productiva. Suite histórica 17/17 PASS. [Evidencia](production-readiness.md).
 - [ ] T236AL [RF-132, RF-151, RF-289]: Repetir gate completo tras error de fork, reconstruir/verificar imágenes del árbol actual, completar tasks-check y acreditar infraestructura real antes de un veredicto de producción. [Seguimiento](production-readiness.md).
-- [ ] T236AM [RF-12, RF-151, T235]: Conservar origen web e identidad de release en el build raíz, invalidar caché al cambiar ambos y configurar el origen local de CI antes de compilar. Verificar con el pipeline Turbo real y el gate de navegador.
+- [x] T236AM [RF-12, RF-151, T235]: Conservar origen web e identidad de release en el build raíz, invalidar caché al cambiar ambos y configurar el origen local de CI antes de compilar. Verificar con el pipeline Turbo real y el gate de navegador. Gate crítico 6/6 sobre el build con origen de CI. [Evidencia 2026-11-16](pre-production-closure-2026-11-16-evidence.md).

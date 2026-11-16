@@ -65,3 +65,15 @@ No encontré errores críticos de seguridad, aislamiento tenant ni cálculo mone
 3. **Refactor de límites de módulos** (hallazgos 3 y 4), con todos los tests en verde.
 4. **Compatibilidad real** T224/T227. Safari real requiere un dispositivo Apple.
 5. **Infraestructura** P04–P12: elegir proveedor gratuito, dominio, HTTPS, S3, email, backup externo y monitoreo. Luego T236 y el `sdd-check` final.
+
+## 6. Seguimiento (mismo día)
+
+Ejecutado en la rama `release/pre-production`. Detalle en [pre-production-closure-2026-11-16-evidence.md](001-mvp-gestion-comercial-saas/pre-production-closure-2026-11-16-evidence.md).
+
+- Hallazgos 1 y 2 resueltos: el trabajo quedó commiteado y el CI y el nightly pasan en verde. La causa raíz del CI rojo era un problema de `turbo.json`.
+- Hallazgo 3 resuelto: hay una regla ESLint para los límites entre módulos (de 23 violaciones a 0) y no quedan ciclos `auth ↔ users` ni `cash ↔ offline-sync`.
+- Hallazgo 4 reclasificado: sigue la convención del módulo para puertos transaccionales.
+- Hallazgo 5 avanzado: matriz default deny de todas las rutas e invariantes del esquema efectivo. Queda pendiente la matriz rol × comando de T236K2–K4.
+- Hallazgo 6 resuelto: `production-readiness.md` está actualizado.
+- Hallazgo 9 aclarado: los tests de rollout requieren PowerShell 7 (`pwsh`) en la máquina local.
+- Nuevo: se corrigió el foco de teclado invisible en los filtros de fecha de los historiales (accesibilidad).

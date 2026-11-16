@@ -12,6 +12,13 @@ Fuentes: [spec 001](spec.md), [constitución](../../constitution.md), [plan 001]
 
 **SPEC CUMPLIDA** acredita requisitos y reglas del proyecto. **LISTO PARA PRODUCCIÓN** exige además infraestructura real configurada, release identificada, TLS, secretos, roles mínimos, servicios externos, backup restaurable, monitoreo y smoke sobre el entorno candidato. Ninguno sustituye al otro.
 
+## Actualización 2026-11-16
+
+- El CI completo pasa por primera vez: lint, typecheck, suite PostgreSQL, build, gate crítico y catálogo (run 43803943283). El fallo de CI desde el 2026-10-10 se debía a que `typecheck` no compilaba `@uconext/shared`, no al runtime.
+- El nightly Chromium/Firefox/WebKit pasa en CI. El gate crítico UI ya no falla: P03/P14/P15 quedan acreditados en CI.
+- El "Worker exited unexpectedly" corresponde a un abort nativo (0xC0000409) del entorno Windows local; en Linux CI la suite completa pasa. Ver [cierre previo a producción](pre-production-closure-2026-11-16-evidence.md).
+- Siguen pendientes P04–P12 (infraestructura real), T224/T227 (dispositivos y navegadores con marca reales) y la matriz rol × comando de T236K2–K4.
+
 ## Trabajo y evidencia de este bloque
 
 ### P01 — Validación del origen antes de modificar el entorno
@@ -62,7 +69,7 @@ Al iniciar el recorrido UI se corrigieron dos problemas del fixture: el locator 
 - [x] Declarar `NEXT_PUBLIC_WEB_ORIGIN` y `UCONEXT_BUILD_ID` en el entorno del build; configurar el origen del runner antes de compilar en CI.
 - [x] Verificar el dry-run real con dos orígenes y dos releases: cambian los hashes y se incluyen las variables configuradas. Pruebas del build y runner: **5/5 PASS**.
 - [x] Ejecutar build raíz con origen 3021: **3/3 tareas PASS**; lint y typecheck actuales: **4/4 tareas PASS** cada uno.
-- [ ] Completar el gate de navegador sobre ese build estable antes de cerrar T236AM.
+- [x] Completar el gate de navegador sobre ese build estable antes de cerrar T236AM. 2026-11-16: gate crítico 6/6 local y CI verde ([evidencia](pre-production-closure-2026-11-16-evidence.md)).
 
 Evidencia: [RED](../../output/production-build-env-red-2026-10-13.log), [GREEN](../../output/production-build-env-green-2026-10-13.log), [build raíz](../../output/production-build-root-env-2026-10-13.log), [lint](../../output/production-lint-current-2026-10-13.log), [typecheck](../../output/production-typecheck-current-2026-10-13.log). No se modifica el alcance funcional ni se reemplaza el origen HTTPS exigido para producción por el origen loopback de las pruebas.
 
