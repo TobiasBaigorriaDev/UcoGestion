@@ -1,0 +1,207 @@
+✖ rollout rejects invalid public origin before pull/migration: http://gestion.example.com (1593.5075ms)
+✖ rollout rejects invalid public origin before pull/migration: not-an-origin (763.8904ms)
+✖ rollout rejects invalid public origin before pull/migration: https://gestion.example.com/api (1013.6064ms)
+✖ rollout rejects invalid public origin before pull/migration: https://gestion.example.com?token=private (709.1127ms)
+✖ rollout rejects invalid public origin before pull/migration: https://gestion.example.com#fragment (600.2129ms)
+✖ rollout rejects invalid public origin before pull/migration: https://redacted@gestion.example.com (597.5548ms)
+✖ rollout rejects invalid public origin before pull/migration: https://localhost (542.9665ms)
+✖ rollout rejects invalid public origin before pull/migration: https://127.0.0.1 (505.1887ms)
+✖ rollout rejects invalid public origin before pull/migration: https://[::1] (526.5466ms)
+✔ a public HTTPS origin passes validation and reaches the external Docker port (514.5829ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 1
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7545.9204
+
+✖ failing tests:
+
+test at test\production-rollout.test.mjs:24:3
+✖ rollout rejects invalid public origin before pull/migration: http://gestion.example.com (1593.5075ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /DOCKER_BOUNDARY_REACHED/. Input:
+  
+  'Exception: DOCKER_BOUNDARY_REACHED\r\n'
+  
+      at TestContext.<anonymous> (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/test/production-rollout.test.mjs:29:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.start (node:internal/test_runner/test:1096:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Exception: DOCKER_BOUNDARY_REACHED\r\n',
+    expected: /DOCKER_BOUNDARY_REACHED/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at test\production-rollout.test.mjs:24:3
+✖ rollout rejects invalid public origin before pull/migration: not-an-origin (763.8904ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /DOCKER_BOUNDARY_REACHED/. Input:
+  
+  'Exception: DOCKER_BOUNDARY_REACHED\r\n'
+  
+      at TestContext.<anonymous> (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/test/production-rollout.test.mjs:29:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Exception: DOCKER_BOUNDARY_REACHED\r\n',
+    expected: /DOCKER_BOUNDARY_REACHED/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at test\production-rollout.test.mjs:24:3
+✖ rollout rejects invalid public origin before pull/migration: https://gestion.example.com/api (1013.6064ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /DOCKER_BOUNDARY_REACHED/. Input:
+  
+  'Exception: DOCKER_BOUNDARY_REACHED\r\n'
+  
+      at TestContext.<anonymous> (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/test/production-rollout.test.mjs:29:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Exception: DOCKER_BOUNDARY_REACHED\r\n',
+    expected: /DOCKER_BOUNDARY_REACHED/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at test\production-rollout.test.mjs:24:3
+✖ rollout rejects invalid public origin before pull/migration: https://gestion.example.com?token=private (709.1127ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /DOCKER_BOUNDARY_REACHED/. Input:
+  
+  'Exception: DOCKER_BOUNDARY_REACHED\r\n'
+  
+      at TestContext.<anonymous> (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/test/production-rollout.test.mjs:29:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Exception: DOCKER_BOUNDARY_REACHED\r\n',
+    expected: /DOCKER_BOUNDARY_REACHED/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at test\production-rollout.test.mjs:24:3
+✖ rollout rejects invalid public origin before pull/migration: https://gestion.example.com#fragment (600.2129ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /DOCKER_BOUNDARY_REACHED/. Input:
+  
+  'Exception: DOCKER_BOUNDARY_REACHED\r\n'
+  
+      at TestContext.<anonymous> (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/test/production-rollout.test.mjs:29:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Exception: DOCKER_BOUNDARY_REACHED\r\n',
+    expected: /DOCKER_BOUNDARY_REACHED/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at test\production-rollout.test.mjs:24:3
+✖ rollout rejects invalid public origin before pull/migration: https://redacted@gestion.example.com (597.5548ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /DOCKER_BOUNDARY_REACHED/. Input:
+  
+  'Exception: DOCKER_BOUNDARY_REACHED\r\n'
+  
+      at TestContext.<anonymous> (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/test/production-rollout.test.mjs:29:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Exception: DOCKER_BOUNDARY_REACHED\r\n',
+    expected: /DOCKER_BOUNDARY_REACHED/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at test\production-rollout.test.mjs:24:3
+✖ rollout rejects invalid public origin before pull/migration: https://localhost (542.9665ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /DOCKER_BOUNDARY_REACHED/. Input:
+  
+  'Exception: DOCKER_BOUNDARY_REACHED\r\n'
+  
+      at TestContext.<anonymous> (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/test/production-rollout.test.mjs:29:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Exception: DOCKER_BOUNDARY_REACHED\r\n',
+    expected: /DOCKER_BOUNDARY_REACHED/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at test\production-rollout.test.mjs:24:3
+✖ rollout rejects invalid public origin before pull/migration: https://127.0.0.1 (505.1887ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /DOCKER_BOUNDARY_REACHED/. Input:
+  
+  'Exception: DOCKER_BOUNDARY_REACHED\r\n'
+  
+      at TestContext.<anonymous> (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/test/production-rollout.test.mjs:29:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Exception: DOCKER_BOUNDARY_REACHED\r\n',
+    expected: /DOCKER_BOUNDARY_REACHED/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at test\production-rollout.test.mjs:24:3
+✖ rollout rejects invalid public origin before pull/migration: https://[::1] (526.5466ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /DOCKER_BOUNDARY_REACHED/. Input:
+  
+  'Exception: DOCKER_BOUNDARY_REACHED\r\n'
+  
+      at TestContext.<anonymous> (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/test/production-rollout.test.mjs:29:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Exception: DOCKER_BOUNDARY_REACHED\r\n',
+    expected: /DOCKER_BOUNDARY_REACHED/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }

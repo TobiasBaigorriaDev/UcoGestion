@@ -1,0 +1,25 @@
+file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/test/browser-runner.test.mjs:4
+import { readScenarioResult, resolveBrowserWebOrigin } from '../ops/browser/run.mjs';
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: The requested module '../ops/browser/run.mjs' does not provide an export named 'resolveBrowserWebOrigin'
+    at #asyncInstantiate (node:internal/modules/esm/module_job:326:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:429:5)
+    at async node:internal/modules/esm/loader:639:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.15.0
+✖ test\browser-runner.test.mjs (127.4179ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 141.8895
+
+✖ failing tests:
+
+test at test\browser-runner.test.mjs:1:1
+✖ test\browser-runner.test.mjs (127.4179ms)
+  'test failed'

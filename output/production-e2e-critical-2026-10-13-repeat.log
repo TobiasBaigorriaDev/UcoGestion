@@ -1,0 +1,6 @@
+$ node ops/browser/run.mjs critical
+Error: Browser fixture server did not start: http://localhost:3001
+    at waitForServer (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/ops/browser/run.mjs:55:9)
+    at async Promise.all (index 0)
+    at async run (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/ops/browser/run.mjs:104:5)
+[ELIFECYCLE] Command failed with exit code 1.

@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  13:00:27
+   Duration  7.27s (transform 46ms, setup 0ms, import 1.80s, tests 5.16s, environment 0ms)
+

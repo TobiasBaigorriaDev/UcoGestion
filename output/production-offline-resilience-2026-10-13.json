@@ -1,0 +1,34 @@
+{
+  "mode": "critical",
+  "browser": "chromium",
+  "requestedScenario": "offline-resilience",
+  "expectedScenarios": [
+    "offline-resilience"
+  ],
+  "results": [
+    {
+      "scenario": "offline-resilience",
+      "browser": "chromium",
+      "version": "155.0.8059.12",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.8059.12 Safari/537.36",
+      "os": "win32 10.0.26200",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "browser": "155.0.8059.12",
+        "scenarios": [
+          "tab-close-reopen",
+          "encrypted-records",
+          "identity-switch-denied",
+          "wrong-dek-denied",
+          "lost-ack-socket",
+          "reload",
+          "exact-retry",
+          "partial-ack",
+          "unconfirmed-bytes",
+          "signed-final-cleanup"
+        ]
+      }
+    }
+  ]
+}

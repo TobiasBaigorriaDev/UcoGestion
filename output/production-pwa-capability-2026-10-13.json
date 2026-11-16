@@ -1,0 +1,40 @@
+{
+  "mode": "critical",
+  "browser": "chromium",
+  "requestedScenario": "pwa-capability",
+  "expectedScenarios": [
+    "pwa-capability"
+  ],
+  "results": [
+    {
+      "scenario": "pwa-capability",
+      "browser": "chromium",
+      "version": "155.0.8059.12",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.8059.12 Safari/537.36",
+      "os": "win32 10.0.26200",
+      "passed": true,
+      "result": {
+        "browser": "155.0.8059.12",
+        "os": "Win32",
+        "results": [
+          {
+            "missing": "none",
+            "passed": true
+          },
+          {
+            "missing": "serviceWorker",
+            "passed": true
+          },
+          {
+            "missing": "indexedDB",
+            "passed": true
+          },
+          {
+            "missing": "crypto",
+            "passed": true
+          }
+        ]
+      }
+    }
+  ]
+}

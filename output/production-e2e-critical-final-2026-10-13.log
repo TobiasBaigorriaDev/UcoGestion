@@ -1,0 +1,9 @@
+$ node ops/browser/run.mjs critical
+Error: {
+  "isError": true,
+  "error": "Error: /accept-invitation?token=test: locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('heading', { level: 1 }).first() to be visible\u001b[22m\n; visible page: Internal Server Error"
+}
+    at cli (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/ops/browser/run.mjs:98:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async run (file:///C:/Users/tobib/OneDrive/Escritorio/Uco%20Digital/UcoGestion/ops/browser/run.mjs:134:43)
+[ELIFECYCLE] Command failed with exit code 1.

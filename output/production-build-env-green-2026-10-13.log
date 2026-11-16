@@ -1,0 +1,13 @@
+✔ browser gates can use a separate loopback port without accepting external origins (3.2722ms)
+✔ a CLI tool error or incomplete scenario cannot produce green browser evidence (3.4563ms)
+✔ CI runs the critical browser gate and nightly expands all three engines (1.0344ms)
+✔ the real Turbo build passes and hashes the origin and release ID (9144.0781ms)
+✔ the CI browser gate builds with its actual local origin (0.886ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9321.1001

@@ -1,0 +1,30 @@
+{
+  "mode": "critical",
+  "browser": "chromium",
+  "requestedScenario": "cash-operations",
+  "expectedScenarios": [
+    "cash-operations"
+  ],
+  "results": [
+    {
+      "scenario": "cash-operations",
+      "browser": "chromium",
+      "version": "155.0.8059.12",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.8059.12 Safari/537.36",
+      "os": "win32 10.0.26200",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "scenarios": [
+          "lost-response-idempotency",
+          "reload",
+          "bound-device",
+          "keyboard",
+          "focus",
+          "desktop-mobile-axe",
+          "offline-return"
+        ]
+      }
+    }
+  ]
+}
