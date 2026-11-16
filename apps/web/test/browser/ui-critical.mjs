@@ -48,6 +48,9 @@ async page => {
     if (path === '/inventory/transfers') return json({ transfers: [], nextCursor: null });
     if (path === '/sales/checkout-context') return json({ sessions: [], paymentMethods: ['CASH', 'TRANSFER'] });
     if (path === '/cash-sessions') return json({ actorUserId: org, registers: [], devices: [], sessions: [], nextCursor: null });
+    if (path === '/sales/trends' || path === '/purchases/trends') return json({ currency: 'ARS', points: [{ date: '2026-10-09', amount: '125.00', count: 1 }] });
+    if (path === '/sales') return json({ items: [{ id: item, branchId: branch, status: 'CONFIRMED', total: '125.00', currency: 'ARS', confirmedAt: '2026-10-09T12:00:00Z' }], nextCursor: null });
+    if (path === '/purchases') return json({ items: [{ id: item, branchId: branch, status: 'PAID', total: '80.00', currency: 'ARS', supplierName: 'Proveedor', confirmedAt: '2026-10-09T12:00:00Z', items: [{ itemName: 'Producto', quantity: '2', lineTotal: '80.00' }] }], nextCursor: null });
     if (path === '/dashboard') return json(dashboard);
     if (path === '/audit') return json({ items: [{ id: item, actorUserId: org, branchId: branch, entityType: 'sale', entityId: item, action: 'CONFIRMED', occurredAt: '2026-10-09T12:00:00Z' }], nextCursor: null });
     if (path.startsWith('/reports/')) return json({ dataset: 'sales', items: [{ id: item, branchId: branch, occurredAt: '2026-10-09T12:00:00Z', status: 'CONFIRMED', total: '125.00', currencyCode: 'ARS' }], nextCursor: null });
