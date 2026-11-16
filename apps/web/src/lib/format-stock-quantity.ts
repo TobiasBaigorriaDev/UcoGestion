@@ -1,6 +1,6 @@
-/** Format canonical decimal quantities without losing precision or actual fractions. */
+import { formatQuantityForDisplay } from '@uconext/shared';
+
+/** Display whole quantities without padding and fractions with two decimal places. */
 export function formatStockQuantity(quantity: string): string {
-  const [integer, fraction = ''] = quantity.split('.');
-  const significantFraction = fraction.replace(/0+$/, '');
-  return significantFraction ? `${integer},${significantFraction}` : (integer ?? quantity);
+  return formatQuantityForDisplay(quantity);
 }

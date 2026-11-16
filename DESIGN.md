@@ -37,6 +37,14 @@ typography:
     fontSize: "0.875rem"
     fontWeight: 500
     lineHeight: 1.4
+  pdf-body:
+    fontFamily: "Helvetica"
+    fontSize: "9pt"
+    lineHeight: 1.4
+  pdf-heading:
+    fontFamily: "Helvetica-Bold"
+    fontSize: "24pt"
+    lineHeight: 1.15
 rounded:
   sm: "8px"
   md: "12px"
@@ -56,6 +64,8 @@ components:
 ---
 
 # Design System: UcoNext
+
+Los reportes PDF usan Helvetica y Helvetica-Bold, fuentes estándar incorporadas en el renderer, para impresión y generación autónoma sin descargas externas. Conservan los colores de marca y la jerarquía de títulos. Esta variante se limita a documentos PDF; la interfaz web mantiene Plus Jakarta Sans. Encabezados y columnas se repiten en cada hoja, importes alineados a la derecha, filas suaves alternadas y paginación estable.
 
 ## Overview
 
@@ -172,3 +182,7 @@ La categoría de catálogo puede elegir entre 52 iconos SVG Lucide orientados a 
 ### Don't:
 - **Don't** saturar la interfaz con desenfoques excesivos que degraden los FPS en dispositivos móviles modestos.
 - **Don't** usar el color verde vibrante `#22C55E` como fondo decorativo estático.
+
+### Cuestionario de edición de productos
+
+Al abrir Editar, los campos de datos, categoría, SKU/código de barras, precio, tipo/unidad/inventario y estado aparecen juntos en el mismo editor. No hay botonera de «Cambiar precio», «Cambiar estructura», «Desactivar» o «Eliminar». Se guarda cada apartado explícitamente, con instrucción visible y las operaciones versionadas existentes. Estado usa un select Activo/Inactivo; su guardado no está disponible si no cambia. La eliminación se despliega al final dentro del editor con confirmación, mientras cambiar stock conserva el flujo independiente. Jerarquía mediante encabezados y tokens existentes, responsive y teclado nativo.

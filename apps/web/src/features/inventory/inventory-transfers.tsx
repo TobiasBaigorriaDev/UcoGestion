@@ -1,5 +1,7 @@
 'use client';
 
+import { formatStockQuantity } from '../../lib/format-stock-quantity';
+
 import { useState } from 'react';
 
 import { ErrorSummary } from '../../components/error-summary';
@@ -114,7 +116,7 @@ export function InventoryTransfers({ organizationId, role, branches, originBranc
                 aria-describedby={error?.fieldErrors[`quantity-${line.key}`] ? `transfer-quantity-error-${line.key}` : undefined}
                 onChange={(event) => changeLine(line.key, { quantity: event.target.value })} />
               {error?.fieldErrors[`quantity-${line.key}`] ? <p id={`transfer-quantity-error-${line.key}`}>{error.fieldErrors[`quantity-${line.key}`]}</p> : null}
-              <span>Disponible en origen: {stock?.quantity ?? '—'}</span></div>
+              <span>Disponible en origen: {stock ? formatStockQuantity(stock.quantity) : '—'}</span></div>
             {lines.length > 1 ? <button type="button" onClick={() => setLines((current) => current.filter((entry) => entry.key !== line.key))}>Quitar línea {index + 1}</button> : null}
           </div>;
         })}
@@ -128,7 +130,7 @@ export function InventoryTransfers({ organizationId, role, branches, originBranc
       {transfers.length === 0 ? <p>No hay transferencias disponibles para esta sucursal.</p> :
         <ul className={styles.rows}>{transfers.map((transfer) => <li className={styles.row} key={transfer.id}>
           <strong>{branchName(transfer.originBranchId)} → {branchName(transfer.destinationBranchId)}</strong>
-          <ul>{transfer.lines.map((line) => <li key={line.itemId}>{line.itemName}: {line.quantity}</li>)}</ul>
+          <ul>{transfer.lines.map((line) => <li key={line.itemId}>{line.itemName}: {formatStockQuantity(line.quantity)}</li>)}</ul>
           <span>{transfer.compensatedBy ? 'Compensada' : transfer.compensates ? 'Compensación confirmada' : 'Confirmada'}</span>
           {role !== 'CASHIER' && !transfer.compensatedBy && !transfer.compensates ?
             confirmId === transfer.id ? <div><p>La compensación revertirá las líneas si hay stock suficiente en destino. El original seguirá en el historial.</p>

@@ -11,7 +11,7 @@ async page => {
   await history.getByText('Bodega Sur').waitFor();
   await history.locator('svg polyline').first().waitFor();
   check(await history.locator('svg polyline').count() === 2, 'Purchase trends are not line charts');
-  check(await history.getByText('Cajas × 2.000').count() === 1, 'Historic products missing');
+  check(await history.getByText('Cajas × 2').count() === 1, 'Historic products missing');
   await history.getByRole('button', { name: /Ver compra/ }).focus();
   await page.keyboard.press('Enter');
   const detail = page.getByRole('region', { name: 'Detalle de compra' });
