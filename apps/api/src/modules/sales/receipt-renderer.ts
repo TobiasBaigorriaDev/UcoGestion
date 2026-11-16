@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { formatQuantityForDisplay } from '@uconext/shared';
 
 import type { SaleReceiptView } from './sales-operations.service.js';
 
@@ -19,10 +20,14 @@ export const receiptLines = (receipt: Receipt): string[] => {
   return [field(receipt.label), `ID de venta: ${receipt.saleCode}`, field(organization.name), field(branch.name),
     ...(customer.name ? [`Cliente: ${field(customer.name)}`] : []),
     ...items.map((value) => { const item = record(value);
-      return `${field(item.name)} | ${field(item.quantity)} ${field(item.unit)} | ${field(item.lineTotal)}`; }),
+      return `${field(item.name)} | ${item.quantity ? formatQuantityForDisplay(field(item.quantity)) : ''} ${field(item.unit)} | ${field(item.lineTotal)}`; }),
     `Subtotal: ${field(receipt.subtotal)} ${field(receipt.currency)}`,
     `Descuento: ${field(receipt.discount)} ${field(receipt.currency)}`,
     `Total: ${field(receipt.total)} ${field(receipt.currency)}`,
+    ...(field(receipt.onAccountAmount) && field(receipt.onAccountAmount) !== '0.00' ? [
+      `Pagado en esta venta: ${field(receipt.paidAmount)} ${field(receipt.currency)}`,
+      `A cuenta del cliente: ${field(receipt.onAccountAmount)} ${field(receipt.currency)}`,
+    ] : []),
     ...payments.map((value) => { const payment = record(value);
       return `${field(payment.method)}: ${field(payment.appliedAmount)}`; })];
 };

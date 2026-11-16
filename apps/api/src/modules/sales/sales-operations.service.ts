@@ -6,6 +6,7 @@ import { AuditEventWriter } from '../../core/audit/audit-event-writer.js';
 import { IdempotencyService, toJsonValue } from '../../core/idempotency/idempotency.service.js';
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
 import { CashSessionDevicePolicy } from '../cash/index.js';
+import { CustomerAccountService } from '../customers/index.js';
 import { SaleCancellationError, SaleCancellationPreparation } from './sale-cancellation-preparation.js';
 import { assertAcceptedSalePrice, fingerprintSaleQuote } from './sales-price-acceptance.js';
 import { SaleSessionBranchError, SalesPersistence, type SalePaymentInput } from './sales-persistence.js';
@@ -18,6 +19,7 @@ export interface SaleConfirmationInput {
   readonly deviceId: string;
   readonly clientOperationId: string;
   readonly customerId?: string | null | undefined;
+  readonly onAccount?: boolean | undefined;
   readonly lines: readonly SalesQuoteLineInput[];
   readonly discount?: SalesDiscountInput | undefined;
   readonly payments: readonly SalePaymentInput[];
@@ -231,7 +233,7 @@ export class SalesOperationsService {
 
   async detail(context: TenantTransactionContext, saleId: string): Promise<{
     id: string; branchId: string; status: 'CONFIRMED' | 'CANCELLED';
-    total: string; currency: string; confirmedAt: string; canCancel: boolean;
+    total: string; currency: string; confirmedAt: string; canCancel: boolean; onAccountAmount: string;
     cancellation: { reason: string; cancelledAt: string } | null;
     items: { name: string; quantity: string; unitPrice: string; lineTotal: string }[];
     payments: { method: string; amount: string; change: string }[];
@@ -239,7 +241,9 @@ export class SalesOperationsService {
     return this.transactions.read(context, async (client) => {
       const result = await client.query<{ id: string; branchId: string; total: string;
         currency: string; confirmedAt: string; role: string; reason: string | null;
-        cancelledAt: string | null }>(`SELECT s.id, s.branch_id AS "branchId", s.total::text,
+        cancelledAt: string | null; onAccountAmount: string }>(`SELECT s.id, s.branch_id AS "branchId", s.total::text,
+        coalesce((SELECT e.amount FROM customer_account_entries e WHERE e.organization_id=s.organization_id
+          AND e.sale_id=s.id AND e.kind='SALE'),0)::numeric(20,2)::text AS "onAccountAmount",
         s.currency_code AS currency, s.confirmed_at::text AS "confirmedAt", m.role,
         c.reason, c.cancelled_at::text AS "cancelledAt"
         FROM sales s JOIN memberships m ON m.organization_id = s.organization_id
@@ -265,6 +269,7 @@ export class SalesOperationsService {
       return { id: sale.id, branchId: sale.branchId, total: sale.total, currency: sale.currency,
         confirmedAt: sale.confirmedAt, status: sale.cancelledAt ? 'CANCELLED' : 'CONFIRMED',
         canCancel: ['OWNER', 'ADMIN'].includes(sale.role) && !sale.cancelledAt,
+        onAccountAmount: sale.onAccountAmount,
         cancellation: sale.cancelledAt && sale.reason
           ? { reason: sale.reason, cancelledAt: sale.cancelledAt } : null,
         items: items.rows, payments: payments.rows };
@@ -292,7 +297,7 @@ export class SalesOperationsService {
       await this.persistence.persist(client, context, { id: input.clientOperationId,
         branchId: input.branchId, cashSessionId: input.cashSessionId, deviceId: input.deviceId,
         clientOperationId: input.clientOperationId, customerId: input.customerId ?? null,
-        quote, payments: input.payments });
+        quote, payments: input.payments, onAccount: input.onAccount });
       const snapshot = await client.query<{ receipt_snapshot: SaleConfirmationResult['receipt'] }>(
         'SELECT receipt_snapshot FROM sales WHERE organization_id = $1 AND id = $2',
         [context.organizationId, input.clientOperationId]);
@@ -326,6 +331,7 @@ export class SalesOperationsService {
       const cash = await this.cancellations.requireCashRefundSession(client, context,
         saleId, input.cashSessionId, input.deviceId);
       const cancellation = await this.cancellations.prepare(client, context, saleId, input.reason);
+      await new CustomerAccountService().cancelCharge(client, context, saleId);
       await this.cancellations.record(client, context, cancellation);
       await this.cancellations.reverseStock(client, context, cancellation);
       await this.cancellations.refund(client, context, cancellation);

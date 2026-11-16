@@ -1,0 +1,14 @@
+.account { display: grid; gap: 1rem; margin-block: 1rem; padding-block: 1.25rem; border-block: 1px solid var(--color-divider); }
+.account h3, .account h4, .account p { margin: 0; }
+.account h3 { font-size: var(--text-title); }
+.account p { max-width: 70ch; line-height: 1.6; color: var(--color-text-secondary); }
+.summary { display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin: 0; }
+.summary dt { font-size: var(--text-label); color: var(--color-text-secondary); }
+.summary dd { margin: .375rem 0 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fields { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; }
+.fields > div { display: grid; gap: .5rem; flex: 1 1 12rem; min-width: 0; }
+.fields > p { flex-basis: 100%; }
+.history { list-style: none; padding: 0; margin: 0; }
+.history li { display: grid; gap: .5rem; padding-block: 1rem; border-top: 1px solid var(--color-divider); }
+.entryHeading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1.5rem; font-variant-numeric: tabular-nums; }
+.pagination { display: flex; flex-wrap: wrap; gap: .75rem; }

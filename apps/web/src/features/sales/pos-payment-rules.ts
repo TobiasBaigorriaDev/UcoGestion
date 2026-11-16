@@ -1,4 +1,13 @@
+import { calculateSaleSettlement } from '@uconext/shared';
+
 export type PosPayment = { method: string; appliedAmount: string; receivedAmount?: string | undefined };
+
+export function accountPaymentBalance(total: string, payments: readonly PosPayment[]) {
+  try {
+    const settlement = calculateSaleSettlement(total, payments.map(payment => payment.appliedAmount), true);
+    return { ...paymentBalance(settlement.paidAmount, payments), deferred: settlement.onAccountAmount };
+  } catch { return { valid: false, change: '0.00', deferred: '0.00', reason: 'Revisá los pagos: no pueden superar el total ni tener importes inválidos.' }; }
+}
 
 function cents(value: string): bigint | null {
   if (!/^(?:0|[1-9]\d{0,17})\.\d{2}$/.test(value)) return null;

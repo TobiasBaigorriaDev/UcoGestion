@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiClient, ApiProblemError } from '../../lib/api/client';
 import styles from '../identity/management.module.css';
+import { CustomerAccountPanel } from './customer-account-panel';
+import { formatAccountAmount } from './customer-account-api';
 
 export interface ManagedCustomer {
   readonly id: string;
@@ -20,6 +22,9 @@ export interface ManagedCustomer {
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly balance?: string | undefined;
+  readonly creditLimit?: string | undefined;
+  readonly currency?: string | undefined;
 }
 
 const customerSchema = z.object({
@@ -33,6 +38,7 @@ const customerSchema = z.object({
   version: z.number().int().positive(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  balance: z.string().optional(), creditLimit: z.string().optional(), currency: z.string().optional(),
 });
 
 const listResponseSchema = z.object({
@@ -63,13 +69,15 @@ async function csrfToken(): Promise<string> {
 }
 
 export async function loadCustomers(organizationId: string, search?: string): Promise<ManagedCustomer[]> {
-  const query = search ? `?search=${encodeURIComponent(search)}` : '';
-  const result = await client.request(`/customers${query}`, {
-    method: 'GET',
-    organizationId,
-    parse: (value) => listResponseSchema.parse(value),
-  });
-  return result?.items ?? [];
+  const items: ManagedCustomer[] = []; const cursors = new Set<string>(); let cursor: string | null = null;
+  do {
+    const query = new URLSearchParams({ limit: '100' }); if (search) query.set('search', search); if (cursor) query.set('cursor', cursor);
+    const result = await client.request(`/customers?${query}`, { method: 'GET', organizationId, parse: value => listResponseSchema.parse(value) });
+    if (!result) throw new Error('Customers unavailable');
+    items.push(...result.items); cursor = result.nextCursor;
+    if (cursor) { if (cursors.has(cursor) || cursors.size >= 200) throw new Error('Customer pagination unavailable'); cursors.add(cursor); }
+  } while (cursor);
+  return items;
 }
 
 export async function createCustomer(
@@ -168,6 +176,7 @@ export function explainCustomerError(cause: unknown): ApiProblemError {
 
 export function CustomerManagement({
   organizationId,
+  branchId,
   role,
   customers,
   onReload,
@@ -177,6 +186,7 @@ export function CustomerManagement({
   onDelete = deleteCustomer,
 }: {
   organizationId: string;
+  branchId?: string | undefined;
   role: Role;
   customers: ManagedCustomer[];
   onReload: () => void;
@@ -299,7 +309,11 @@ export function CustomerManagement({
                     {customer.contact ? ` · Contacto: ${customer.contact}` : ''}
                   </span>
                   {customer.address ? <span>Dirección: {customer.address}</span> : null}
+                  {customer.balance !== undefined && customer.currency ? <span><strong>Deuda: {formatAccountAmount(customer.balance, customer.currency)}</strong>
+                    {customer.creditLimit !== undefined ? ` · Tope: ${formatAccountAmount(customer.creditLimit, customer.currency)}` : ''}</span> : null}
                 </div>
+                {branchId && canCreate ? <CustomerAccountDisclosure key={`${organizationId}:${branchId}:${role}:${customer.id}`}
+                  organizationId={organizationId} branchId={branchId} customer={customer} role={role} onReload={onReload} /> : null}
                 <CustomerItemEditor
                   organizationId={organizationId}
                   customer={customer}
@@ -318,6 +332,18 @@ export function CustomerManagement({
       </section>
     </section>
   );
+}
+
+function CustomerAccountDisclosure({ organizationId, branchId, customer, role, onReload }: {
+  organizationId: string; branchId: string; customer: ManagedCustomer; role: Role; onReload: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const regionId = `account-${customer.id}`;
+  return <div><button type="button" aria-expanded={open} aria-controls={regionId} onClick={() => setOpen(!open)}>
+    {open ? 'Cerrar cuenta' : 'Cuenta corriente'} de {customer.name}</button>
+    {open ? <div id={regionId}><CustomerAccountPanel organizationId={organizationId} branchId={branchId}
+      customerId={customer.id} customerName={customer.name} role={role} onReload={onReload} /></div> : null}
+  </div>;
 }
 
 function CustomerItemEditor({

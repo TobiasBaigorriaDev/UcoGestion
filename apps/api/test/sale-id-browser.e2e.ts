@@ -45,6 +45,9 @@ beforeAll(async () => {
   await pool.query("INSERT INTO devices(id,organization_id,branch_id,authorized_by_user_id,authorized_at,status) VALUES ($1,$2,$3,$4,now(),'ACTIVE')", [deviceId, organizationId, branchId, actor.id]);
   await pool.query("INSERT INTO cash_sessions(id,organization_id,branch_id,cash_register_id,owner_user_id,device_id,origin,status,opening_cash,expected_cash,currency_code) VALUES ($1,$2,$3,$4,$5,$6,'ONLINE','OPEN',0,0,'ARS')", [sessionId, organizationId, branchId, registerId, actor.id, deviceId]);
   await pool.query("INSERT INTO catalog_items(id,organization_id,name,type,base_unit,price,price_version,track_inventory) VALUES ($1,$2,'Producto navegador','PRODUCT','UNIT',0,1,false)", [randomUUID(), organizationId]);
+  await pool.query("INSERT INTO catalog_items(id,organization_id,name,type,base_unit,price,price_version,track_inventory) VALUES ($1,$2,'Producto a cuenta navegador','PRODUCT','UNIT',10,1,true)", [randomUUID(), organizationId]);
+  await pool.query('UPDATE branch_stocks SET quantity=10 WHERE organization_id=$1 AND branch_id=$2', [organizationId, branchId]);
+  await pool.query("INSERT INTO customers(id,organization_id,name) VALUES ($1,$2,'Ana Cuenta')", [randomUUID(), organizationId]);
   await pool.query("CREATE ROLE sale_id_browser_runtime LOGIN PASSWORD 'runtime-password' IN ROLE uco_app");
   const runtimeUrl = new URL(container.getConnectionUri());
   runtimeUrl.username = 'sale_id_browser_runtime'; runtimeUrl.password = 'runtime-password';
@@ -75,6 +78,7 @@ afterAll(async () => {
 async function runBrowserScenario(script: string): Promise<unknown> {
   const directory = resolve(root, 'output/playwright');
   await mkdir(directory, { recursive: true });
+  await mkdir(resolve(root, '.impeccable/review'), { recursive: true });
   const config = resolve(directory, 'd03-browser.config.json');
   await writeFile(config, JSON.stringify({ browser: { browserName: 'chromium', launchOptions: { headless: true } } }));
   const session = `sale-id-${randomUUID().slice(0, 8)}`;
@@ -119,4 +123,17 @@ it('sales history: filters, cursor pages, existing detail, cancellation and resp
   const result = await runBrowserScenario('sales-history.mjs');
   expect(result).toMatchObject({ passed: true, pages: [25, 2] });
   await writeFile(resolve(root, 'output/playwright/sales-history-result.json'), JSON.stringify(result, null, 2));
+}, 180_000);
+
+it('customer accounts: partial credit, limits, lost collection response, reversal, offline refusal and accessibility', async () => {
+  const cashBefore = (await pool.query('SELECT sum(expected_cash)::text AS expected_cash FROM cash_sessions WHERE organization_id=$1', [organizationId])).rows[0]?.expected_cash;
+  const result = await runBrowserScenario('customer-accounts.mjs');
+  expect(result).toMatchObject({ passed: true, collectionReplayedOnce: true, offlineCreditRejected: true });
+  const customer = await pool.query<{ id: string }>("SELECT id FROM customers WHERE organization_id=$1 AND name='Ana Cuenta'", [organizationId]);
+  const id = customer.rows[0]?.id;
+  expect((await pool.query('SELECT balance::text FROM customer_accounts WHERE customer_id=$1', [id])).rows[0]?.balance).toBe('6.00');
+  expect((await pool.query("SELECT 1 FROM customer_account_entries WHERE customer_id=$1 AND kind='COLLECTION'", [id])).rowCount).toBe(1);
+  expect((await pool.query("SELECT 1 FROM customer_account_entries WHERE customer_id=$1 AND kind='COLLECTION_REVERSAL'", [id])).rowCount).toBe(1);
+  expect((await pool.query('SELECT (sum(expected_cash)-$2::numeric)::text AS added FROM cash_sessions WHERE organization_id=$1', [organizationId, cashBefore])).rows[0]?.added).toBe('4.00');
+  await writeFile(resolve(root, 'output/playwright/customer-accounts-result.json'), JSON.stringify(result, null, 2));
 }, 180_000);

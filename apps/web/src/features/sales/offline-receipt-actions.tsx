@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { saleCodeFromId } from '@uconext/shared';
+import { formatQuantityForDisplay, saleCodeFromId } from '@uconext/shared';
 import type { OfflineReceipt } from '../../offline/offline-pos-actions';
 import styles from './pos.module.css';
 
@@ -12,7 +12,7 @@ export function offlineReceiptLines(receipt: OfflineReceipt): string[] {
   return [receipt.label, `ID de venta: ${saleCodeFromId(receipt.saleId)}`,
     'Confirmada sin conexión · Pendiente de sincronización', receipt.branchName,
     `Referencia local: ${receipt.localReference}`, 'Consumidor final',
-    ...receipt.items.map(item => `${item.itemName} | ${item.quantity} ${item.baseUnit} | ${item.lineTotal}`),
+    ...receipt.items.map(item => `${item.itemName} | ${formatQuantityForDisplay(item.quantity)} ${item.baseUnit} | ${item.lineTotal}`),
     `Subtotal: ${receipt.subtotal} ${receipt.currency}`, `Descuento: ${receipt.discount} ${receipt.currency}`,
     `Total: ${receipt.total} ${receipt.currency}`,
     ...receipt.payments.map(payment => `${payment.method}: ${payment.appliedAmount} · Vuelto: ${payment.changeAmount}`),

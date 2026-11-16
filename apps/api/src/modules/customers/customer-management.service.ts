@@ -65,6 +65,9 @@ export interface CustomerResult {
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly balance?: string;
+  readonly creditLimit?: string;
+  readonly currency?: string;
 }
 
 export type CustomerManagementErrorCode =
@@ -190,7 +193,10 @@ export class CustomerManagementService {
         `SELECT id, name, tax_id AS "taxId", contact, address, notes, status,
            version::integer AS version,
            created_at::text AS "createdAt",
-           updated_at::text AS "updatedAt"
+           updated_at::text AS "updatedAt",
+           coalesce((SELECT balance FROM customer_accounts a WHERE a.organization_id=customers.organization_id AND a.customer_id=customers.id),0)::numeric(20,2)::text AS balance,
+           coalesce((SELECT credit_limit FROM customer_accounts a WHERE a.organization_id=customers.organization_id AND a.customer_id=customers.id),0)::numeric(20,2)::text AS "creditLimit",
+           (SELECT base_currency FROM organizations WHERE id=customers.organization_id) AS currency
          FROM customers
          WHERE organization_id = $1 AND id = $2`,
         [context.organizationId, id],
@@ -214,7 +220,10 @@ export class CustomerManagementService {
       let sql = `SELECT id, name, tax_id AS "taxId", contact, address, notes, status,
                    version::integer AS version,
                    created_at::text AS "createdAt",
-                   updated_at::text AS "updatedAt"
+                   updated_at::text AS "updatedAt",
+                   coalesce((SELECT balance FROM customer_accounts a WHERE a.organization_id=customers.organization_id AND a.customer_id=customers.id),0)::numeric(20,2)::text AS balance,
+                   coalesce((SELECT credit_limit FROM customer_accounts a WHERE a.organization_id=customers.organization_id AND a.customer_id=customers.id),0)::numeric(20,2)::text AS "creditLimit",
+                   (SELECT base_currency FROM organizations WHERE id=customers.organization_id) AS currency
                  FROM customers
                  WHERE organization_id = $1`;
 
@@ -486,6 +495,7 @@ export class CustomerManagementService {
             );
           }
 
+          await client.query('DELETE FROM customer_accounts WHERE organization_id=$1 AND customer_id=$2', [context.organizationId, id]);
           await client.query(
             `DELETE FROM customers WHERE organization_id = $1 AND id = $2`,
             [context.organizationId, id],

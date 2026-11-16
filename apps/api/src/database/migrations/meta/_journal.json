@@ -114,6 +114,8 @@
     { "idx": 109, "version": "7", "when": 109, "tag": "0109_document_category_snapshots", "breakpoints": true },
     { "idx": 110, "version": "7", "when": 110, "tag": "0110_catalog_item_category_edit", "breakpoints": true },
     { "idx": 111, "version": "7", "when": 111, "tag": "0111_catalog_category_icons", "breakpoints": true },
-    { "idx": 112, "version": "7", "when": 112, "tag": "0112_catalog_category_kiosk_icons", "breakpoints": true }
+    { "idx": 112, "version": "7", "when": 112, "tag": "0112_catalog_category_kiosk_icons", "breakpoints": true },
+    { "idx": 113, "version": "7", "when": 113, "tag": "0113_customer_accounts", "breakpoints": true },
+    { "idx": 114, "version": "7", "when": 114, "tag": "0114_historical_sync_epoch", "breakpoints": true }
   ]
 }

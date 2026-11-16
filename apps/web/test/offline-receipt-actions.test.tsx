@@ -7,6 +7,15 @@ import { saleCodeFromId } from '@uconext/shared';
 const receipt: OfflineReceipt = { saleId: '11111111-1111-4111-8111-111111111111', label: 'Comprobante no fiscal', branchName: '<script>alert(1)</script>',
   localReference: 'OFF-device-original', currency: 'ARS', subtotal: '0.00', discount: '0.00', total: '0.00', items: [], payments: [], occurredAt: '2026-10-11T12:00:00Z' };
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+it('formats offline receipt quantities with the same rule as online receipts', () => {
+  const snapshot: OfflineReceipt = { ...receipt, items: [
+    { itemId: 'i1', itemName: 'Queso', quantity: '0.500', baseUnit: 'FRACTIONAL',
+      unitPrice: '10.00', lineTotal: '5.00', sku: null, barcode: null, type: 'PRODUCT',
+      trackInventory: true, priceVersion: 1 },
+  ] };
+  expect(offlineReceiptHtml(snapshot)).toContain('Queso | 0,50 FRACTIONAL');
+  expect(snapshot.items[0]?.quantity).toBe('0.500');
+});
 it('D03 creates passive local HTML with the short sale code', () => {
   const html = offlineReceiptHtml(receipt);
   expect(html).toContain(`ID de venta: ${saleCodeFromId(receipt.saleId)}`); expect(html).toContain('&lt;script&gt;');
