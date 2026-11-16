@@ -26,7 +26,8 @@ async page => {
     await page.getByRole('alert').filter({ hasText: 'Ingresá un nombre' }).waitFor();
     check(patches.length === index, 'Invalid form sent a mutation');
     await input.fill(newName);
-    await page.keyboard.press('Tab');
+    // The icon picker sits between the name and Guardar (T236W); Enter in the field submits the form.
+    await input.focus();
     const response = page.waitForResponse(response => response.request().method() === 'PATCH');
     await page.keyboard.press('Enter');
     check((await response).status() === 200, 'Real category edit failed');
