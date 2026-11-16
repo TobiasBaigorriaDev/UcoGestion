@@ -60,6 +60,8 @@ jobs:
 
       - name: Run build
         run: pnpm run build
+        env:
+          NEXT_PUBLIC_WEB_ORIGIN: http://localhost:3001
 
       - name: Install the critical browser
         run: pnpm run test:e2e:install chromium

@@ -16,6 +16,10 @@ async function responds(url) {
 const apiReady = await responds('http://localhost:4000/api/v1/health/ready');
 const webReady = await responds('http://localhost:3000/login');
 const services = [];
+let storageAvailable = false;
+try { storageAvailable = (await fetch('http://127.0.0.1:9000/', { signal: AbortSignal.timeout(1500) })).status < 500; } catch {}
+if (!storageAvailable) services.push(['storage', ['output/mvp-demo/storage-local.mjs'], root]);
+if (!(await responds('http://127.0.0.1:3001/health/ready'))) services.push(['report-worker', ['ops/development/report-worker.mjs'], root]);
 if (!apiReady) services.push(['api', ['apps/api/dist/main.js'], root]);
 if (!webReady) services.push(['web', [require.resolve('next/dist/bin/next'), 'dev', '--hostname', 'localhost', '--port', '3000'], fileURLToPath(new URL('../../apps/web/', import.meta.url))]);
 for (const [name, args, cwd] of services) {

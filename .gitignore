@@ -2,6 +2,10 @@ node_modules/
 .turbo/
 .playwright-cli/
 output/playwright/
+output/pdf/
+output/mvp-demo/storage-data/
+output/mvp-demo/storage-runtime/
+output/mvp-demo/minio.exe
 coverage/
 dist/
 .next/
