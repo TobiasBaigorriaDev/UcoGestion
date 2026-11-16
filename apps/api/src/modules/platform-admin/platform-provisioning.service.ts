@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import type { DatabaseError } from 'pg';
 
-import { hashPassword } from '../auth/password.js';
+import { hashPassword } from '../../core/security/password.js';
 import { PlatformDatabase } from './platform-database.js';
 import {
   provisionOrganizationCommandSchema,

@@ -1,7 +1,7 @@
 import { Injectable, Module, type OnModuleDestroy } from '@nestjs/common';
 import { Pool } from 'pg';
 
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../auth/index.js';
 import { GlobalMembershipDiscoveryService } from './global-membership-discovery.service.js';
 import { OrganizationsController } from './organizations.controller.js';
 import { OrganizationProfileService } from './organization-profile.service.js';

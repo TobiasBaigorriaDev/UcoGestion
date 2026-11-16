@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { Client } from 'pg';
 
-import { hashPassword } from './password.js';
+import { normalizeEmail } from '../../core/security/email-normalization.js';
+import { hashPassword } from '../../core/security/password.js';
+
+export { normalizeEmail };
 
 type QueryClient = Pick<Client, 'query'>;
 
@@ -13,14 +16,6 @@ export interface CreateGlobalUserInput {
 export interface GlobalUserIdentity {
   id: string;
   email: string;
-}
-
-export function normalizeEmail(email: string): string {
-  const normalized = email.trim().toLowerCase();
-  if (!normalized) {
-    throw new Error('Email cannot be empty');
-  }
-  return normalized;
 }
 
 export async function createGlobalUser(

@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { runMigrations } from '../src/database/migrate.js';
-import { verifyPassword } from '../src/modules/auth/password.js';
+import { verifyPassword } from '../src/core/security/password.js';
 import {
   NewAccountInvitationAcceptanceService,
   PasswordPolicyError,

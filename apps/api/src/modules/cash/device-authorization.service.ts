@@ -4,7 +4,7 @@ import type { PoolClient } from 'pg';
 import { z } from 'zod';
 
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
-import { DeviceCertificate } from '../offline-sync/device-certificate.js';
+import { DeviceCertificate } from '../../core/security/device-certificate.js';
 
 export class DeviceAuthorizationError extends Error {
   constructor(readonly code: 'DEVICE_AUTHORIZATION_FORBIDDEN' | 'DEVICE_BRANCH_NOT_AVAILABLE' | 'DEVICE_BRANCH_FORBIDDEN', message: string) {

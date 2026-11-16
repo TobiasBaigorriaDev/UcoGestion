@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hashPassword, PASSWORD_HASH_VERSION, verifyPassword } from '../src/modules/auth/password.js';
+import { hashPassword, PASSWORD_HASH_VERSION, verifyPassword } from '../src/core/security/password.js';
 
 describe('versioned password hashing', () => {
   it('uses a fresh salt for each Argon2id hash and verifies only the matching password', async () => {

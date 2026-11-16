@@ -7,8 +7,8 @@ import { z } from 'zod';
 import { IdempotencyKeyReusedError, IdempotencyReplayForbiddenError } from '../../core/idempotency/idempotency.service.js';
 import { requireIdempotencyKey } from '../../core/validation/idempotency-key.js';
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
-import { DeviceAuthorizationError, DeviceAuthorizationService } from '../cash/device-authorization.service.js';
-import { DeviceCertificate } from './device-certificate.js';
+import { DeviceAuthorizationError, DeviceAuthorizationService } from '../cash/index.js';
+import { DeviceCertificate } from '../../core/security/device-certificate.js';
 
 const schema = z.strictObject({ branchId: z.uuid(), publicKey: z.string().min(100).max(2000) });
 interface RequestContext {

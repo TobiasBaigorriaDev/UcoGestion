@@ -3,13 +3,13 @@ import { Pool } from 'pg';
 
 import { TenantTransaction } from '../../database/tenant-transaction.js';
 import { MetricsService } from '../../core/observability/metrics.service.js';
-import { DeviceAuthorizationService } from '../cash/device-authorization.service.js';
+import { DeviceAuthorizationService } from '../cash/index.js';
 import { ConfigurationBarrierController } from './configuration-barrier.controller.js';
 import { DeviceAuthorizationController } from './device-authorization.controller.js';
 import { OfflineBootstrapController } from './offline-bootstrap.controller.js';
 import { OfflineDeliveryController } from './offline-delivery.controller.js';
 import { OfflineDeliveryService } from './offline-delivery.service.js';
-import { DeviceCertificate } from './device-certificate.js';
+import { DeviceCertificate } from '../../core/security/device-certificate.js';
 import { HistoricalDeliveryIngestion } from './historical-delivery-ingestion.js';
 import { HistoricalEnvelopeValidator } from './historical-envelope-validator.js';
 import { loadOfflineAckKey, loadOfflineKeys } from './offline-key-custody.js';

@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import { revocationCheckpointSchema,type RevocationCheckpoint } from '@uconext/shared';
 import { recordRevocationCheckpoint } from './revocation-checkpoint.js';
-import { DeviceCertificate, type DeviceCertificateClaims } from './device-certificate.js';
+import { DeviceCertificate, type DeviceCertificateClaims } from '../../core/security/device-certificate.js';
 import { assertEnvelopeTransportRouting } from './historical-envelope-validator.js';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');

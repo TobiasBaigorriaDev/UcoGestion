@@ -2,9 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, HttpException, HttpStatus, Param, Patch, Post, Req, UnauthorizedException } from '@nestjs/common';
 
-import { PublicRoute } from '../auth/public-route.decorator.js';
-import { readSessionCookie } from '../auth/session-cookie.js';
-import { SessionAuthenticationService } from '../auth/session-authentication.service.js';
+import { PublicRoute, readSessionCookie, SessionAuthenticationService } from '../auth/index.js';
 import { OrganizationSettingsService } from './organization-settings.service.js';
 import {
   PaymentMethodSettingsError,

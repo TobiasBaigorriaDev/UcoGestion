@@ -13,7 +13,7 @@ import { OfflineGrantService } from '../src/modules/offline-sync/offline-grant.s
 import { readHistoricalEnvelopeContext } from '../src/modules/offline-sync/historical-envelope-context.js';
 import { OfflineCashOpeningImporter } from '../src/modules/cash/index.js';
 import { recordOfflineReceipt } from '../src/modules/offline-sync/sync-operation-receipt.js';
-import { DeviceCertificate } from '../src/modules/offline-sync/device-certificate.js';
+import { DeviceCertificate } from '../src/core/security/device-certificate.js';
 import { DeliveryRejectedError, HistoricalIngestionUnavailableError, OfflineDeliveryService,
   UnconfiguredHistoricalDeliveryIngestion, deliveryProofPayload } from '../src/modules/offline-sync/offline-delivery.service.js';
 

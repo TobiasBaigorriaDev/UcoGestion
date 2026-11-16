@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../auth/index.js';
 import { PlatformAdminController } from './platform-admin.controller.js';
 import { PlatformDatabase } from './platform-database.js';
 import { PlatformProvisioningService } from './platform-provisioning.service.js';

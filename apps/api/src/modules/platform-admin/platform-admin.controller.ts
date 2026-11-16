@@ -10,9 +10,7 @@ import {
 } from '@nestjs/common';
 
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
-import { PublicRoute } from '../auth/public-route.decorator.js';
-import { readSessionCookie } from '../auth/session-cookie.js';
-import { SessionAuthenticationService } from '../auth/session-authentication.service.js';
+import { PublicRoute, readSessionCookie, SessionAuthenticationService } from '../auth/index.js';
 import {
   PlatformAuthorizationError,
   PlatformProvisioningService,

@@ -2,7 +2,7 @@ import { randomUUID, verify } from 'node:crypto';
 import { revocationCheckpointSchema,revocationCheckpointPayload } from '@uconext/shared';
 import type { PoolClient } from 'pg';
 import { AuditEventWriter } from '../../core/audit/audit-event-writer.js';
-import type { DeviceCertificateClaims } from './device-certificate.js';
+import type { DeviceCertificateClaims } from '../../core/security/device-certificate.js';
 export { revocationCheckpointPayload } from '@uconext/shared';
 export async function recordRevocationCheckpoint(client:PoolClient,certificate:DeviceCertificateClaims,input:unknown):Promise<void> {
   const checkpoint=revocationCheckpointSchema.parse(input);

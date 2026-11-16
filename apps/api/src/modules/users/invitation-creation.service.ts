@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
 import type { PoolClient } from 'pg';
 
-import { normalizeEmail } from '../auth/global-user.repository.js';
+import { normalizeEmail } from '../../core/security/email-normalization.js';
 import {
   NonOwnerMembershipPolicy,
   type MembershipBranchSnapshot,

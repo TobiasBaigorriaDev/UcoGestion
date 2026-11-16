@@ -11,7 +11,7 @@ import { TenantTransaction } from '../src/database/tenant-transaction.js';
 import { OfflineBootstrapService } from '../src/modules/offline-sync/offline-bootstrap.service.js';
 import { OfflineGrantService } from '../src/modules/offline-sync/offline-grant.service.js';
 import { RsaSyncEnvelopeDecryptor } from '../src/modules/offline-sync/sync-envelope-decryptor.js';
-import { DeviceCertificate } from '../src/modules/offline-sync/device-certificate.js';
+import { DeviceCertificate } from '../src/core/security/device-certificate.js';
 import { HistoricalEnvelopeValidator, canonicalEnvelopeJson } from '../src/modules/offline-sync/historical-envelope-validator.js';
 import { recordRevocationCheckpoint, revocationCheckpointPayload, readRevocationKnowledge } from '../src/modules/offline-sync/revocation-checkpoint.js';
 import { HistoricalDeliveryIngestion } from '../src/modules/offline-sync/historical-delivery-ingestion.js';
