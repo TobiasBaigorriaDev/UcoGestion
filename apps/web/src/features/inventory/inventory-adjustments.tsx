@@ -2,7 +2,8 @@
 
 import { formatStockQuantity } from '../../lib/format-stock-quantity';
 
-import { useState } from 'react';
+import { useContext, useState } from 'react';
+import { OrganizationTimezone } from '../../components/organization-time';
 
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
@@ -21,12 +22,16 @@ const reasonLabels: Record<string, string> = Object.fromEntries([
 const decimal = /^(?:0|[1-9]\d{0,16})(?:\.\d{1,3})?$/;
 type Role = 'OWNER' | 'ADMIN' | 'EMPLOYEE' | 'CASHIER';
 
-export function InventoryAdjustments({ compact = false, historyOnly = false, organizationId, branchId, role, stocks, adjustments, nextCursor,
+export function InventoryAdjustments({ timezone, compact = false, historyOnly = false, organizationId, branchId, role, stocks, adjustments, nextCursor,
   onReload, onLoadMore, onLoadMoreStocks, onConfirm = confirmAdjustment, onCompensate = compensateAdjustment }: {
-  compact?: boolean; historyOnly?: boolean; organizationId: string; branchId: string; role: Role; stocks: StockItem[]; adjustments: Adjustment[];
+  timezone?: string; compact?: boolean; historyOnly?: boolean; organizationId: string; branchId: string; role: Role; stocks: StockItem[]; adjustments: Adjustment[];
   nextCursor: string | null; onReload: () => void; onLoadMore?: () => void; onLoadMoreStocks?: () => void;
   onConfirm?: typeof confirmAdjustment; onCompensate?: typeof compensateAdjustment;
 }) {
+  const contextTimezone = useContext(OrganizationTimezone);
+  const [search, setSearch] = useState('');
+  const visibleAdjustments = adjustments.filter((adjustment) =>
+    adjustment.itemName.toLocaleLowerCase('es').includes(search.trim().toLocaleLowerCase('es')));
   const [itemId, setItemId] = useState(stocks[0]?.itemId ?? '');
   const [direction, setDirection] = useState<'INCREASE' | 'DECREASE'>('INCREASE');
   const [quantity, setQuantity] = useState('');
@@ -74,7 +79,6 @@ export function InventoryAdjustments({ compact = false, historyOnly = false, org
   return <section className={styles.page} aria-label={compact ? "Cambiar stock" : undefined} aria-labelledby={compact ? undefined : "adjustment-heading"}>
     {!compact ? <><header className={styles.heading}><h1 id="adjustment-heading">{historyOnly ? "Historial de ajustes" : "Ajustes de inventario"}</h1>
       <p>Registrá cambios con motivo. Si te equivocaste, revertí el ajuste: queda registrado como un movimiento nuevo.</p></header>
-    <p><a href="/workspace/catalog">Volver a productos</a></p>
     </> : null}
     <ErrorSummary error={error} fieldIds={{ itemId: `${fieldPrefix}-item`, quantity: `${fieldPrefix}-quantity` }}
       fieldLabels={{ itemId: 'Producto', quantity: 'Cantidad' }} />{message ? <p role="status">{message}</p> : null}
@@ -104,20 +108,35 @@ export function InventoryAdjustments({ compact = false, historyOnly = false, org
         {onLoadMoreStocks ? <button type="button" onClick={onLoadMoreStocks}>Cargar más productos</button> : null}
       </form>}
     {!compact ? <section className={styles.panel} aria-label="Ajustes confirmados"><h2>Historial de ajustes</h2>
-      {adjustments.length === 0 ? <p>No hay ajustes confirmados en esta sucursal.</p> :
-        <ul className={styles.rows}>{adjustments.map((adjustment) => <li className={styles.row} key={adjustment.id}>
-          <strong>{adjustment.itemName}</strong><span>{adjustment.direction === 'INCREASE' ? 'Ingreso' : 'Egreso'} de {formatStockQuantity(adjustment.quantity)} · {reasonLabels[adjustment.reason] ?? adjustment.reason}</span>
-          <span>{adjustment.compensatedBy ? 'Compensado' : adjustment.compensates ? 'Compensación confirmada' : 'Confirmado'}</span>
-          {adjustment.observation ? <p>{adjustment.observation}</p> : null}
+      {adjustments.length === 0 ? <p>No hay ajustes confirmados en esta sucursal.</p> : <>
+        <div className={adjustmentStyles.search}><label htmlFor={`${fieldPrefix}-search`}>Buscar producto</label>
+          <input id={`${fieldPrefix}-search`} type="search" value={search} onChange={(event) => setSearch(event.target.value)} /></div>
+        {visibleAdjustments.length === 0 ? <p role="status">Ningún ajuste coincide con «{search.trim()}».</p> :
+        <ul className={adjustmentStyles.entries} aria-label="Ajustes de stock">{visibleAdjustments.map((adjustment) => <li className={adjustmentStyles.entry} key={adjustment.id}>
+          <div className={adjustmentStyles.entryMain}>
+            <strong>{adjustment.itemName}</strong>
+            <span className={adjustmentStyles.meta}><time dateTime={adjustment.occurredAt}>{formatWhen(adjustment.occurredAt, timezone ?? contextTimezone)}</time>
+              {' · '}{reasonLabels[adjustment.reason] ?? adjustment.reason}{adjustment.observation ? ` · ${adjustment.observation}` : ''}</span>
+          </div>
+          <span className={adjustmentStyles.delta} data-direction={adjustment.direction}>
+            <span className={adjustmentStyles.hidden}>{adjustment.direction === 'INCREASE' ? 'Ingreso de ' : 'Egreso de '}</span>
+            <span aria-hidden="true">{adjustment.direction === 'INCREASE' ? '+' : '−'}</span>{formatStockQuantity(adjustment.quantity)}</span>
+          {adjustment.compensatedBy ? <span className={adjustmentStyles.pill}>Revertido</span>
+            : adjustment.compensates ? <span className={adjustmentStyles.pill}>Reversión</span> : null}
           {role !== 'CASHIER' && !adjustment.compensatedBy && !adjustment.compensates ?
-            confirmId === adjustment.id ? <div><p>Se registra un movimiento contrario que deja el stock como estaba. El ajuste original queda en el historial.</p>
+            confirmId === adjustment.id ? <div className={adjustmentStyles.confirm}><p>Se registra un movimiento contrario que deja el stock como estaba. El ajuste original queda en el historial.</p>
               <div className={styles.actions}><button type="button" disabled={busy} onClick={() => void compensate(adjustment.id)}><EntityAction label="Sí, revertir el ajuste" name={`de ${adjustment.itemName}`} /></button>
                 <button type="button" onClick={() => setConfirmId(null)}>Cancelar</button></div></div>
-              : <button type="button" disabled={busy} onClick={() => setConfirmId(adjustment.id)}><EntityAction label="Revertir ajuste" name={`de ${adjustment.itemName}`} /></button> : null}
-        </li>)}</ul>}
+              : <button type="button" className={adjustmentStyles.revert} disabled={busy} onClick={() => setConfirmId(adjustment.id)}><EntityAction label="Revertir" name={`ajuste de ${adjustment.itemName}`} /></button> : null}
+        </li>)}</ul>}</>}
       {nextCursor && onLoadMore ? <button type="button" onClick={onLoadMore}>Cargar más ajustes</button> : null}
     </section> : null}
   </section>;
+}
+
+function formatWhen(value: string, timeZone: string): string {
+  return new Date(value).toLocaleString('es-AR', { timeZone, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+    .replace('.', '');
 }
 
 function problem(cause: unknown): ApiProblemError {

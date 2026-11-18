@@ -14,7 +14,8 @@ it('limits ADMIN to non-owner roles and submits the version being edited', async
   const changeRole = vi.fn().mockResolvedValue({ role: 'CASHIER', version: 4 });
   render(<UserManagement organizationId="org" data={{ actorRole: 'ADMIN', branches: [branch], memberships: [employee], invitations: [] }}
     onChangeRole={changeRole} onInvite={vi.fn()} onRevokeInvitation={vi.fn()} onReload={vi.fn()} />);
-  expect(screen.queryByRole('option', { name: 'Propietario' })).toBeNull();
+  await userEvent.click(screen.getByRole('button', { name: 'Editar ana@example.com' }));
+  expect(screen.queryByRole('option', { name: 'Dueño' })).toBeNull();
   await userEvent.selectOptions(screen.getByLabelText('Rol de ana@example.com'), 'CASHIER');
   await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios de ana@example.com' }));
   await waitFor(() => expect(changeRole).toHaveBeenCalledWith('org', 'member-a', 3, 'CASHIER', ['branch-a']));
@@ -23,6 +24,7 @@ it('limits ADMIN to non-owner roles and submits the version being edited', async
 it('shows version conflicts with a reload action', async () => {
   render(<UserManagement organizationId="org" data={{ actorRole: 'OWNER', branches: [branch], memberships: [employee], invitations: [] }}
     onChangeRole={vi.fn().mockRejectedValue({ code: 'MEMBERSHIP_VERSION_CONFLICT' })} onInvite={vi.fn()} onRevokeInvitation={vi.fn()} onReload={vi.fn()} />);
+  await userEvent.click(screen.getByRole('button', { name: 'Editar ana@example.com' }));
   await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios de ana@example.com' }));
   expect(await screen.findByRole('alert')).toHaveProperty('textContent', expect.stringContaining('Volvé a cargar'));
 });
@@ -30,6 +32,7 @@ it('shows version conflicts with a reload action', async () => {
 it('provides labeled controls without structural accessibility violations', async () => {
   const { container } = render(<UserManagement organizationId="org" data={{ actorRole: 'OWNER', branches: [branch], memberships: [employee], invitations: [] }}
     onChangeRole={vi.fn()} onInvite={vi.fn()} onRevokeInvitation={vi.fn()} onReload={vi.fn()} />);
+  await userEvent.click(screen.getByRole('button', { name: 'Editar ana@example.com' }));
   expect((await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toEqual([]);
 });
 
@@ -41,4 +44,18 @@ it('lets a manager resend an expired invitation and announces the old-link inval
   await userEvent.click(screen.getByRole('button', { name: 'Reenviar invitación a ana@example.com' }));
   await waitFor(() => expect(resend).toHaveBeenCalledWith('org', 'invite-a'));
   expect(screen.getByRole('status').textContent).toContain('El enlace anterior dejó de ser válido');
+});
+
+it('shows each person as a short row and opens the editor on demand', async () => {
+  render(<UserManagement organizationId="org" data={{ actorRole: 'OWNER', branches: [branch], memberships: [employee], invitations: [] }}
+    onChangeRole={vi.fn()} onInvite={vi.fn()} onRevokeInvitation={vi.fn()} onReload={vi.fn()} />);
+  const row = screen.getByRole('article', { name: 'ana@example.com' });
+  expect(row.textContent).toContain('Empleado');
+  expect(row.textContent).toContain('Principal');
+  expect(screen.queryByLabelText('Rol de ana@example.com')).toBeNull();
+  const edit = screen.getByRole('button', { name: 'Editar ana@example.com' });
+  expect(edit.getAttribute('aria-expanded')).toBe('false');
+  await userEvent.click(edit);
+  expect(edit.getAttribute('aria-expanded')).toBe('true');
+  expect(screen.getByLabelText('Rol de ana@example.com')).toBeTruthy();
 });

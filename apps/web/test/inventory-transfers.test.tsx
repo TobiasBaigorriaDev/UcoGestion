@@ -38,8 +38,8 @@ it('T114C leaves a multi-line stock rejection unassigned when the server does no
     transfers={[]} nextCursor={null} onOriginChange={vi.fn()} onReload={vi.fn()} onConfirm={confirm} />);
   await userEvent.selectOptions(screen.getByLabelText('Destino'), 'b2');
   await userEvent.type(screen.getByLabelText('Cantidad de Yerba'), '1');
-  await userEvent.click(screen.getByRole('button', { name: 'Agregar producto' }));
-  await userEvent.selectOptions(screen.getByLabelText('Producto de línea 2'), 'i2');
+  await userEvent.click(screen.getByRole('button', { name: 'Agregar otro producto' }));
+  await userEvent.selectOptions(screen.getByLabelText('Producto 2'), 'i2');
   await userEvent.type(screen.getByLabelText('Cantidad de Aceite'), '1');
   await userEvent.click(screen.getByRole('button', { name: 'Confirmar transferencia' }));
   expect((await screen.findByRole('alert')).textContent).toMatch(/stock disponible/i);

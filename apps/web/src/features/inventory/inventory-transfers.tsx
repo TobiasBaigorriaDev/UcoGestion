@@ -8,6 +8,8 @@ import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
 import { compensateTransfer, confirmTransfer, type StockItem, type Transfer } from './inventory-api';
 import styles from '../identity/management.module.css';
+import workspaceStyles from '../purchases/purchase-workspace.module.css';
+import { EntityAction } from '../../components/entity-action';
 
 type Role = 'OWNER' | 'ADMIN' | 'EMPLOYEE' | 'CASHIER';
 type Line = { key: string; itemId: string; quantity: string };
@@ -32,8 +34,8 @@ export function InventoryTransfers({ organizationId, role, branches, originBranc
   for (const [index, line] of lines.entries()) {
     fieldIds[`item-${line.key}`] = `transfer-item-${line.key}`;
     fieldIds[`quantity-${line.key}`] = `transfer-quantity-${line.key}`;
-    fieldLabels[`item-${line.key}`] = `Producto de línea ${index + 1}`;
-    fieldLabels[`quantity-${line.key}`] = `Cantidad de línea ${index + 1}`;
+    fieldLabels[`item-${line.key}`] = `Producto ${index + 1}`;
+    fieldLabels[`quantity-${line.key}`] = `Cantidad ${index + 1}`;
   }
   function changeLine(key: string, patch: Partial<Line>) {
     setLines((current) => current.map((line) => line.key === key ? { ...line, ...patch } : line));
@@ -83,7 +85,6 @@ export function InventoryTransfers({ organizationId, role, branches, originBranc
   return <section className={styles.page} aria-labelledby="transfer-heading">
     <header className={styles.heading}><h1 id="transfer-heading">Transferencias de stock</h1>
       <p>Mové productos entre sucursales autorizadas. Una corrección posterior crea una transferencia compensatoria.</p></header>
-    <p><a href="/workspace/catalog">Volver a productos</a></p>
     <ErrorSummary error={error} fieldIds={fieldIds} fieldLabels={fieldLabels} />
     {message ? <p role="status">{message}</p> : null}
     {role === 'CASHIER' ? <p role="alert">Tu rol no puede confirmar transferencias.</p> :
@@ -100,30 +101,30 @@ export function InventoryTransfers({ organizationId, role, branches, originBranc
               <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select>
             {error?.fieldErrors.destinationBranchId ? <p id="transfer-destination-error">{error.fieldErrors.destinationBranchId}</p> : null}</div>
         </div>
-        <h3>Productos</h3>{lines.map((line, index) => {
+        <h3>Productos a enviar</h3><ol className={workspaceStyles.lines}>{lines.map((line, index) => {
           const stock = stocks.find((entry) => entry.itemId === line.itemId);
-          return <div className={styles.fields} key={line.key}>
-            <div><label htmlFor={`transfer-item-${line.key}`}>Producto de línea {index + 1}</label>
+          return <li className={workspaceStyles.line} key={line.key}><div className={styles.fields}>
+            <div><label htmlFor={`transfer-item-${line.key}`}><EntityAction label="Producto" name={String(index + 1)} /></label>
               <select id={`transfer-item-${line.key}`} value={line.itemId}
                 aria-invalid={!!error?.fieldErrors[`item-${line.key}`]}
                 aria-describedby={error?.fieldErrors[`item-${line.key}`] ? `transfer-item-error-${line.key}` : undefined}
                 onChange={(event) => changeLine(line.key, { itemId: event.target.value })}>
                 {stocks.map((entry) => <option key={entry.itemId} value={entry.itemId}>{entry.itemName}</option>)}</select>
               {error?.fieldErrors[`item-${line.key}`] ? <p id={`transfer-item-error-${line.key}`}>{error.fieldErrors[`item-${line.key}`]}</p> : null}</div>
-            <div><label htmlFor={`transfer-quantity-${line.key}`}>Cantidad de {stock?.itemName ?? `línea ${index + 1}`}</label>
+            <div><label htmlFor={`transfer-quantity-${line.key}`}><EntityAction label="Cantidad" name={stock ? `de ${stock.itemName}` : String(index + 1)} /></label>
               <input id={`transfer-quantity-${line.key}`} type="text" inputMode="decimal" value={line.quantity}
                 aria-invalid={!!error?.fieldErrors[`quantity-${line.key}`]}
                 aria-describedby={error?.fieldErrors[`quantity-${line.key}`] ? `transfer-quantity-error-${line.key}` : undefined}
                 onChange={(event) => changeLine(line.key, { quantity: event.target.value })} />
               {error?.fieldErrors[`quantity-${line.key}`] ? <p id={`transfer-quantity-error-${line.key}`}>{error.fieldErrors[`quantity-${line.key}`]}</p> : null}
-              <span>Disponible en origen: {stock ? formatStockQuantity(stock.quantity) : '—'}</span></div>
-            {lines.length > 1 ? <button type="button" onClick={() => setLines((current) => current.filter((entry) => entry.key !== line.key))}>Quitar línea {index + 1}</button> : null}
-          </div>;
-        })}
+              <span className={workspaceStyles.hint}>Disponible: {stock ? formatStockQuantity(stock.quantity) : '—'}</span></div></div>
+            {lines.length > 1 ? <button type="button" className={workspaceStyles.removeLine} aria-label={`Quitar producto ${index + 1}`} onClick={() => setLines((current) => current.filter((entry) => entry.key !== line.key))}>Quitar</button> : null}
+          </li>;
+        })}</ol>
+        <button type="button" className={workspaceStyles.addLine} disabled={!stocks.length || lines.length >= 100}
+            onClick={() => setLines((current) => [...current, { key: crypto.randomUUID(), itemId: stocks[0]?.itemId ?? '', quantity: '' }])}>Agregar otro producto</button>
         <div className={styles.actions}><button type="submit" disabled={busy || !stocks.length || branches.length < 2}>
           {busy ? 'Confirmando…' : 'Confirmar transferencia'}</button>
-          <button type="button" disabled={!stocks.length || lines.length >= 100}
-            onClick={() => setLines((current) => [...current, { key: crypto.randomUUID(), itemId: stocks[0]?.itemId ?? '', quantity: '' }])}>Agregar producto</button>
           {onLoadMoreStocks ? <button type="button" onClick={onLoadMoreStocks}>Cargar más productos</button> : null}</div>
       </form>}
     <section className={styles.panel} aria-label="Transferencias confirmadas"><h2>Historial de transferencias</h2>

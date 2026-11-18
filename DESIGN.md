@@ -203,6 +203,9 @@ La profundidad viene de superficies sólidas con borde fino y sombras cortas con
 - **Secondary:** Fondo Surface, borde Control Border, texto Text Primary; hover con borde y texto Bosque.
 - **Touch target:** Área interactiva mínima de 44×44px, aun cuando el contenido visual sea menor.
 - **Acciones de fila:** Secundarias y con el verbo solo (`Editar`, `Desactivar`, `Revertir`). El nombre del registro va oculto visualmente con `EntityAction`, así el lector de pantalla anuncia «Editar Distribuidora Sur» sin repetir el nombre en pantalla.
+- **Interruptores:** Medios de pago usan `role="switch"` con `aria-checked`, pista Bosque cuando está activo y el estado también escrito («Habilitado»).
+- **Líneas de productos** (Compras, Transferencias): una fila por producto sin recuadro de `fieldset`, «Quitar» como enlace rojo discreto y «Agregar otro producto» secundario antes del botón de confirmar.
+- **Listas con detalle a pedido:** Usuarios muestra correo, sucursales y píldora de rol; «Editar» despliega el formulario. El historial de ajustes usa fecha corta, «+2» / «−10» con color y texto, píldora «Revertido» / «Reversión» y búsqueda por producto.
 - **Un primario por panel:** Acciones auxiliares (elegir icono, revisar una desactivación) son secundarias.
 
 ### Forms and feedback

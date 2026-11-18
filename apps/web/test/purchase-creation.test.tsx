@@ -53,12 +53,22 @@ it('T173A requires a session for cash and keeps lines after a payment error', as
   await userEvent.type(screen.getByLabelText('Cantidad'), '2');
   await userEvent.type(screen.getByLabelText('Costo unitario'), '3.25');
   await userEvent.selectOptions(screen.getByLabelText('Estado al confirmar'), 'PAID');
+  expect(screen.getByRole('option', { name: 'Efectivo' })).toBeTruthy();
   await userEvent.selectOptions(screen.getByLabelText('Medio de pago'), 'CASH');
   expect((screen.getByRole('button', { name: 'Confirmar compra' }) as HTMLButtonElement).disabled).toBe(true);
-  await userEvent.selectOptions(screen.getByLabelText('Sesión de caja'), 'session');
+  await userEvent.selectOptions(screen.getByLabelText('Turno de caja'), 'session');
   await userEvent.click(screen.getByRole('button', { name: 'Confirmar compra' }));
   expect(confirm).toHaveBeenCalledWith('org', expect.any(Object), 'PAID',
     { method: 'CASH', amount: '6.50', cashSessionId: 'session', deviceId: 'device' }, expect.any(String));
   expect(await screen.findByText(/Registrá un ingreso antes de pagar/i)).toBeTruthy();
   expect((screen.getByLabelText('Costo unitario') as HTMLInputElement).value).toBe('3.25');
+});
+
+it('adds and removes product lines with short, labelled controls', async () => {
+  render(<PurchaseCreation {...props} role="OWNER" />);
+  expect(screen.queryByRole('button', { name: /Quitar producto/ })).toBeNull();
+  await userEvent.click(screen.getByRole('button', { name: 'Agregar otro producto' }));
+  expect(screen.getAllByLabelText('Producto')).toHaveLength(2);
+  await userEvent.click(screen.getByRole('button', { name: 'Quitar producto 2' }));
+  expect(screen.getAllByLabelText('Producto')).toHaveLength(1);
 });

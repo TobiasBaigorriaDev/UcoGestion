@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { paymentMethodLabel } from '../../lib/format';
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
 import { confirmPurchase, type PurchaseConfirmationInput, type PurchasePaymentInput } from './purchases-api';
@@ -109,7 +110,8 @@ export function PurchaseCreation({ organizationId, branchId, role, suppliers, it
           <select id="purchase-status" {...form.register('status')}><option value="PENDING_PAYMENT">Pendiente de pago</option>
             <option value="PAID">Pagada</option></select></div> : null}</div>
       <h2>Productos recibidos</h2>
-      {fields.map((field, index) => <fieldset key={field.id}><legend>Producto {index + 1}</legend>
+      <ol className={workspaceStyles.lines} aria-label="Productos recibidos">
+      {fields.map((field, index) => <li key={field.id} className={workspaceStyles.line}>
         <div className={`${styles.fields} ${workspaceStyles.lineFields}`}><div className={workspaceStyles.itemField}><label htmlFor={`purchase-item-${index}`}>Producto</label>
           <select id={`purchase-item-${index}`} {...form.register(`lines.${index}.itemId`)}>
             <option value="">Seleccioná un producto</option>
@@ -118,18 +120,19 @@ export function PurchaseCreation({ organizationId, branchId, role, suppliers, it
             <input id={`purchase-quantity-${index}`} inputMode="decimal" {...form.register(`lines.${index}.quantity`)} /></div>
           <div><label htmlFor={`purchase-cost-${index}`}>Costo unitario</label>
             <input id={`purchase-cost-${index}`} inputMode="decimal" {...form.register(`lines.${index}.unitCost`)} /></div></div>
-        {fields.length > 1 ? <button type="button" onClick={() => remove(index)}>Quitar producto</button> : null}
-      </fieldset>)}
-      <button type="button" onClick={() => append({ itemId: '', quantity: '', unitCost: '' })}>Agregar producto</button>
+        {fields.length > 1 ? <button type="button" className={workspaceStyles.removeLine} aria-label={`Quitar producto ${index + 1}`}
+          onClick={() => remove(index)}>Quitar</button> : null}
+      </li>)}</ol>
+      <button type="button" className={workspaceStyles.addLine} onClick={() => append({ itemId: '', quantity: '', unitCost: '' })}>Agregar otro producto</button>
       <p aria-live="polite"><strong>Total estimado:</strong> {totalText}</p>
-      {needsPayment ? <fieldset><legend>Pago total</legend><div className={styles.fields}>
+      {needsPayment ? <fieldset className={workspaceStyles.paymentGroup}><legend>Pago total</legend><div className={styles.fields}>
         <div><label htmlFor="purchase-method">Medio de pago</label><select id="purchase-method" {...form.register('method')}>
           <option value="">Seleccioná un medio</option>{paymentMethods.map((entry) =>
-            <option key={entry} value={entry}>{entry}</option>)}</select></div>
-        {method === 'CASH' ? <div><label htmlFor="purchase-session">Sesión de caja</label>
-          <select id="purchase-session" {...form.register('sessionId')}><option value="">Seleccioná una sesión</option>
+            <option key={entry} value={entry}>{paymentMethodLabel(entry)}</option>)}</select></div>
+        {method === 'CASH' ? <div><label htmlFor="purchase-session">Turno de caja</label>
+          <select id="purchase-session" {...form.register('sessionId')}><option value="">Elegí un turno abierto</option>
             {sessions.map((session) => <option key={session.id} value={session.id}>{session.registerName}</option>)}</select>
-          {!sessions.length ? <p role="alert">Abrí una sesión válida en esta sucursal para pagar en efectivo.</p> : null}</div> : null}</div></fieldset> : null}
+          {!sessions.length ? <p role="alert">Abrí un turno de caja en esta sucursal para pagar en efectivo.</p> : null}</div> : null}</div></fieldset> : null}
       <ErrorSummary error={error} />
       {success ? <p role="status">{success}</p> : null}
       <button type="submit" disabled={!canSubmit || form.formState.isSubmitting}>

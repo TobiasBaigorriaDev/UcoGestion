@@ -62,7 +62,7 @@ function asError(cause: unknown): ApiProblemError {
   return cause instanceof ApiProblemError ? cause : new ApiProblemError({ status: 0, code: 'REQUEST_FAILED', message: 'No pudimos completar la solicitud. Intentá nuevamente.' });
 }
 
-const roleLabels: Record<Role, string> = { OWNER: 'Propietario', ADMIN: 'Administrador', CASHIER: 'Cajero', EMPLOYEE: 'Empleado' };
+const roleLabels: Record<Role, string> = { OWNER: 'Dueño', ADMIN: 'Administrador', CASHIER: 'Cajero', EMPLOYEE: 'Empleado' };
 
 export function UserManagement({ organizationId, data, onInvite = inviteUser, onRevokeInvitation = revokeInvitation, onResendInvitation = resendInvitation, onChangeRole = changeMembershipRole, onChangeStatus = changeMembershipStatus, onRevokeMembership = revokeMembership, onReload }: {
   organizationId: string;
@@ -95,7 +95,7 @@ export function UserManagement({ organizationId, data, onInvite = inviteUser, on
     }
   }
   return <section className={styles.page} aria-labelledby="users-heading">
-    <header className={styles.heading}><div><h1 id="users-heading">Usuarios y accesos</h1><p>Administrá invitaciones, roles y sucursales asignadas.</p></div></header>
+    <header className={styles.heading}><div><h1 id="users-heading">Usuarios y accesos</h1><p>Quién entra a tu negocio, con qué rol y en qué sucursales.</p></div></header>
     <ErrorSummary error={error} />
     {error?.code === 'VERSION_CONFLICT' ? <button type="button" onClick={onReload}>Volver a cargar</button> : null}
     {message ? <p role="status">{message}</p> : null}
@@ -103,7 +103,7 @@ export function UserManagement({ organizationId, data, onInvite = inviteUser, on
       <h2>Invitar a una persona</h2>
       <div className={styles.fields}><div><label htmlFor="invite-email">Correo electrónico</label><input id="invite-email" type="email" autoComplete="email" aria-invalid={!!errors.email} {...register('email')} />{errors.email ? <p role="alert">Ingresá un correo válido.</p> : null}</div>
       <div><label htmlFor="invite-role">Rol</label><select id="invite-role" {...register('role')}>{allowedRoles.map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}</select></div></div>
-      {inviteRole === 'OWNER' ? <p>El propietario tiene acceso a todas las sucursales.</p> : <fieldset><legend>Sucursales asignadas</legend><div className={styles.checks}>{data.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => <label key={branch.id}><input type="checkbox" checked={inviteBranches.includes(branch.id)} onChange={(event) => setInviteBranches(event.target.checked ? [...inviteBranches, branch.id] : inviteBranches.filter((id) => id !== branch.id))} />{branch.name}</label>)}</div></fieldset>}
+      {inviteRole === 'OWNER' ? <p>El dueño tiene acceso a todas las sucursales.</p> : <fieldset><legend>Sucursales asignadas</legend><div className={styles.checks}>{data.branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => <label key={branch.id}><input type="checkbox" checked={inviteBranches.includes(branch.id)} onChange={(event) => setInviteBranches(event.target.checked ? [...inviteBranches, branch.id] : inviteBranches.filter((id) => id !== branch.id))} />{branch.name}</label>)}</div></fieldset>}
       <button type="submit" disabled={busy}>Enviar invitación</button>
     </form>
     <section className={styles.panel} aria-labelledby="members-heading"><h2 id="members-heading">Personas con acceso</h2>
@@ -121,10 +121,26 @@ function MemberEditor({ member, branches, actorRole, busy, onSave, onStatus, onR
 }) {
   const [role, setRole] = useState<Role>(member.role);
   const [branchIds, setBranchIds] = useState(member.branchIds);
+  const [open, setOpen] = useState(false);
+  const editorId = `member-editor-${member.id}`;
+  const titleId = `member-title-${member.id}`;
   const allowedRoles: Role[] = actorRole === 'OWNER' ? ['OWNER', 'ADMIN', 'CASHIER', 'EMPLOYEE'] : ['ADMIN', 'CASHIER', 'EMPLOYEE'];
-  return <article className={styles.row}><div className={styles.memberTitle}><strong>{member.email}</strong><span>{member.status === 'ACTIVE' ? 'Activo' : member.status === 'INACTIVE' ? 'Inactivo' : 'Revocado'}</span></div>
+  const branchNames = member.role === 'OWNER' ? 'Todas las sucursales'
+    : branches.filter((branch) => member.branchIds.includes(branch.id)).map((branch) => branch.name).join(', ') || 'Sin sucursales';
+  const statusLabel = member.status === 'ACTIVE' ? 'Activo' : member.status === 'INACTIVE' ? 'Inactivo' : 'Revocado';
+  return <article className={`${styles.row} ${styles.memberRow}`} aria-labelledby={titleId}>
+    <div className={styles.memberSummary}>
+      <div className={styles.memberTitle}><strong id={titleId}>{member.email}</strong>
+        <span>{branchNames}{member.status !== 'ACTIVE' ? ` · ${statusLabel}` : ''}</span></div>
+      <span className={styles.rolePill}>{roleLabels[member.role]}</span>
+      {member.status !== 'REVOKED' ? <button type="button" className={styles.secondary} aria-expanded={open} aria-controls={editorId}
+        onClick={() => setOpen(!open)}><EntityAction label={open ? 'Cerrar' : 'Editar'} name={member.email} /></button> : null}
+    </div>
+    {open ? <div id={editorId} className={styles.memberEditor}>
     <div className={styles.fields}><div><label htmlFor={`role-${member.id}`}>Rol de {member.email}</label><select id={`role-${member.id}`} value={role} disabled={busy || member.status === 'REVOKED'} onChange={(event) => setRole(roleSchema.parse(event.target.value))}>{allowedRoles.map((value) => <option key={value} value={value}>{roleLabels[value]}</option>)}</select></div></div>
     {role !== 'OWNER' ? <fieldset><legend>Sucursales de {member.email}</legend><div className={styles.checks}>{branches.filter((branch) => branch.status === 'ACTIVE').map((branch) => <label key={branch.id}><input type="checkbox" checked={branchIds.includes(branch.id)} disabled={busy} onChange={(event) => setBranchIds(event.target.checked ? [...branchIds, branch.id] : branchIds.filter((id) => id !== branch.id))} />{branch.name}</label>)}</div>{member.hasOutsideScope ? <p>Esta persona también tiene acceso a sucursales fuera de tu alcance. Se conservarán.</p> : null}</fieldset> : <p>Acceso a todas las sucursales.</p>}
-    <div className={styles.actions}><button type="button" disabled={busy || member.status !== 'ACTIVE' || role !== 'OWNER' && branchIds.length === 0} onClick={() => onSave(role, role === 'OWNER' ? [] : branchIds)}><EntityAction label="Guardar cambios" name={`de ${member.email}`} /></button><button type="button" disabled={busy || member.status === 'REVOKED'} onClick={onStatus}><EntityAction label={member.status === 'ACTIVE' ? 'Desactivar' : 'Activar'} name={`a ${member.email}`} /></button><ConfirmAction label={`Revocar acceso de ${member.email}`} confirmLabel="Sí, revocar el acceso" busy={busy} disabled={member.status !== 'ACTIVE'} onConfirm={onRevoke}><p>La persona deja de entrar a este negocio de inmediato, también en sus equipos. Su historial se conserva. Para volver a darle acceso hay que invitarla de nuevo.</p></ConfirmAction></div>
+    <div className={styles.actions}><button type="button" disabled={busy || member.status !== 'ACTIVE' || role !== 'OWNER' && branchIds.length === 0} onClick={() => onSave(role, role === 'OWNER' ? [] : branchIds)}><EntityAction label="Guardar cambios" name={`de ${member.email}`} /></button><button type="button" disabled={busy || member.status === 'REVOKED'} onClick={onStatus}><EntityAction label={member.status === 'ACTIVE' ? 'Pausar acceso' : 'Reactivar acceso'} name={`de ${member.email}`} /></button><ConfirmAction label={`Revocar acceso de ${member.email}`} confirmLabel="Sí, revocar el acceso" busy={busy} disabled={member.status !== 'ACTIVE'} onConfirm={onRevoke}><p>La persona deja de entrar a este negocio de inmediato, también en sus equipos. Su historial se conserva. Para volver a darle acceso hay que invitarla de nuevo.</p></ConfirmAction></div>
+    <p className={styles.memberNote}>«Pausar acceso» se puede deshacer cuando quieras. «Revocar acceso» es definitivo.</p>
+    </div> : null}
   </article>;
 }
