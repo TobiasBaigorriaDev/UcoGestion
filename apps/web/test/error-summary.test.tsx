@@ -36,3 +36,22 @@ describe('ErrorSummary', () => {
     expect(container.firstChild).toBeNull();
   });
 });
+
+describe('D08 error titles', () => {
+  it.each([
+    [0, 'NETWORK_ERROR', 'No hay conexión con el servidor'],
+    [401, 'SESSION_INVALID', 'Tu sesión venció'],
+    [403, 'MEMBERSHIP_INACTIVE', 'No tenés permiso para hacer esto'],
+    [409, 'VERSION_CONFLICT', 'Alguien cambió estos datos mientras trabajabas'],
+    [400, 'VALIDATION_FAILED', 'Revisá los datos'],
+    [422, 'SALE_PAYMENTS_INVALID', 'Revisá los datos'],
+    [503, 'SERVICE_UNAVAILABLE', 'El servicio no está disponible en este momento'],
+    [500, 'INTERNAL', 'Algo salió mal de nuestro lado'],
+  ])('titles status %s (%s) as "%s" and keeps the server message', (status, code, title) => {
+    render(<ErrorSummary error={new ApiProblemError({ status, code, message: 'Detalle del servidor.', traceId: 'abc' })} />);
+    const alert = screen.getByRole('alert');
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe(title);
+    expect(alert.textContent).toContain('Detalle del servidor.');
+    expect(alert.textContent).toContain('Referencia: abc');
+  });
+});

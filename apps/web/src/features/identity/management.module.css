@@ -41,3 +41,42 @@
 .page button:not(:disabled):hover { background: var(--color-accent); color: var(--color-on-primary); }
 .actions button:not(:disabled):hover, .row > button:not(:disabled):hover { background: var(--color-primary-soft); color: var(--color-primary); border-color: var(--color-primary); }
 @media (prefers-reduced-motion: no-preference) { .page button { transition: background-color .16s ease-out, border-color .16s ease-out; } }
+.loginLink { display: inline-flex; align-items: center; min-height: 44px; margin-top: 1rem; padding: .65rem 1.25rem; border-radius: var(--radius-button); background: var(--color-primary); color: var(--color-on-primary); font-weight: 700; text-decoration: none; }
+.createPanel summary { display: flex; align-items: center; gap: .5rem; min-height: 44px; color: var(--color-primary); font-size: var(--text-title); font-weight: 700; cursor: pointer; } .createPanel[open] summary { margin-bottom: .75rem; }
+.page .secondary { color: var(--color-primary); background: var(--color-surface); border-color: var(--color-control-border); }
+.page .secondary:not(:disabled):hover { background: var(--color-primary-soft); color: var(--color-primary); border-color: var(--color-primary); }
+/* Folded "Nuevo …" panels read as an action: a plus that turns into a minus when open. */
+.createPanel summary { list-style: none; }
+.createPanel summary::-webkit-details-marker { display: none; }
+.createPanel summary::before { content: ''; width: 1.75rem; height: 1.75rem; flex: none; border-radius: var(--radius-sm); background: var(--color-primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E") center / 1.1rem no-repeat; }
+.createPanel[open] summary::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E"); }
+.createPanel summary:hover { text-decoration: underline; text-underline-offset: .2em; }
+.createPanel summary:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+@media (forced-colors: active) { .createPanel summary::before { forced-color-adjust: none; background-color: ButtonText; } }
+.createPanel:not([open]) { padding-block: 1rem; }
+/* The form's submit stays primary even inside an action row of secondary buttons. */
+.actions button[type='submit'] { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-on-primary); }
+.actions button[type='submit']:not(:disabled):hover { border-color: var(--color-accent); background: var(--color-accent); color: var(--color-on-primary); }
+.memberRow { gap: .75rem; }
+.memberSummary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem 1rem; align-items: center; }
+.memberSummary > button { grid-column: 1 / -1; justify-self: start; }
+.rolePill { justify-self: end; padding: .125rem .75rem; border-radius: 999px; background: var(--color-primary-soft); color: var(--color-primary); font-size: var(--text-label); font-weight: 700; white-space: nowrap; }
+.memberEditor { display: grid; gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-divider); }
+.memberNote { margin: 0; color: var(--color-text-secondary); font-size: var(--text-label); }
+@media (min-width: 48rem) {
+  .memberSummary { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .memberSummary > button { grid-column: auto; }
+}
+/* Payment methods: one row per method with an accessible on/off switch and the state in words. */
+.methodRow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .5rem 1rem; align-items: center; }
+.methodState { color: var(--color-text-secondary); font-size: var(--text-label); font-weight: 650; }
+.methodState[data-enabled='true'] { color: var(--color-primary); }
+.page .switch { position: relative; width: 3.25rem; min-width: 3.25rem; min-height: 2rem; height: 2rem; padding: 0; border: 2px solid var(--color-control-border); border-radius: 999px; background: var(--color-sidebar); }
+.page .switch[aria-checked='true'] { border-color: var(--color-primary); background: var(--color-primary); }
+.page .switch:not(:disabled):hover { background: var(--color-divider); }
+.page .switch[aria-checked='true']:not(:disabled):hover { background: var(--color-accent); border-color: var(--color-accent); }
+.page .switch::after { content: ''; position: absolute; inset: -.5rem; }
+.switchThumb { position: absolute; top: .1875rem; left: .1875rem; width: 1.375rem; height: 1.375rem; border-radius: 50%; background: var(--color-surface); box-shadow: 0 1px 3px rgb(28 33 24 / 25%); }
+.switch[aria-checked='true'] .switchThumb { transform: translateX(1.25rem); }
+@media (prefers-reduced-motion: no-preference) { .switchThumb { transition: transform .16s ease-out; } }
+@media (forced-colors: active) { .switchThumb { forced-color-adjust: none; background: ButtonText; } }

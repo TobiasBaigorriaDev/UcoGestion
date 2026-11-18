@@ -14,7 +14,7 @@ it('shows stock and minimum without redundant decimals and preserves actual frac
     nextCursor={null} onBranchChange={vi.fn()} onReload={vi.fn()} />);
   expect(screen.getByText('Disponible: 29 unidades')).toBeTruthy();
   expect(screen.getByText('Mínimo: 30')).toBeTruthy();
-  expect(screen.getByText('Disponible: 12.345.678.901.234.567,25 unidades fraccionables')).toBeTruthy();
+  expect(screen.getByText('Disponible: 12.345.678.901.234.567,25 (venta suelta)')).toBeTruthy();
   expect(screen.getByText('Mínimo: 0,50')).toBeTruthy();
 });
 

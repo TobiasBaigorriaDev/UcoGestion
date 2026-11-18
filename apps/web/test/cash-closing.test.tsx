@@ -28,25 +28,25 @@ it('T218B freezes before begin and requires final-sync before counted cash, then
   render(<CashClosing organizationId={org} actorUserId={org} role="CASHIER" session={session} localDeviceId={device}
     onPrepare={freeze} onCommand={command} onAbortRelease={release} onFinish={finish} onReload={vi.fn()}/>);
   expect(screen.queryByRole('textbox',{name:'Efectivo contado'})).toBeNull();
-  await userEvent.click(screen.getByRole('button',{name:'Congelar y comenzar cierre'}));
-  await screen.findByRole('button',{name:'Verificar sincronización final'});
+  await userEvent.click(screen.getByRole('button',{name:'Empezar el cierre'}));
+  await screen.findByRole('button',{name:'Revisar ventas pendientes'});
   expect(freeze).toHaveBeenCalledBefore(command);
   expect(command).toHaveBeenCalledWith('begin-close',{checkpoint:proof.checkpoint,signature:proof.signature},proof.key);
-  await userEvent.click(screen.getByRole('button',{name:'Verificar sincronización final'}));
+  await userEvent.click(screen.getByRole('button',{name:'Revisar ventas pendientes'}));
   await screen.findByText('Conexión interrumpida.');
   expect(screen.queryByRole('textbox',{name:'Efectivo contado'})).toBeNull();
   const syncKey=command.mock.calls[1]?.[2];
-  await userEvent.click(screen.getByRole('button',{name:'Verificar sincronización final'}));
+  await userEvent.click(screen.getByRole('button',{name:'Revisar ventas pendientes'}));
   await screen.findByRole('textbox',{name:'Efectivo contado'});
   expect(command.mock.calls[2]?.[2]).toBe(syncKey);
   await userEvent.type(screen.getByRole('textbox',{name:'Efectivo contado'}),'9.25');
   await userEvent.click(screen.getByRole('button',{name:'Confirmar cierre'}));
   expect(command).toHaveBeenCalledTimes(3);
   await screen.findByText('Explicá la diferencia antes de cerrar.');
-  await userEvent.type(screen.getByRole('textbox',{name:'Motivo del cierre'}),'Sobrante contado');
+  await userEvent.type(screen.getByRole('textbox',{name:'Motivo de la diferencia'}),'Sobrante contado');
   await userEvent.click(screen.getByRole('button',{name:'Confirmar cierre'}));
   await waitFor(()=>expect(finish).toHaveBeenCalled());
-  expect(screen.getByText(/Diferencia: 1.00 ARS/)).toBeTruthy();
+  expect(screen.getByText('Diferencia').nextElementSibling?.textContent).toBe('$ 1,00');
 });
 
 it('T218B resumes the persisted attempt after reload and never thaws on a lost abort response',async()=>{
@@ -56,10 +56,10 @@ it('T218B resumes the persisted attempt after reload and never thaws on a lost a
     finalSync:{ready:true,expectedCash:'8.25'}}} localDeviceId={device} onCommand={command} onAbortRelease={release}
     onPrepare={vi.fn()} onFinish={vi.fn()} onReload={vi.fn()}/>);
   expect(screen.getByRole('textbox',{name:'Efectivo contado'})).toBeTruthy();
-  await userEvent.click(screen.getByRole('button',{name:'Abortar cierre'}));
+  await userEvent.click(screen.getByRole('button',{name:'Cancelar el cierre'}));
   await screen.findByText('Sin respuesta.');expect(release).not.toHaveBeenCalled();
   const key=command.mock.calls[0]?.[2];
-  await userEvent.click(screen.getByRole('button',{name:'Abortar cierre'}));
+  await userEvent.click(screen.getByRole('button',{name:'Cancelar el cierre'}));
   await waitFor(()=>expect(release).toHaveBeenCalledWith(id,attempt,{cashSessionId:id,closeAttemptId:attempt,status:'OPEN'}));
   expect(command.mock.calls[1]?.[2]).toBe(key);
   expect(screen.queryByRole('textbox',{name:'Efectivo contado'})).toBeNull();
@@ -70,7 +70,7 @@ it('T218B recovers local completion from an authenticated final snapshot after l
   render(<CashClosing organizationId={org} actorUserId={org} role="CASHIER" session={{...session,status:'CLOSED',
     closure:{expectedCash:'8.25',countedCash:'8.25',difference:'0.00',reason:null}}} localDeviceId={device}
     onFinish={finish} onCommand={command} onReload={vi.fn()}/>);
-  await userEvent.click(screen.getByRole('button',{name:'Consolidar cierre en este equipo'}));
+  await userEvent.click(screen.getByRole('button',{name:'Actualizar este equipo con el cierre'}));
   await waitFor(()=>expect(finish).toHaveBeenCalledWith({cashSessionId:id,status:'CLOSED'},undefined));
   expect(command).not.toHaveBeenCalled();
 });
@@ -98,8 +98,8 @@ it('T218B consolidates a server-confirmed abort after reload before signing anot
   const command=vi.fn().mockResolvedValue({cashSessionId:id,closeAttemptId:attempt,status:'CLOSING'});
   render(<CashClosing organizationId={org} actorUserId={org} role="CASHIER" session={{...session,
     lastAbortedAttemptId:attempt}} localDeviceId={device} onAbortRelease={release} onPrepare={prepare} onCommand={command} onReload={vi.fn()}/>);
-  await userEvent.click(screen.getByRole('button',{name:'Congelar y comenzar cierre'}));
-  await screen.findByRole('button',{name:'Abortar cierre'});
+  await userEvent.click(screen.getByRole('button',{name:'Empezar el cierre'}));
+  await screen.findByRole('button',{name:'Cancelar el cierre'});
   expect(release).toHaveBeenCalledWith(id,attempt,{cashSessionId:id,closeAttemptId:attempt,status:'OPEN'});
   expect(release).toHaveBeenCalledBefore(prepare);
 });

@@ -1,5 +1,6 @@
 'use client';
 
+import { formatMoney, paymentMethodLabel } from '../../lib/format';
 import { formatStockQuantity } from '../../lib/format-stock-quantity';
 import { OrganizationTime } from '../../components/organization-time';
 
@@ -13,6 +14,7 @@ import { cancelSale, loadCheckoutContext, loadSaleDetail } from './sales-api';
 import { ReceiptActions } from './receipt-actions';
 import { SaleHistory } from './sale-history';
 import styles from './pos.module.css';
+import { ConfirmAction } from '../../components/confirm-action';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -98,14 +100,14 @@ function SaleLookupWorkspace({ organizationId, branchId, role, branches, timezon
     {sale ? <section ref={detailRegion} tabIndex={-1} className={styles.panel} aria-labelledby="sale-detail-heading">
       <h2 id="sale-detail-heading">Venta {saleCodeFromId(sale.id)}</h2>
       <p><strong>Estado:</strong> {sale.status === 'CANCELLED' ? 'Anulada' : 'Confirmada'}</p>
-      <p><strong>Total:</strong> {sale.total} {sale.currency}</p>
+      <p><strong>Total:</strong> {formatMoney(sale.total, sale.currency)}</p>
       <p><strong>Confirmada:</strong> <OrganizationTime value={sale.confirmedAt} /></p>
       <h3>Ítems</h3><ul className={styles.detailList}>{sale.items.map((item, index) => <li key={index}>
-        {item.name} · {formatStockQuantity(item.quantity)} × {item.unitPrice} = {item.lineTotal}</li>)}</ul>
+        {item.name} · {formatStockQuantity(item.quantity)} × {formatMoney(item.unitPrice, sale.currency)} = {formatMoney(item.lineTotal, sale.currency)}</li>)}</ul>
       <h3>Pagos originales</h3><ul className={styles.detailList}>{sale.payments.map((payment, index) =>
-        <li key={index}>{payment.method}: {payment.amount}{payment.change !== '0.00'
-          ? ` · Vuelto ${payment.change}` : ''}</li>)}</ul>
-      {sale.onAccountAmount && sale.onAccountAmount !== '0.00' ? <p><strong>A cuenta en esta venta:</strong> {sale.onAccountAmount} {sale.currency}. Los cobros posteriores se consultan en Clientes.</p> : null}
+        <li key={index}>{paymentMethodLabel(payment.method)}: {formatMoney(payment.amount, sale.currency)}{payment.change !== '0.00'
+          ? ` · Vuelto ${formatMoney(payment.change, sale.currency)}` : ''}</li>)}</ul>
+      {sale.onAccountAmount && sale.onAccountAmount !== '0.00' ? <p><strong>A cuenta en esta venta:</strong> {formatMoney(sale.onAccountAmount, sale.currency)}. Los cobros posteriores se consultan en Clientes.</p> : null}
       {sale.cancellation ? <p role="status"><strong>Anulación:</strong> {sale.cancellation.reason}
         {' · '}<OrganizationTime value={sale.cancellation.cancelledAt} /></p> : null}
       <ReceiptActions organizationId={organizationId} saleId={sale.id} />
@@ -121,9 +123,10 @@ function SaleLookupWorkspace({ organizationId, branchId, role, branches, timezon
               {session.registerName}</option>)}</select>
           {sessions.data && !sessions.data.sessions.length ? <p role="alert">Abrí una sesión válida en esta sucursal antes de reintegrar efectivo.</p> : null}
           {sessions.error ? <ErrorSummary error={problem(sessions.error)} /> : null}</> : null}
-        <button className={styles.danger} type="button" disabled={busy || !reason.trim() ||
-          (needsCash && !selected)} onClick={() => void cancel()}>
-          {busy ? 'Anulando…' : 'Anular venta'}</button>
+        <ConfirmAction label="Anular venta" confirmLabel="Sí, anular la venta" busy={busy} busyLabel="Anulando…"
+          disabled={!reason.trim() || (needsCash && !selected)} onConfirm={() => void cancel()}>
+          <p>Se repone el stock, se devuelve el efectivo cobrado desde la caja elegida y, si fue fiada, se descuenta la deuda. La anulación queda registrada y no se puede deshacer.</p>
+        </ConfirmAction>
       </div> : null}
     </section> : null}
   </section>;

@@ -30,8 +30,8 @@ it('T114B restricts employee reasons, validates UNIT precision, and exposes conf
   await userEvent.type(screen.getByLabelText('Cantidad'), '1');
   await userEvent.click(screen.getByRole('button', { name: 'Confirmar ajuste' }));
   expect(confirm).toHaveBeenCalledWith('o1', expect.objectContaining({ branchId: 'b1', itemId: 'i1', quantity: '1' }));
-  await userEvent.click(screen.getByRole('button', { name: /compensar ajuste/i }));
-  await userEvent.click(screen.getByRole('button', { name: /confirmar compensación/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^revertir ajuste/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^sí, revertir/i }));
   expect(compensate).toHaveBeenCalledWith('o1', 'a1', null);
   expect((await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toEqual([]);
 });
@@ -56,7 +56,28 @@ it('keeps history and compensation while moving creation into products', async (
   expect(screen.queryByRole('button', { name: 'Confirmar ajuste' })).toBeNull();
   expect(screen.queryByRole('textbox', { name: 'Cantidad' })).toBeNull();
   expect(screen.getByRole('heading', { level: 1, name: 'Historial de ajustes' })).toBeTruthy();
-  await userEvent.click(screen.getByRole('button', { name: /compensar ajuste/i }));
-  await userEvent.click(screen.getByRole('button', { name: /confirmar compensación/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^revertir ajuste/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^sí, revertir/i }));
   expect(compensate).toHaveBeenCalledWith('o1', 'a1', null);
+});
+
+it('lists adjustments compactly with date, signed quantity, status and a product filter', async () => {
+  const entries = [
+    { ...history[0]!, id: 'a2', itemName: 'Aceite', direction: 'DECREASE' as const, quantity: '10.000', reason: 'PERDIDA',
+      occurredAt: '2026-10-12T15:30:00Z', compensatedBy: 'a3' },
+    { ...history[0]!, id: 'a3', itemName: 'Aceite', quantity: '10.000', reason: 'CORRECCION',
+      occurredAt: '2026-10-12T16:00:00Z', compensates: 'a2' },
+    history[0]!,
+  ];
+  render(<InventoryAdjustments historyOnly organizationId="o1" branchId="b1" role="OWNER" timezone="America/Argentina/Buenos_Aires"
+    stocks={stocks} adjustments={entries} nextCursor={null} onReload={vi.fn()} />);
+  const list = screen.getByRole('list', { name: 'Ajustes de stock' });
+  expect(list.textContent).toContain('−10');
+  expect(list.textContent).toContain('+2');
+  expect(list.textContent).toContain('12 oct, 12:30');
+  expect(screen.getByText('Revertido')).toBeTruthy();
+  expect(screen.getByText('Reversión')).toBeTruthy();
+  expect(screen.getAllByRole('button', { name: /^revertir ajuste/i })).toHaveLength(1);
+  await userEvent.type(screen.getByLabelText('Buscar producto'), 'yer');
+  expect(screen.getByRole('list', { name: 'Ajustes de stock' }).querySelectorAll(':scope > li')).toHaveLength(1);
 });

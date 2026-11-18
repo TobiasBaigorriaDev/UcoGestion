@@ -35,6 +35,10 @@ export function TrendChart({ title, values, labels, display, currency, headingLe
   }));
   const units = plotted.flatMap(entry => entry.units);
   const maximum = units.reduce((max, value) => value > max ? value : max, 0n);
+  if (maximum === 0n) return <section className={styles.chart} aria-label={title}>
+    <Heading>{title}</Heading>
+    <p className={styles.empty}>Sin movimientos en este período.</p>
+  </section>;
   const step = chartStep(maximum, currency ? 1n : 100n);
   const ceiling = step * 4n;
   const valueTicks = Array.from({ length: 5 }, (_, index) => {

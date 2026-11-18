@@ -19,8 +19,8 @@ export type Role = 'OWNER' | 'ADMIN' | 'CASHIER' | 'EMPLOYEE';
 
 export const paymentMethodLabels: Record<PaymentMethod, string> = {
   CASH: 'Efectivo',
-  DEBIT_CARD: 'Tarjeta de Débito',
-  CREDIT_CARD: 'Tarjeta de Crédito',
+  DEBIT_CARD: 'Tarjeta de débito',
+  CREDIT_CARD: 'Tarjeta de crédito',
   TRANSFER: 'Transferencia',
   QR: 'QR / Billetera digital',
 };
@@ -132,13 +132,13 @@ export function PaymentMethodsManagement({
     <section className={styles.page} aria-labelledby="payment-methods-heading">
       <header className={styles.heading}>
         <h1 id="payment-methods-heading">Medios de pago</h1>
-        <p>Habilitá o deshabilitá los medios de pago disponibles para las operaciones de cobro en mostrador.</p>
+        <p>Elegí con qué medios te pueden pagar en el mostrador.</p>
       </header>
       <ErrorSummary error={error} />
       {message ? <p role="status">{message}</p> : null}
 
       <section className={styles.panel} aria-labelledby="methods-list-heading">
-        <h2 id="methods-list-heading">Medios de pago configurados</h2>
+        <h2 id="methods-list-heading">Medios que aceptás</h2>
         <ul className={styles.rows}>
           {methods.map(({ method, enabled }) => {
             const label = paymentMethodLabels[method] ?? method;
@@ -146,26 +146,17 @@ export function PaymentMethodsManagement({
             const isBusy = busyMethod === method;
 
             return (
-              <li className={styles.row} key={method}>
+              <li className={`${styles.row} ${styles.methodRow}`} key={method}>
                 <div>
-                  <strong>{label}</strong>
+                  <strong id={`method-${method}`}>{label}</strong>
                   <span>{desc}</span>
-                  <span>{enabled ? 'Habilitado' : 'Deshabilitado'}</span>
                 </div>
+                <span className={styles.methodState} data-enabled={enabled}>{isBusy ? 'Guardando…' : enabled ? 'Habilitado' : 'Deshabilitado'}</span>
                 {canManage ? (
-                  <div className={styles.actions}>
-                    <button
-                      type="button"
-                      disabled={isBusy}
-                      onClick={() => void handleToggle(method, enabled)}
-                    >
-                      {isBusy
-                        ? 'Guardando…'
-                        : enabled
-                          ? `Deshabilitar ${label}`
-                          : `Habilitar ${label}`}
-                    </button>
-                  </div>
+                  <button type="button" role="switch" className={styles.switch} aria-checked={enabled}
+                    aria-label={`Aceptar ${label}`} disabled={isBusy} onClick={() => void handleToggle(method, enabled)}>
+                    <span className={styles.switchThumb} aria-hidden="true" />
+                  </button>
                 ) : null}
               </li>
             );

@@ -146,6 +146,27 @@ Separadores `#D9DDD1` delimitan filas y navegación sin competir con los datos. 
 - Los importes aceptan el formato argentino (`5.000`, `5.000,50`).
 - «Preparar o abrir POS sin conexión» es una acción secundaria al pie.
 
+**Turno de caja.**
+- Bajo el título está «Ver turnos»: Abiertos o en cierre, Cerrados y Con diferencias para revisar.
+- Le sigue el resumen del turno: caja, estado en una píldora (Abierto, Cerrando, Con conflicto, Cerrado), «Efectivo esperado en la caja» en 2rem Bosque, apertura e inicial.
+- Un equipo no habilitado muestra un aviso cálido con «Habilitar este equipo» para OWNER/ADMIN. A CASHIER le indica que se lo pida al dueño o a un administrador.
+- «Abrir turno» y «Ingresar o retirar efectivo» aceptan importes argentinos.
+- El cierre es una lista numerada de cuatro pasos (pendiente, actual en Bosque, hecho con tilde SVG): Empezar el cierre, Revisar ventas pendientes, Contar el efectivo y Confirmar el cierre. Muestra «En la caja debería haber $ …» y, mientras se escribe, «Faltan $ …», «Sobran $ …» o «El efectivo coincide». «Cancelar el cierre» devuelve la caja a abierta.
+- «Caja cerrada» resume Esperado, Contado y Diferencia.
+
+**Listados.**
+- Los historiales se recorren en lista, no por ID.
+- Gastos (OWNER/ADMIN): «Historial de gastos» con filtros Desde, Hasta y «Estado del gasto», «Total del período» en Primary Soft y filas-botón con concepto, categoría, medio, fecha, importe y la píldora «Anulado». Tocar una fila abre el detalle, encabezado por el concepto.
+- La búsqueda por ID queda plegada en «Buscar un gasto por su ID»; para CASHIER está abierta.
+- Auditoría: tabla Fecha, «Qué pasó» (acción traducida), Persona (correo o «Otra persona») y Sucursal. Los filtros son listas: «Qué pasó» y «Persona». «Mostrar también tareas automáticas del sistema» está apagado por defecto.
+
+**Confirmaciones y errores.**
+- Anular venta, gasto o compra y revocar una invitación o un acceso usan `ConfirmAction`: el botón en rojo de borde se convierte en el mismo lugar en «¿…?», con la consecuencia, «No, volver» (con foco) y «Sí, …» en rojo sólido. Escape vuelve atrás. No hay modales.
+- Revertir ajustes y transferencias conserva su paso de confirmación, con la palabra «Revertir».
+- `ErrorSummary` titula según el problema: «No hay conexión con el servidor», «Tu sesión venció», «No tenés permiso para hacer esto», «Alguien cambió estos datos mientras trabajabas», «Revisá los datos», «El servicio no está disponible en este momento» o «Algo salió mal de nuestro lado». Debajo mantiene el mensaje del servidor y la referencia.
+- Con la sesión vencida se ofrece «Iniciar sesión».
+- Las altas de clientes y proveedores quedan plegadas en «Nuevo cliente» o «Nuevo proveedor» y se abren solas si la lista está vacía.
+
 **Formato.** El dinero se muestra siempre como `$ 1.800,00` (`formatMoney`). Las cantidades agrupan miles (`22.000`). Los roles, medios de pago y estados de turno se muestran en español.
 
 Catálogo e inventario comparten una entrada en la navegación principal. Dentro de esa sección, una navegación local identifica Productos y, según el rol, Historial de ajustes, Transferencias y Categorías. Productos presenta inicialmente nombre, precio y stock. Seleccionar una fila despliega detalles y dos entradas: Editar y Cambiar stock. Precio, estructura, estado y eliminación se ofrecen dentro de Editar. Cambiar stock abre un formulario vertical de nuevo ajuste; Historial de ajustes conserva consulta y compensaciones sin duplicar el alta. El ajuste de existencias y el mínimo por sucursal se gestionan dentro del producto, conservando motivos, historial y permisos. La ruta anterior de Stock redirige a Productos. La consulta muestra el stock de la sucursal activa junto a cada producto inventariable; nunca interpreta un saldo ausente como cero. Para OWNER/ADMIN también reúne la gestión de ítems: búsqueda, edición, precio, estado y eliminación sujeta al historial. El alta se abre cuando se necesita, inmediatamente debajo de su botón y antes del listado; las acciones menos frecuentes se despliegan por producto. La ruta anterior de ítems conserva enlaces directos y las acciones siguen sujetas a sus permisos propios.
@@ -181,12 +202,20 @@ La profundidad viene de superficies sólidas con borde fino y sombras cortas con
 - **Hover:** Transición a `#15803D` con escala sutil `scale-[0.98]` en activo.
 - **Secondary:** Fondo Surface, borde Control Border, texto Text Primary; hover con borde y texto Bosque.
 - **Touch target:** Área interactiva mínima de 44×44px, aun cuando el contenido visual sea menor.
+- **Acciones de fila:** Secundarias y con el verbo solo (`Editar`, `Desactivar`, `Revertir`). El nombre del registro va oculto visualmente con `EntityAction`, así el lector de pantalla anuncia «Editar Distribuidora Sur» sin repetir el nombre en pantalla.
+- **Interruptores:** Medios de pago usan `role="switch"` con `aria-checked`, pista Bosque cuando está activo y el estado también escrito («Habilitado»).
+- **Líneas de productos** (Compras, Transferencias): una fila por producto sin recuadro de `fieldset`, «Quitar» como enlace rojo discreto y «Agregar otro producto» secundario antes del botón de confirmar.
+- **Listas con detalle a pedido:** Usuarios muestra correo, sucursales y píldora de rol; «Editar» despliega el formulario. El historial de ajustes usa fecha corta, «+2» / «−10» con color y texto, píldora «Revertido» / «Reversión» y búsqueda por producto.
+- **Un primario por panel:** Acciones auxiliares (elegir icono, revisar una desactivación) son secundarias.
 
 ### Forms and feedback
 
 - Labels persistentes; el placeholder nunca sustituye al label y usa `text-muted` con opacidad 1.
 - Errores junto al campo y en un resumen enfocable, enlazados mediante semántica ARIA.
 - Estados de carga, vacío, éxito, advertencia, conflicto, offline y permiso denegado usan icono/texto además de color.
+- **Estados vacíos de gráficos:** Si todos los valores del período son cero, no se dibuja eje ni línea; se muestra «Sin movimientos en este período.» en un recuadro punteado.
+- **Altas plegadas:** «Nuevo cliente» / «Nuevo proveedor» llevan un cuadrado Bosque con `+` (se vuelve `−` al abrir) para leerse como acción.
+- Las notas de fechas dicen «Las fechas incluyen el día completo.»; la zona horaria técnica (IANA) solo aparece en Datos del negocio.
 - El foco visible debe conservar contraste de al menos 3:1 contra cada superficie. Los `input type="date"` usan `:focus-within`, porque Chromium no aplica `:focus-visible` al host.
 
 ### Panels
@@ -209,6 +238,8 @@ La categoría de catálogo puede elegir entre 52 iconos SVG Lucide orientados a 
 ### Don't:
 - **Don't** usar vidrio, desenfoque ni bordes laterales de color como decoración.
 - **Don't** mostrar códigos internos (`CASH`, `OWNER`, `OPEN`) ni importes con punto decimal (`1800.00`).
+- **Don't** usar «POS», «offline» ni «unidades fraccionables» en la interfaz: se dice «Mostrador sin conexión», «PIN sin conexión» y «(venta suelta)».
+- **Don't** dejar un stock negativo sin aviso: se marca «Revisar stock: se vendió más de lo registrado».
 - **Don't** usar el color verde vibrante `#22C55E` como fondo decorativo estático.
 
 ### Cuestionario de edición de productos

@@ -24,8 +24,8 @@ it('T114C submits valid lines and offers explicit compensation of a confirmed tr
   await userEvent.click(screen.getByRole('button', { name: 'Confirmar transferencia' }));
   expect(confirm).toHaveBeenCalledWith('o1', { originBranchId: 'b1', destinationBranchId: 'b2',
     lines: [{ itemId: 'i1', quantity: '2' }] });
-  await userEvent.click(screen.getByRole('button', { name: /compensar transferencia/i }));
-  await userEvent.click(screen.getByRole('button', { name: /confirmar compensación/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^revertir transferencia/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^sí, revertir/i }));
   expect(compensate).toHaveBeenCalledWith('o1', 't1');
   expect((await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toEqual([]);
 });
@@ -38,8 +38,8 @@ it('T114C leaves a multi-line stock rejection unassigned when the server does no
     transfers={[]} nextCursor={null} onOriginChange={vi.fn()} onReload={vi.fn()} onConfirm={confirm} />);
   await userEvent.selectOptions(screen.getByLabelText('Destino'), 'b2');
   await userEvent.type(screen.getByLabelText('Cantidad de Yerba'), '1');
-  await userEvent.click(screen.getByRole('button', { name: 'Agregar producto' }));
-  await userEvent.selectOptions(screen.getByLabelText('Producto de línea 2'), 'i2');
+  await userEvent.click(screen.getByRole('button', { name: 'Agregar otro producto' }));
+  await userEvent.selectOptions(screen.getByLabelText('Producto 2'), 'i2');
   await userEvent.type(screen.getByLabelText('Cantidad de Aceite'), '1');
   await userEvent.click(screen.getByRole('button', { name: 'Confirmar transferencia' }));
   expect((await screen.findByRole('alert')).textContent).toMatch(/stock disponible/i);

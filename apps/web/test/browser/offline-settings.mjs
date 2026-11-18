@@ -7,10 +7,10 @@ async page => {
   await page.context().setOffline(false);
   await page.goto('http://127.0.0.1:4179/apps/web/test/browser/offline-settings.html');
   await page.getByRole('button', { name: 'Desbloquear mi identidad' }).waitFor();
-  await page.getByLabel('PIN offline', { exact: true }).fill('offline-pin');
+  await page.getByLabel('PIN sin conexión', { exact: true }).fill('offline-pin');
   await page.getByRole('button', { name: 'Desbloquear mi identidad' }).focus(); await page.keyboard.press('Enter');
   await page.getByRole('heading', { name: 'Mis operaciones pendientes' }).waitFor();
-  await page.getByRole('button', { name: 'Cambiar PIN offline' }).click();
+  await page.getByRole('button', { name: 'Cambiar PIN sin conexión' }).click();
   await page.getByLabel('PIN actual', { exact: true }).fill('offline-pin');
   await page.getByLabel('Nuevo PIN', { exact: true }).fill('replacement-offline-pin');
   await page.getByLabel('Confirmar nuevo PIN', { exact: true }).fill('does-not-match');
@@ -28,15 +28,15 @@ async page => {
   const before = await page.evaluate(async () => (await window.offlineSettingsHarness.pending()).map(row => ({ id: row.id, bytes: Array.from(row.envelope) })));
   await page.context().setOffline(true);
   await page.getByRole('button', { name: 'Guardar nuevo PIN' }).click();
-  await page.getByText('PIN offline actualizado. Tus datos y pendientes se conservaron.', { exact: true }).waitFor();
+  await page.getByText('PIN sin conexión actualizado. Tus datos y pendientes se conservaron.', { exact: true }).waitFor();
   check(JSON.stringify(before) === JSON.stringify(await page.evaluate(async () => (await window.offlineSettingsHarness.pending()).map(row => ({ id: row.id, bytes: Array.from(row.envelope) })))), 'PIN rotation changed pending envelopes');
   await page.context().setOffline(false);
   await page.goto('http://127.0.0.1:4179/apps/web/test/browser/offline-settings.html?resume');
-  await page.getByLabel('PIN offline', { exact: true }).fill('offline-pin');
+  await page.getByLabel('PIN sin conexión', { exact: true }).fill('offline-pin');
   await page.getByRole('button', { name: 'Desbloquear mi identidad' }).click();
   await page.getByRole('alert').waitFor();
   check(await page.getByRole('heading', { name: 'Mis operaciones pendientes' }).count() === 0, 'Old PIN unlocked private data');
-  await page.getByLabel('PIN offline', { exact: true }).fill('replacement-offline-pin');
+  await page.getByLabel('PIN sin conexión', { exact: true }).fill('replacement-offline-pin');
   await page.getByRole('button', { name: 'Desbloquear mi identidad' }).click();
   await page.getByRole('heading', { name: 'Mis operaciones pendientes' }).waitFor();
   check(JSON.stringify(before) === JSON.stringify(await page.evaluate(async () => (await window.offlineSettingsHarness.pending()).map(row => ({ id: row.id, bytes: Array.from(row.envelope) })))), 'Reload lost pending envelopes');
@@ -48,6 +48,8 @@ async page => {
   await page.getByRole('button', { name: 'Sincronizar mis pendientes' }).click();
   await page.getByText('No tenés operaciones pendientes.', { exact: true }).waitFor();
   await page.evaluate(() => window.offlineSettingsHarness.retire());
+  // Retirement re-renders asynchronously; wait for the private detail to go before asserting it is gone.
+  await page.getByRole('heading', { name: 'Mis operaciones pendientes' }).waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
   check(await page.getByRole('heading', { name: 'Mis operaciones pendientes' }).count() === 0, 'Retired identity detail remained visible');
   await page.evaluate(() => window.offlineSettingsHarness.seedForeign());
   await page.getByText(/1 entregas pendientes en este equipo/).waitFor();

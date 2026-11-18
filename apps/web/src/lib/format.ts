@@ -2,7 +2,9 @@ import { formatMoneyForDisplay } from '@uconext/shared';
 
 /** One money format for the whole interface: `$ 1.800,00`. Exact over the API's decimal strings. */
 export function formatMoney(value: string, currency = 'ARS'): string {
-  return formatMoneyForDisplay(value, currency);
+  try { return formatMoneyForDisplay(value, currency); }
+  // Never break a screen over an unexpected amount: show it as received.
+  catch { return `${value} ${currency}`; }
 }
 
 const roleLabels: Readonly<Record<string, string>> = {

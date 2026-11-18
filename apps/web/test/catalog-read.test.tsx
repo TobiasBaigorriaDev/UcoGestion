@@ -78,7 +78,7 @@ it('shows active catalog prices and categories without edit controls', async () 
     stocks={[{ branchId: 'branch-a', itemId: '1', itemName: 'Yerba', baseUnit: 'UNIT', quantity: '2.000', threshold: '3.000', lowStock: true }]}
     loadHistory={vi.fn()} />);
   expect(screen.getByText('Yerba')).toBeTruthy();
-  expect(screen.getByText('123.00')).toBeTruthy();
+  expect(screen.getByText('$ 123,00')).toBeTruthy();
   expect(screen.getByText('2 unidades')).toBeTruthy();
   expect(screen.getByText('Stock bajo')).toBeTruthy();
   expect(screen.getByText('Almacén')).toBeTruthy();

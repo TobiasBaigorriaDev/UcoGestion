@@ -26,7 +26,7 @@ async page => {
   page = await page.context().newPage(); await page.goto(sessionPage.url());
   region = page.getByRole('region', { name: 'Confirmación de venta' });
   await page.getByRole('button', { name: 'Venta offline', exact: true }).click();
-  await page.getByLabel('PIN offline', { exact: true }).fill('offline-pin');
+  await page.getByLabel('PIN sin conexión', { exact: true }).fill('offline-pin');
   await page.getByRole('button', { name: 'Autorizar este equipo y crear PIN' }).click();
   await page.getByRole('button', { name: 'Abrir caja sin conexión' }).waitFor();
   await page.getByLabel('Caja', { exact: true }).selectOption({ label: 'Caja offline' });
@@ -55,7 +55,7 @@ async page => {
   await page.close(); page = sessionPage; await page.reload();
   region = page.getByRole('region', { name: 'Confirmación de venta' });
   await page.getByRole('button', { name: 'Venta offline', exact: true }).click();
-  await page.getByLabel('PIN offline', { exact: true }).fill('offline-pin');
+  await page.getByLabel('PIN sin conexión', { exact: true }).fill('offline-pin');
   await page.getByRole('button', { name: 'Desbloquear mi identidad' }).click();
   await page.getByRole('button', { name: 'Ver comprobante de venta pendiente' }).click();
   await region.getByRole('button', { name: 'Ver comprobante local', exact: true }).click();
@@ -67,7 +67,8 @@ async page => {
   }
   const axeSource = await (await page.request.get(`${origin}/apps/web/node_modules/axe-core/axe.min.js`)).text();
   await page.addScriptTag({ content: axeSource });
-  check((await page.evaluate(async () => (await window.axe.run(document)).violations)).length === 0, 'Offline interface accessibility failed');
+  const offlineViolations = await page.evaluate(async () => (await window.axe.run(document)).violations.map(item => ({ id: item.id, nodes: item.nodes.map(node => [node.target, node.any[0]?.message]) })));
+  check(offlineViolations.length === 0, `Offline interface accessibility failed: ${JSON.stringify(offlineViolations)}`);
   let dropped = false;
   await page.route('**/api/v1/offline/delivery/push', async route => {
     await route.fetch(); dropped = true; await route.abort('failed');

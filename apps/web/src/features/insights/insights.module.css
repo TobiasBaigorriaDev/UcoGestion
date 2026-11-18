@@ -33,3 +33,4 @@
 @media (prefers-reduced-transparency: reduce) { .filters, .metric, .section { background: white; } }
 @media (prefers-reduced-motion: reduce) { .button:active:not(:disabled) { transform: none; } }
 @media (min-width: 48rem) { .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.toggle { display: flex; gap: .625rem; align-items: center; min-height: 44px; margin: .5rem 0 1rem; font-weight: 600; } .toggle input { width: 1.15rem; height: 1.15rem; accent-color: var(--color-primary); }

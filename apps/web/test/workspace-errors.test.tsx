@@ -34,3 +34,12 @@ it('D07 waits for the organization timezone before showing purchase date filters
   await screen.findByRole('button', { name: 'Reintentar' }, { timeout: 15000 });
   expect(screen.queryByRole('heading', { name: 'Historial de compras' })).toBeNull();
 }, 20000);
+
+it('D08 sends an expired session to the login instead of retrying forever', async () => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ status: 401, code: 'SESSION_INVALID',
+    detail: 'Iniciá sesión nuevamente.', traceId: 'test' }, { status: 401, headers: { 'Content-Type': 'application/problem+json' } }));
+  render(<Workspace page="cash-sessions" />);
+  const login = await screen.findByRole('link', { name: 'Iniciar sesión' }, { timeout: 15000 });
+  expect(login.getAttribute('href')).toBe('/login');
+  expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull();
+}, 20000);

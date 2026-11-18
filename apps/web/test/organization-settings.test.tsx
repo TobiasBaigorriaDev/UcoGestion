@@ -21,8 +21,8 @@ it('lets an admin save commercial profile with the current version but not timez
 it('makes a version conflict actionable for owner', async () => {
   const saveTimezone = vi.fn().mockRejectedValue({ code: 'VERSION_CONFLICT', currentVersion: 5 });
   render(<OrganizationSettings organizationId="org" role="OWNER" initial={{ profile: {}, timezone: 'UTC', version: 4 }} saveProfile={vi.fn()} saveTimezone={saveTimezone} />);
-  await userEvent.clear(screen.getByLabelText('Zona horaria'));
-  await userEvent.type(screen.getByLabelText('Zona horaria'), 'America/Argentina/Mendoza');
+  expect(screen.getByRole('option', { name: 'Argentina · Mendoza' })).toBeTruthy();
+  await userEvent.selectOptions(screen.getByLabelText('Zona horaria'), 'America/Argentina/Mendoza');
   await userEvent.click(screen.getByRole('button', { name: 'Guardar zona horaria' }));
   expect(await screen.findByRole('alert')).toHaveProperty('textContent', expect.stringContaining('Volvé a cargar'));
 });
@@ -40,8 +40,9 @@ it('allows OWNER to change currency with optimistic concurrency', async () => {
     />,
   );
   expect(screen.getByLabelText('Moneda base')).toBeTruthy();
-  await userEvent.clear(screen.getByLabelText('Moneda base'));
-  await userEvent.type(screen.getByLabelText('Moneda base'), 'USD');
+  expect((screen.getByLabelText('Moneda base') as HTMLSelectElement).value).toBe('ARS');
+  expect(screen.getByRole('option', { name: 'Peso argentino ($)' })).toBeTruthy();
+  await userEvent.selectOptions(screen.getByLabelText('Moneda base'), 'USD');
   await userEvent.click(screen.getByRole('button', { name: 'Guardar moneda' }));
   expect(saveCurrency).toHaveBeenCalledWith('org', 4, 'USD');
   expect(await screen.findByText(/Moneda base actualizada/i)).toBeTruthy();
@@ -112,3 +113,10 @@ it('displays differentiated D01 error messages for currency locks', async () => 
   unmount3();
 });
 
+
+it('keeps an unlisted stored timezone selectable instead of replacing it', () => {
+  render(<OrganizationSettings organizationId="org" role="OWNER"
+    initial={{ profile: {}, timezone: 'Pacific/Auckland', currency: 'NZD', version: 1 }} saveProfile={vi.fn()} saveTimezone={vi.fn()} />);
+  expect((screen.getByLabelText('Zona horaria') as HTMLSelectElement).value).toBe('Pacific/Auckland');
+  expect((screen.getByLabelText('Moneda base') as HTMLSelectElement).value).toBe('NZD');
+});

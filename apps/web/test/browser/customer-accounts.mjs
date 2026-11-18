@@ -7,7 +7,7 @@ async page => {
   check(login.status() === 204, 'Account browser login failed');
   await page.reload();
   await page.getByRole('button', { name: 'Clientes', exact: true }).click();
-  await page.getByRole('button', { name: 'Cuenta corriente de Ana Cuenta', exact: true }).click();
+  await page.getByRole('button', { name: 'Ver fiado de Ana Cuenta', exact: true }).click();
   const account = page.getByRole('region', { name: 'Cuenta de Ana Cuenta', exact: true });
   await account.getByLabel('Tope de deuda').fill('7');
   await account.getByRole('button', { name: 'Guardar tope' }).click();
@@ -16,13 +16,14 @@ async page => {
   await page.getByRole('button', { name: 'Venta online', exact: true }).click();
   await page.getByLabel('Buscar producto').fill('Producto a cuenta navegador');
   await page.getByRole('button', { name: 'Agregar Producto a cuenta navegador', exact: true }).click();
+  await page.getByText('Cliente, fiado o descuento', { exact: true }).click();
   await page.getByLabel('Cliente de la venta').selectOption({ label: 'Ana Cuenta' });
   await page.getByLabel('A cuenta del cliente', { exact: true }).check();
   await page.getByText(/La compra supera el crédito disponible/).waitFor();
   check(await page.getByRole('button', { name: 'Confirmar venta', exact: true }).isDisabled(), 'Credit limit did not block full credit');
   await page.getByRole('button', { name: 'Agregar pago', exact: true }).click();
   await page.getByLabel('Importe aplicado 1', { exact: true }).fill('4.00');
-  await page.getByText('6,00 ARS', { exact: true }).waitFor();
+  await page.getByText(/^\$\s6,00$/).waitFor();
   const axeSource = await (await page.request.get(`${origin}/apps/web/node_modules/axe-core/axe.min.js`)).text();
   await page.addScriptTag({ content: axeSource });
   const inspect = async name => {
@@ -55,15 +56,15 @@ async page => {
   await page.getByText('Reintentá para recuperar el resultado de esta venta. Se conservaron los datos originales.', { exact: true }).waitFor();
   check(saleDropped, 'Credit sale response was not dropped');
   await page.evaluate(() => window.dispatchEvent(new window.Event('visibilitychange')));
-  await page.getByText('1,00 ARS', { exact: true }).waitFor();
+  await page.getByText(/^\$\s1,00$/).waitFor();
   check(await page.getByRole('button', { name: 'Confirmar venta', exact: true }).isEnabled(), 'Refreshed limit blocked sale recovery');
   await page.getByRole('button', { name: 'Confirmar venta', exact: true }).click();
   await page.getByRole('region', { name: 'Confirmación de venta' }).waitFor();
   await page.unroute('**/api/v1/sales');
   await page.getByRole('button', { name: 'Clientes', exact: true }).click();
-  await page.getByText('Deuda: 6,00 ARS', { exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Cuenta corriente de Ana Cuenta', exact: true }).click();
-  await account.locator('dl').getByText('6,00 ARS', { exact: true }).waitFor();
+  await page.getByText(/^Deuda: \$\s6,00$/).waitFor();
+  await page.getByRole('button', { name: 'Ver fiado de Ana Cuenta', exact: true }).click();
+  await account.locator('dl').getByText(/^\$\s6,00$/).waitFor();
   let dropped = false;
   await page.route('**/account/collections', async route => {
     if (dropped) return route.continue();
@@ -75,12 +76,12 @@ async page => {
   await account.getByRole('alert').waitFor();
   check(dropped, 'Lost response did not reach backend');
   await account.getByRole('button', { name: 'Registrar cobro', exact: true }).click();
-  await account.locator('dl').getByText('4,00 ARS', { exact: true }).waitFor();
+  await account.locator('dl').getByText(/^\$\s4,00$/).waitFor();
   await page.unroute('**/account/collections');
   await account.getByRole('button', { name: 'Revertir cobro', exact: true }).click();
   await account.getByLabel('Motivo de reversión', { exact: true }).fill('Cobro de prueba equivocado');
   await account.getByRole('button', { name: 'Confirmar reversión', exact: true }).click();
-  await account.locator('dl').getByText('6,00 ARS', { exact: true }).waitFor();
+  await account.locator('dl').getByText(/^\$\s6,00$/).waitFor();
   await inspect('customer-account');
   return { passed: true, backend: 'real NestJS/PostgreSQL runtime', partialCredit: '6.00', saleReplayedAfterCreditRefresh: true, collectionReplayedOnce: true, offlineCreditRejected: true, viewports: [1280, 390] };
 }

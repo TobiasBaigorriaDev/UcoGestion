@@ -11,7 +11,7 @@ it('keeps the product list visible and opens creation on demand', async () => {
   render(<CatalogItemManagement organizationId="org" items={[item]} branchName="Centro"
     stocks={[{ branchId: 'branch-a', itemId: item.id, itemName: item.name, baseUnit: 'UNIT', quantity: '2.000', threshold: null, lowStock: false }]}
     onReload={vi.fn()} />);
-  const list = screen.getByRole('region', { name: 'Ítems de la organización' });
+  const list = screen.getByRole('region', { name: 'Tus productos y servicios' });
   const add = screen.getByRole('button', { name: 'Nuevo producto o servicio' });
   expect(screen.queryByRole('textbox', { name: 'Nombre del ítem nuevo' })).toBeNull();
   expect(add.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -130,7 +130,7 @@ it('filters managed items by name, SKU or barcode and retains editing actions', 
   const user = userEvent.setup();
   const coffee = { ...item, id: 'coffee', name: 'Café molido', sku: 'CAFE-01', barcode: '7791234567890', status: 'INACTIVE' as const };
   render(<CatalogItemManagement organizationId="org" items={[item, coffee]} onReload={vi.fn()} />);
-  const list = within(screen.getByRole('region', { name: 'Ítems de la organización' }));
+  const list = within(screen.getByRole('region', { name: 'Tus productos y servicios' }));
   const search = screen.getByRole('searchbox', { name: 'Buscar producto' });
   await openProduct('Café molido');
   await user.click(list.getByRole('button', { name: 'Editar Café molido' }));
@@ -338,12 +338,12 @@ it('reveals product details and stock controls only after selecting the product'
     stocks={[{ branchId: 'branch-a', itemId: item.id, itemName: item.name, baseUnit: 'UNIT', quantity: '2.000', threshold: null, lowStock: false }]}
     onReload={vi.fn()} />);
   expect(screen.queryByRole('button', { name: 'Editar Yerba' })).toBeNull();
-  expect(screen.getByText('Precio: 100.00')).toBeTruthy();
+  expect(screen.getByText('$ 100,00')).toBeTruthy();
   expect(screen.getByText('2 unidades')).toBeTruthy();
   await userEvent.click(screen.getByText('Yerba', { exact: true }));
   await openProduct('Yerba');
   expect(screen.getByRole('button', { name: 'Editar Yerba' })).toBeTruthy();
-  await userEvent.click(screen.getByText('Cambiar stock de Yerba'));
+  await userEvent.click(screen.getByRole('button', { name: 'Cambiar stock de Yerba' }));
   expect(screen.getByRole('button', { name: 'Confirmar ajuste' })).toBeTruthy();
   expect(screen.getByRole('textbox', { name: 'Mínimo de Yerba' })).toBeTruthy();
 });

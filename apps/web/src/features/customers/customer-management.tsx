@@ -10,6 +10,7 @@ import { ApiClient, ApiProblemError } from '../../lib/api/client';
 import styles from '../identity/management.module.css';
 import { CustomerAccountPanel } from './customer-account-panel';
 import { formatAccountAmount } from './customer-account-api';
+import { EntityAction } from '../../components/entity-action';
 
 export interface ManagedCustomer {
   readonly id: string;
@@ -241,14 +242,15 @@ export function CustomerManagement({
     <section className={styles.page} aria-labelledby="customers-heading">
       <header className={styles.heading}>
         <h1 id="customers-heading">Clientes</h1>
-        <p>Administración de clientes y datos fiscales para ventas y cuenta corriente.</p>
+        <p>Tus clientes, sus datos y lo que te deben de fiado.</p>
       </header>
       <ErrorSummary error={error} />
       {message ? <p role="status">{message}</p> : null}
 
       {canCreate ? (
-        <form className={styles.panel} onSubmit={form.handleSubmit(submitCreate)} noValidate>
-          <h2>Nuevo cliente</h2>
+        <details className={`${styles.panel} ${styles.createPanel}`} open={customers.length === 0 || undefined}>
+        <summary>Nuevo cliente</summary>
+        <form onSubmit={form.handleSubmit(submitCreate)} noValidate>
           <div className={styles.fields}>
             <div>
               <label htmlFor="customer-new-name">Nombre del cliente nuevo</label>
@@ -277,7 +279,7 @@ export function CustomerManagement({
             </div>
           </div>
           <button type="submit" disabled={busy}>{busy ? 'Creando…' : 'Crear cliente'}</button>
-        </form>
+        </form></details>
       ) : null}
 
       <section className={styles.panel} aria-labelledby="customers-list-heading">
@@ -340,7 +342,7 @@ function CustomerAccountDisclosure({ organizationId, branchId, customer, role, o
   const [open, setOpen] = useState(false);
   const regionId = `account-${customer.id}`;
   return <div><button type="button" aria-expanded={open} aria-controls={regionId} onClick={() => setOpen(!open)}>
-    {open ? 'Cerrar cuenta' : 'Cuenta corriente'} de {customer.name}</button>
+    <EntityAction label={open ? 'Ocultar fiado' : 'Ver fiado'} name={`de ${customer.name}`} /></button>
     {open ? <div id={regionId}><CustomerAccountPanel organizationId={organizationId} branchId={branchId}
       customerId={customer.id} customerName={customer.name} role={role} onReload={onReload} /></div> : null}
   </div>;
@@ -436,17 +438,17 @@ function CustomerItemEditor({
       <div className={styles.actions}>
         {canEdit ? (
           <button type="button" onClick={() => setMode(mode === 'edit' ? 'closed' : 'edit')}>
-            Editar {customer.name}
+            <EntityAction label="Editar" name={customer.name} />
           </button>
         ) : null}
         {canManageStatus ? (
           <button type="button" onClick={() => void toggleStatus()} disabled={busy}>
-            {customer.status === 'ACTIVE' ? `Desactivar ${customer.name}` : `Activar ${customer.name}`}
+            <EntityAction label={customer.status === 'ACTIVE' ? 'Desactivar' : 'Activar'} name={customer.name} />
           </button>
         ) : null}
         {canDelete ? (
           <button type="button" onClick={() => setMode(mode === 'delete' ? 'closed' : 'delete')}>
-            Eliminar {customer.name}
+            <EntityAction label="Eliminar" name={customer.name} />
           </button>
         ) : null}
       </div>
@@ -480,7 +482,7 @@ function CustomerItemEditor({
               <input id={`customer-edit-notes-${customer.id}`} {...editForm.register('notes')} />
             </div>
           </div>
-          <button type="submit" disabled={busy}>Guardar cambios de {customer.name}</button>
+          <button type="submit" disabled={busy}><EntityAction label="Guardar cambios" name={`de ${customer.name}`} /></button>
         </form>
       ) : null}
 
@@ -490,7 +492,7 @@ function CustomerItemEditor({
           <p>Solo se puede eliminar si no posee historial comercial previo. En caso contrario, se debe desactivar.</p>
           <div className={styles.actions}>
             <button type="button" onClick={() => void confirmDelete()} disabled={busy}>
-              Confirmar eliminación de {customer.name}
+              <EntityAction label="Confirmar eliminación" name={`de ${customer.name}`} />
             </button>
             <button type="button" onClick={() => setMode('closed')} disabled={busy}>
               Cancelar

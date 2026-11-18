@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiClient, ApiProblemError } from '../../lib/api/client';
 import styles from '../identity/management.module.css';
+import { EntityAction } from '../../components/entity-action';
 
 export interface ManagedCashRegister {
   readonly id: string;
@@ -331,11 +332,11 @@ function CashRegisterItemEditor({
       {canManage ? (
         <div className={styles.actions}>
           <button type="button" onClick={() => setMode(mode === 'rename' ? 'closed' : 'rename')}>
-            Renombrar {register.name}
+            <EntityAction label="Renombrar" name={register.name} />
           </button>
           {register.status === 'ACTIVE' ? (
             <button type="button" onClick={() => setMode(mode === 'deactivate' ? 'closed' : 'deactivate')}>
-              Desactivar {register.name}
+              <EntityAction label="Desactivar" name={register.name} />
             </button>
           ) : null}
         </div>
@@ -354,7 +355,7 @@ function CashRegisterItemEditor({
               {renameForm.formState.errors.name ? <p role="alert">Ingresá un nombre válido.</p> : null}
             </div>
           </div>
-          <button type="submit" disabled={busy}>Guardar nombre de {register.name}</button>
+          <button type="submit" disabled={busy}><EntityAction label="Guardar nombre" name={`de ${register.name}`} /></button>
         </form>
       ) : null}
 
@@ -363,7 +364,7 @@ function CashRegisterItemEditor({
           <p>¿Confirmás desactivar la caja {register.name}? No se podrán abrir nuevas sesiones en esta caja.</p>
           <div className={styles.actions}>
             <button type="button" onClick={() => void confirmDeactivate()} disabled={busy}>
-              Confirmar desactivación de {register.name}
+              <EntityAction label="Confirmar desactivación" name={`de ${register.name}`} />
             </button>
             <button type="button" onClick={() => setMode('closed')} disabled={busy}>
               Cancelar

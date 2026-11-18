@@ -1,5 +1,6 @@
 'use client';
 
+import { formatMoney, paymentMethodLabel } from '../../lib/format';
 import { formatStockQuantity } from '../../lib/format-stock-quantity';
 import { OrganizationTime } from '../../components/organization-time';
 
@@ -7,9 +8,10 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
-import { formatDashboardAmount } from '../insights/dashboard-presentation';
+
 import { cancelPurchase, loadPurchase, payPurchase, type PurchaseDetail } from './purchases-api';
 import styles from '../identity/management.module.css';
+import { ConfirmAction } from '../../components/confirm-action';
 import workspaceStyles from './purchase-workspace.module.css';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -119,7 +121,7 @@ export function PurchaseLookup({ organizationId, branchId, role, paymentMethods,
         <div><dt>Proveedor</dt><dd>{purchase.supplierName}</dd></div>
         <div><dt>Confirmada</dt><dd><OrganizationTime value={purchase.confirmedAt} /></dd></div>
         <div className={workspaceStyles.totalSummary}><dt>Total de la compra</dt>
-          <dd>{formatDashboardAmount(purchase.total)} <small>{purchase.currency}</small></dd></div>
+          <dd>{formatMoney(purchase.total, purchase.currency)}</dd></div>
       </dl>
       {owner && purchase.branchId !== branchId ? <p role="status" className={workspaceStyles.detailNotice}>Seleccioná la sucursal de esta compra para pagarla o anularla.</p> : null}
       <section className={workspaceStyles.detailSection} aria-labelledby="purchase-items-heading">
@@ -127,15 +129,15 @@ export function PurchaseLookup({ organizationId, branchId, role, paymentMethods,
         <ul className={workspaceStyles.itemList} aria-label="Productos de la compra">
           {purchase.items.map((item, index) => <li key={index}>
             <strong>{item.itemName}</strong>
-            <span>{formatStockQuantity(item.quantity)} × {formatDashboardAmount(item.unitCost)} {purchase.currency}</span>
-            <span className={workspaceStyles.lineTotal}>{formatDashboardAmount(item.lineTotal)} {purchase.currency}</span>
+            <span>{formatStockQuantity(item.quantity)} × {formatMoney(item.unitCost, purchase.currency)}</span>
+            <span className={workspaceStyles.lineTotal}>{formatMoney(item.lineTotal, purchase.currency)}</span>
           </li>)}
         </ul>
       </section>
       {purchase.payment ? <section className={workspaceStyles.detailSection} aria-label="Pago histórico">
         <h3>Pago histórico</h3><dl className={workspaceStyles.paymentSummary}>
-          <div><dt>Medio</dt><dd>{purchase.payment.method}</dd></div>
-          <div><dt>Importe</dt><dd>{formatDashboardAmount(purchase.payment.amount)} {purchase.currency}</dd></div>
+          <div><dt>Medio</dt><dd>{paymentMethodLabel(purchase.payment.method)}</dd></div>
+          <div><dt>Importe</dt><dd>{formatMoney(purchase.payment.amount, purchase.currency)}</dd></div>
         </dl></section> : null}
       {purchase.cancellation ? <section className={workspaceStyles.detailSection} aria-label="Anulación registrada">
         <h3>Anulación registrada</h3><p role="status">{purchase.cancellation.reason}</p>
@@ -148,12 +150,12 @@ export function PurchaseLookup({ organizationId, branchId, role, paymentMethods,
         <h3 id="purchase-pay-heading">Registrar pago</h3><div className={styles.fields}>
         <div><label htmlFor="purchase-pay-method">Medio de pago</label><select id="purchase-pay-method"
           value={method} onChange={(event) => { setMethod(event.target.value); key.current = null; }}>
-          <option value="">Seleccioná un medio</option>{paymentMethods.map((entry) => <option key={entry} value={entry}>{entry}</option>)}</select></div>
+          <option value="">Seleccioná un medio</option>{paymentMethods.map((entry) => <option key={entry} value={entry}>{paymentMethodLabel(entry)}</option>)}</select></div>
         {method === 'CASH' ? <div><label htmlFor="purchase-pay-session">Sesión de caja</label>
           <select id="purchase-pay-session" value={sessionId} onChange={(event) => { setSessionId(event.target.value); key.current = null; }}>
             <option value="">Seleccioná una sesión</option>{sessions.map((entry) => <option key={entry.id} value={entry.id}>{entry.registerName}</option>)}</select>
           {!sessions.length ? <p role="alert">Abrí una sesión válida en esta sucursal para pagar en efectivo.</p> : null}</div> : null}
-        <div><p>Pago exacto: {formatDashboardAmount(purchase.total)} {purchase.currency}</p><button type="button"
+        <div><p>Pago exacto: {formatMoney(purchase.total, purchase.currency)}</p><button type="button"
           disabled={busy || !method || method === 'CASH' && !selectedSession} onClick={() => void performPay()}>
           {busy ? 'Pagando…' : 'Pagar compra'}</button></div></div></section> : null}
       {canOperate && purchase.status !== 'CANCELLED' ? <section className={`${workspaceStyles.detailSection} ${workspaceStyles.cancelSection}`}>
@@ -165,8 +167,10 @@ export function PurchaseLookup({ organizationId, branchId, role, paymentMethods,
           <select id="purchase-return-session" value={sessionId} onChange={(event) => { setSessionId(event.target.value); key.current = null; }}>
             <option value="">Seleccioná una sesión</option>{sessions.map((entry) => <option key={entry.id} value={entry.id}>{entry.registerName}</option>)}</select>
           {!sessions.length ? <p role="alert">Abrí una sesión válida antes de devolver efectivo.</p> : null}</> : null}
-        <button type="button" disabled={busy || !reason.trim() || needsCashOnCancel && !selectedSession}
-          onClick={() => void performCancel()}>{busy ? 'Anulando…' : 'Anular compra'}</button></section> : null}
+        <ConfirmAction label="Anular compra" confirmLabel="Sí, anular la compra" busy={busy} busyLabel="Anulando…"
+          disabled={!reason.trim() || needsCashOnCancel && !selectedSession} onConfirm={() => void performCancel()}>
+          <p>Se descuenta del stock lo recibido{needsCashOnCancel ? ' y el efectivo pagado vuelve a la caja elegida' : ''}. La anulación queda registrada y no se puede deshacer.</p>
+        </ConfirmAction></section> : null}
     </section> : null}
   </section>;
 }

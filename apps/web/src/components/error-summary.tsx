@@ -11,6 +11,17 @@ type ErrorSummaryProps = Readonly<{
   fieldLabels?: Readonly<Record<string, string>>;
 }>;
 
+/** What happened, in the shop's words; the server message below says what to do. */
+export function errorTitle(error: ApiProblemError): string {
+  if (error.status === 0) return 'No hay conexión con el servidor';
+  if (error.status === 401) return 'Tu sesión venció';
+  if (error.status === 403) return 'No tenés permiso para hacer esto';
+  if (error.status === 409) return 'Alguien cambió estos datos mientras trabajabas';
+  if (error.status === 503) return 'El servicio no está disponible en este momento';
+  if (error.status >= 500) return 'Algo salió mal de nuestro lado';
+  return 'Revisá los datos';
+}
+
 export function ErrorSummary({ error, fieldIds = {}, fieldLabels = {} }: ErrorSummaryProps) {
   const summaryRef = useRef<HTMLDivElement>(null);
 
@@ -22,7 +33,7 @@ export function ErrorSummary({ error, fieldIds = {}, fieldLabels = {} }: ErrorSu
 
   return (
     <div ref={summaryRef} className={styles.summary} role="alert" tabIndex={-1}>
-      <h2>Revisá la solicitud</h2>
+      <h2>{errorTitle(error)}</h2>
       <p>{error.message}</p>
       {Object.entries(error.fieldErrors).length > 0 ? (
         <ul>

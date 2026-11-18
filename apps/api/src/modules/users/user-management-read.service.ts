@@ -5,7 +5,7 @@ import type { MembershipRole } from './non-owner-membership.policy.js';
 
 interface ActorRow { id: string; role: MembershipRole }
 interface BranchRow { id: string; name: string; status: 'ACTIVE' | 'INACTIVE' }
-interface MemberRow { id: string; email: string; role: MembershipRole; status: 'ACTIVE' | 'INACTIVE' | 'REVOKED'; version: number; branchIds: string[] }
+interface MemberRow { id: string; userId: string; email: string; role: MembershipRole; status: 'ACTIVE' | 'INACTIVE' | 'REVOKED'; version: number; branchIds: string[] }
 interface InvitationRow { id: string; email: string; role: MembershipRole; status: string; expiresAt: Date; branchIds: string[] }
 
 export class UserManagementReadService {
@@ -33,7 +33,7 @@ export class UserManagementReadService {
         [context.organizationId],
       );
       const memberships = await client.query<MemberRow>(
-        `SELECT m.id, u.email_normalized AS email, m.role, m.status, m.version::integer AS version,
+        `SELECT m.id, m.user_id AS "userId", u.email_normalized AS email, m.role, m.status, m.version::integer AS version,
            COALESCE(array_agg(mb.branch_id::text ORDER BY mb.branch_id) FILTER (WHERE mb.branch_id IS NOT NULL), '{}') AS "branchIds"
          FROM memberships m JOIN users u ON u.id = m.user_id
          LEFT JOIN membership_branches mb ON mb.organization_id = m.organization_id AND mb.membership_id = m.id

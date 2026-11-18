@@ -29,7 +29,7 @@ async page=>{
   });
   await page.setViewportSize({width:1440,height:1000});
   await page.goto('http://127.0.0.1:4179/apps/web/test/browser/cash-operations.html');
-  await page.getByRole('heading',{name:'Abrir sesión',exact:true}).waitFor();
+  await page.getByRole('heading',{name:'Abrir turno',exact:true}).waitFor();
   await page.evaluate(()=>document.fonts.ready);
   await page.screenshot({path:'.impeccable/review/cash-opening-desktop.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});
@@ -37,13 +37,13 @@ async page=>{
   await page.screenshot({path:'.impeccable/review/cash-opening-mobile.png',fullPage:true});
   await page.setViewportSize({width:1440,height:1000});
   await page.getByRole('textbox',{name:'Efectivo inicial'}).fill('5.00');
-  await page.getByRole('button',{name:'Abrir sesión',exact:true}).focus();await page.keyboard.press('Enter');
+  await page.getByRole('button',{name:'Abrir turno',exact:true}).focus();await page.keyboard.press('Enter');
   await page.getByRole('alert').waitFor();
   check(await page.getByRole('alert').evaluate(el=>el===document.activeElement),'Error summary did not receive focus');
-  await page.getByRole('button',{name:'Abrir sesión',exact:true}).click();
-  await page.getByText('Esperado: 5.00 ARS').waitFor();
+  await page.getByRole('button',{name:'Abrir turno',exact:true}).click();
+  await page.getByRole('region',{name:'Turno actual'}).getByText('$ 5,00',{exact:true}).waitFor();
   check(results.size===1 && openingKey,'Retry duplicated the opening');
-  await page.reload();await page.getByText('Esperado: 5.00 ARS').waitFor();
+  await page.reload();await page.getByRole('region',{name:'Turno actual'}).getByText('$ 5,00',{exact:true}).waitFor();
   await page.getByRole('textbox',{name:'Importe',exact:true}).fill('2.00');
   await page.getByRole('textbox',{name:'Motivo',exact:true}).fill('Cambio de turno');
   await page.getByRole('textbox',{name:'Motivo',exact:true}).fill('x'.repeat(2001));
@@ -55,7 +55,7 @@ async page=>{
   await page.setViewportSize({width:1440,height:1000});
   await page.getByRole('textbox',{name:'Motivo',exact:true}).fill('Cambio de turno');
   await page.getByRole('button',{name:'Registrar movimiento'}).focus();await page.keyboard.press('Enter');
-  await page.getByText('Esperado: 7.00 ARS').waitFor();
+  await page.getByRole('region',{name:'Turno actual'}).getByText('$ 7,00',{exact:true}).waitFor();
   await page.addScriptTag({path:'apps/web/node_modules/axe-core/axe.min.js'});
   await page.evaluate(()=>document.fonts.ready);
   check(await page.evaluate(()=>document.fonts.check('16px "Plus Jakarta Sans"') && window.getComputedStyle(document.body).fontFamily.includes('Plus Jakarta Sans')),'Workspace font did not load');
@@ -68,6 +68,6 @@ async page=>{
   await page.context().setOffline(true);
   await page.getByRole('heading',{name:'Esta pantalla necesita conexión'}).waitFor();
   check(await page.getByRole('button',{name:'Registrar movimiento'}).count()===0,'Offline cash mutation remained available');
-  await page.context().setOffline(false);await page.reload();await page.getByText('Esperado: 7.00 ARS').waitFor();
+  await page.context().setOffline(false);await page.reload();await page.getByRole('region',{name:'Turno actual'}).getByText('$ 7,00',{exact:true}).waitFor();
   return {passed:true,scenarios:['lost-response-idempotency','reload','bound-device','keyboard','focus','desktop-mobile-axe','offline-return']};
 }

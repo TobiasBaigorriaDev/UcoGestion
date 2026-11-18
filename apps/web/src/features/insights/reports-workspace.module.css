@@ -21,3 +21,4 @@
 .export p { margin: 0; color: var(--color-text-secondary); }
 .export h2 { margin-bottom: .35rem; }
 @media (max-width: 42rem) { .filters { padding: 1rem; } .period button { flex: 1 1 auto; } .controls { align-items: stretch; } .controls > button { width: 100%; } }
+.empty { margin: 1rem 0 0; padding: 1.5rem; border: 1px dashed var(--color-control-border); border-radius: var(--radius-sm); color: var(--color-text-secondary); text-align: center; }

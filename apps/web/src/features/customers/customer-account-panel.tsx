@@ -98,7 +98,7 @@ export function CustomerAccountPanel({ organizationId, branchId, customerId, cus
     if (await run('reverse', { entryId: reversalId, ...input }, key => reverseCustomerCollection(organizationId, customerId, reversalId, input, key), 'Cobro revertido. Se conservó el historial.')) reversal.reset();
   }
   return <section className={styles.account} aria-label={`Cuenta de ${customerName}`}>
-    <h3>Cuenta corriente de {customerName}</h3>
+    <h3>Fiado de {customerName}</h3>
     <p>La deuda es compartida entre las sucursales del negocio. Los movimientos corresponden a la sucursal activa.</p>
     {account.isPending ? <p role="status">Cargando cuenta corriente…</p> : null}
     {account.error ? <><ErrorSummary error={problem(account.error)} /><button type="button" onClick={() => void account.refetch()}>Reintentar cuenta</button></> : null}

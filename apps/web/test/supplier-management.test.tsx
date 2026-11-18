@@ -55,8 +55,8 @@ it('allows OWNER/ADMIN to create, edit, toggle status and delete supplier with a
 
   // Accessible landmarks and structure
   expect(screen.getByRole('heading', { name: 'Proveedores' })).toBeTruthy();
-  expect(screen.getByText('Distribuidora Cuyo')).toBeTruthy();
-  expect(screen.getByText('Empaques del Valle')).toBeTruthy();
+  expect(screen.getByText('Distribuidora Cuyo', { selector: 'strong' })).toBeTruthy();
+  expect(screen.getByText('Empaques del Valle', { selector: 'strong' })).toBeTruthy();
 
   // Create
   await userEvent.type(screen.getByRole('textbox', { name: 'Nombre del proveedor nuevo' }), 'Nuevo Proveedor');

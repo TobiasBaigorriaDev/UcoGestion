@@ -51,7 +51,7 @@ describe('T152B sale lookup', () => {
       <SaleLookup organizationId="org" branchId="branch" role="OWNER" timezone="America/Argentina/Buenos_Aires"
         branches={[{ id: 'branch', name: 'Principal' }, { id: 'other', name: 'Secundaria' }]} />
     </QueryClientProvider>);
-    expect(await screen.findByText('25,00 ARS')).toBeDefined();
+    expect(await screen.findByText('$ 25,00')).toBeDefined();
     expect(view.container.querySelectorAll('svg polyline').length).toBe(2);
     expect(mocks.loadSaleTrends).toHaveBeenCalledWith('org',
       expect.objectContaining({ groupBy: 'HOUR' }));
@@ -74,7 +74,7 @@ describe('T152B sale lookup', () => {
     const view = render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <SaleLookup organizationId="org" branchId="branch" role="OWNER" />
     </QueryClientProvider>);
-    await screen.findByText('120,00 ARS');
+    await screen.findByText('$ 120,00');
     for (const chart of view.container.querySelectorAll('svg:has(polyline)')) {
       expect(chart.querySelectorAll('[data-axis="value"]')).toHaveLength(5);
       expect(chart.querySelectorAll('[data-axis="time"]')).toHaveLength(5);
@@ -82,16 +82,25 @@ describe('T152B sale lookup', () => {
       expect(chart.textContent).toContain('23:00 h');
     }
   });
+  it('shows an empty state instead of a flat chart when the period has no sales', async () => {
+    mocks.loadSaleTrends.mockResolvedValue({ currency: 'ARS', points: [{ date: '2026-10-11', amount: '0.00', count: 0 }] });
+    const view = render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <SaleLookup organizationId="org" branchId="branch" role="OWNER" timezone="America/Argentina/Buenos_Aires" />
+    </QueryClientProvider>);
+    expect(await screen.findAllByText('Sin movimientos en este período.')).toHaveLength(2);
+    expect(view.container.querySelector('svg polyline')).toBeNull();
+    expect(screen.queryByText(/Máximo/)).toBeNull();
+  });
   it('ends today’s charts at the current local hour and omits future hours from the table', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-11T15:30:00Z')); // 12:30 in Buenos Aires
     mocks.loadSaleTrends.mockResolvedValue({ currency: 'ARS', points: Array.from({ length: 24 }, (_, hour) => ({
-      date: '2026-10-11', hour, amount: '0.00', count: 0,
+      date: '2026-10-11', hour, amount: hour === 10 ? '5.00' : '0.00', count: hour === 10 ? 1 : 0,
     })) });
     const view = render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <SaleLookup organizationId="org" branchId="branch" role="OWNER" timezone="America/Argentina/Buenos_Aires" />
     </QueryClientProvider>);
-    await screen.findByText('Máximo: 0,00 ARS');
+    await screen.findByText('Máximo: $ 5,00');
     for (const chart of view.container.querySelectorAll('section[aria-label="Dinero vendido"], section[aria-label="Cantidad de ventas"]')) {
       expect(chart.querySelectorAll('svg circle')).toHaveLength(13);
       expect(chart.querySelectorAll('tbody tr')).toHaveLength(13);
@@ -104,7 +113,7 @@ describe('T152B sale lookup', () => {
     vi.setSystemTime(new Date('2026-10-11T15:30:00Z'));
     mocks.loadSaleTrends.mockImplementation(async (_organizationId, filters) => ({ currency: 'ARS',
       points: filters.groupBy === 'DAY' ? Array.from({ length: 31 }, (_, index) => ({
-        date: `2026-10-${String(index + 1).padStart(2, '0')}`, amount: '0.00', count: 0,
+        date: `2026-10-${String(index + 1).padStart(2, '0')}`, amount: index === 0 ? '5.00' : '0.00', count: index === 0 ? 1 : 0,
       })) : [],
     }));
     const view = render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -119,7 +128,7 @@ describe('T152B sale lookup', () => {
     vi.setSystemTime(new Date('2026-10-11T15:30:00Z'));
     mocks.loadSaleTrends.mockImplementation(async (_organizationId, filters) => ({ currency: 'ARS',
       points: filters.groupBy === 'DAY' ? Array.from({ length: 7 }, (_, index) => ({
-        date: `2026-10-${String(index + 5).padStart(2, '0')}`, amount: '0.00', count: 0,
+        date: `2026-10-${String(index + 5).padStart(2, '0')}`, amount: index === 0 ? '5.00' : '0.00', count: index === 0 ? 1 : 0,
       })) : [],
     }));
     const view = render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -188,6 +197,7 @@ describe('T152B sale lookup', () => {
     expect(screen.getByRole('button', { name: 'Anular venta' }).hasAttribute('disabled')).toBe(true);
     fireEvent.change(screen.getByLabelText('Motivo de anulación'), { target: { value: 'Error de carga' } });
     fireEvent.click(screen.getByRole('button', { name: 'Anular venta' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, anular la venta' }));
     await waitFor(() => expect(mocks.cancelSale).toHaveBeenCalledTimes(1));
     expect(mocks.cancelSale.mock.calls[0]?.[2]).toMatchObject({ reason: 'Error de carga' });
     await screen.findByText(/Error de carga/);

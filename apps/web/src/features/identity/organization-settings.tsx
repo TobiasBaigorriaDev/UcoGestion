@@ -45,6 +45,27 @@ const currencySchema = z.strictObject({
   currency: z.string().trim().min(3).max(3).toUpperCase(),
 });
 
+const timezoneOptions: readonly (readonly [string, string])[] = [
+  ['America/Argentina/Buenos_Aires', 'Argentina · Buenos Aires y CABA'], ['America/Argentina/Cordoba', 'Argentina · Córdoba'],
+  ['America/Argentina/Mendoza', 'Argentina · Mendoza'], ['America/Argentina/Salta', 'Argentina · Salta'],
+  ['America/Argentina/Jujuy', 'Argentina · Jujuy'], ['America/Argentina/Tucuman', 'Argentina · Tucumán'],
+  ['America/Argentina/Catamarca', 'Argentina · Catamarca'], ['America/Argentina/La_Rioja', 'Argentina · La Rioja'],
+  ['America/Argentina/San_Juan', 'Argentina · San Juan'], ['America/Argentina/San_Luis', 'Argentina · San Luis'],
+  ['America/Argentina/Rio_Gallegos', 'Argentina · Santa Cruz'], ['America/Argentina/Ushuaia', 'Argentina · Tierra del Fuego'],
+  ['America/Montevideo', 'Uruguay'], ['America/Santiago', 'Chile'], ['America/Asuncion', 'Paraguay'],
+  ['America/Sao_Paulo', 'Brasil · San Pablo'], ['America/La_Paz', 'Bolivia'], ['America/Lima', 'Perú'],
+  ['America/Bogota', 'Colombia'], ['America/Mexico_City', 'México · Ciudad de México'], ['Europe/Madrid', 'España'],
+  ['UTC', 'Hora universal (UTC)'],
+];
+const currencyOptions: readonly (readonly [string, string])[] = [
+  ['ARS', 'Peso argentino ($)'], ['USD', 'Dólar estadounidense (US$)'], ['UYU', 'Peso uruguayo'], ['CLP', 'Peso chileno'],
+  ['PYG', 'Guaraní paraguayo'], ['BRL', 'Real brasileño'], ['BOB', 'Boliviano'], ['PEN', 'Sol peruano'],
+  ['COP', 'Peso colombiano'], ['MXN', 'Peso mexicano'], ['EUR', 'Euro (€)'],
+];
+/** Keeps a stored value that is not in the curated list selectable, so saving never rewrites it silently. */
+function withCurrent(options: readonly (readonly [string, string])[], current: string | undefined) {
+  return current && !options.some(([value]) => value === current) ? [[current, current] as const, ...options] : options;
+}
 type ProfileValues = z.infer<typeof profileSchema>;
 type TimezoneValues = z.infer<typeof timezoneSchema>;
 type CurrencyValues = z.infer<typeof currencySchema>;
@@ -176,13 +197,14 @@ export function OrganizationSettings({
   }
 
   return (
-    <section className={styles.form} aria-labelledby="settings-heading">
-      <h1 id="settings-heading">Configuración de la organización</h1>
+    <section className={`${styles.form} ${styles.pageForm}`} aria-labelledby="settings-heading">
+      <h1 id="settings-heading">Datos del negocio</h1>
+      <p>Lo que aparece en tus comprobantes, la hora de tus registros y la moneda con la que trabajás.</p>
       <ErrorSummary error={error} />
       {error?.code === 'VERSION_CONFLICT' ? <a href="" onClick={(event) => { event.preventDefault(); window.location.reload(); }}>Volver a cargar</a> : null}
       {message ? <p role="status">{message}</p> : null}
       <form className={styles.innerForm} onSubmit={profileForm.handleSubmit(submitProfile)} noValidate>
-        <h2>Perfil comercial</h2>
+        <h2>Datos para comprobantes</h2>
         <label htmlFor="displayName">Nombre comercial</label>
         <input id="displayName" disabled={!canEditProfile || busy} maxLength={200} aria-invalid={!!profileForm.formState.errors.displayName} {...profileForm.register('displayName')} />
         <label htmlFor="address">Dirección comercial</label>
@@ -197,23 +219,20 @@ export function OrganizationSettings({
       <form className={styles.innerForm} onSubmit={timezoneForm.handleSubmit(submitTimezone)} noValidate>
         <h2>Zona horaria</h2>
         <label htmlFor="timezone">Zona horaria</label>
-        <input id="timezone" disabled={role !== 'OWNER' || busy} aria-invalid={!!timezoneForm.formState.errors.timezone} {...timezoneForm.register('timezone')} />
-        {timezoneForm.formState.errors.timezone ? <p role="alert">Ingresá una zona horaria IANA válida.</p> : null}
-        <p>Solo OWNER puede cambiarla. Los timestamps históricos no se modifican.</p>
+        <select id="timezone" disabled={role !== 'OWNER' || busy} aria-invalid={!!timezoneForm.formState.errors.timezone} {...timezoneForm.register('timezone')}>
+          {withCurrent(timezoneOptions, settings.timezone).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+        {timezoneForm.formState.errors.timezone ? <p role="alert">Ingresá una zona horaria válida, por ejemplo America/Argentina/Buenos_Aires.</p> : null}
+        <p>Solo el dueño puede cambiarla. Las operaciones ya registradas conservan su fecha y hora.</p>
         {role === 'OWNER' ? <button type="submit" disabled={busy}>Guardar zona horaria</button> : null}
       </form>
       <form className={styles.innerForm} onSubmit={currencyForm.handleSubmit(submitCurrency)} noValidate>
         <h2>Moneda base</h2>
         <label htmlFor="currency">Moneda base</label>
-        <input
-          id="currency"
-          disabled={role !== 'OWNER' || busy}
-          maxLength={3}
-          aria-invalid={!!currencyForm.formState.errors.currency}
-          {...currencyForm.register('currency')}
-        />
+        <select id="currency" disabled={role !== 'OWNER' || busy} aria-invalid={!!currencyForm.formState.errors.currency}
+          {...currencyForm.register('currency')}>
+          {withCurrent(currencyOptions, settings.currency ?? settings.baseCurrency).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
         {currencyForm.formState.errors.currency ? <p role="alert">Ingresá un código ISO 4217 de 3 letras (por ejemplo ARS o USD).</p> : null}
-        <p>Solo OWNER puede cambiar la moneda base. Si la organización ya registró operaciones o incertidumbre offline, el cambio queda bloqueado.</p>
+        <p>Solo el dueño puede cambiarla, y únicamente antes de registrar la primera venta, compra o gasto.</p>
         {role === 'OWNER' ? <button type="submit" disabled={busy}>Guardar moneda</button> : null}
       </form>
     </section>

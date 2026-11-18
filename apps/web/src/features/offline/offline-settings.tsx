@@ -74,7 +74,7 @@ export function OfflineSettings(actions: OfflineSettingsActions) {
     try {
       await actions.changePin(currentPin, newPin);
       if (current === generation.current) {
-        setChangingPin(false); setNotice('PIN offline actualizado. Tus datos y pendientes se conservaron.');
+        setChangingPin(false); setNotice('PIN sin conexión actualizado. Tus datos y pendientes se conservaron.');
         changePinButton.current?.focus();
       }
     } catch (failure) {
@@ -89,14 +89,14 @@ export function OfflineSettings(actions: OfflineSettingsActions) {
   }
   const canAuthorize = actions.deviceAuthorized || actions.role === 'OWNER' || actions.role === 'ADMIN';
   return <section className={styles.page} aria-labelledby="offline-heading">
-    <header className={styles.heading}><h1 id="offline-heading">POS sin conexión</h1><p>Prepará este equipo online. El PIN desbloquea únicamente tus datos y operaciones.</p></header>
+    <header className={styles.heading}><h1 id="offline-heading">Mostrador sin conexión</h1><p>Prepará este equipo online. El PIN desbloquea únicamente tus datos y operaciones.</p></header>
     <ErrorSummary error={error} />
     {notice ? <p role="status">{notice}</p> : null}
     {actions.role === 'EMPLOYEE' ? <p role="alert">Tu rol no permite operar el POS offline.</p> : <>
       {!status ? <form className={styles.panel} noValidate onSubmit={handleSubmit(({ pin }) => run(() => prepared ? actions.unlock(pin) : actions.authorize(pin)))}>
         <h2>{prepared ? 'Desbloquear datos' : 'Preparar este equipo'}</h2>
-        {!prepared && !canAuthorize ? <p>Pedile a OWNER o ADMIN que autorice este equipo para esta sucursal.</p> : <>
-          <label htmlFor="offline-pin">PIN offline</label>
+        {!prepared && !canAuthorize ? <p>Pedile al dueño o a un administrador que autorice este equipo para esta sucursal.</p> : <>
+          <label htmlFor="offline-pin">PIN sin conexión</label>
           <input id="offline-pin" type="password" autoComplete={prepared ? 'current-password' : 'new-password'} aria-invalid={!!errors.pin} aria-describedby={errors.pin ? 'offline-pin-error' : 'offline-pin-help'} {...register('pin')} />
           <p id="offline-pin-help">Al menos 8 caracteres. No uses tu contraseña de acceso.</p>
           {errors.pin ? <p id="offline-pin-error" role="alert">{errors.pin.message}</p> : null}
@@ -112,7 +112,7 @@ export function OfflineSettings(actions: OfflineSettingsActions) {
             <button type="button" disabled={busy} onClick={() => void run(actions.refresh, 'refresh')}>Renovar autorización online</button>
             <button type="button" onClick={() => { generation.current++; actions.lock(); setStatus(null); setChangingPin(false); setNotice(null); reset(); }}>Bloquear datos offline</button>
             {actions.changePin ? <button ref={changePinButton} type="button" disabled={busy} aria-expanded={changingPin} aria-controls="offline-pin-change"
-              onClick={() => { setChangingPin(value => !value); setNotice(null); setError(null); }}>Cambiar PIN offline</button> : null}</div>
+              onClick={() => { setChangingPin(value => !value); setNotice(null); setError(null); }}>Cambiar PIN sin conexión</button> : null}</div>
         </section>
         {changingPin ? <OfflinePinChange busy={busy} onChange={changePin} onCancel={() => { setChangingPin(false); changePinButton.current?.focus(); }} /> : null}
         <section className={styles.panel} aria-labelledby="offline-pending"><h2 id="offline-pending">Mis operaciones pendientes</h2>

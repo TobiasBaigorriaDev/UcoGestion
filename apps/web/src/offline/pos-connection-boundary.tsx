@@ -20,16 +20,16 @@ export function PosConnectionBoundary({ children, offlinePos }: { children: Reac
   return <>
     {!online || local ? <div ref={notice} tabIndex={-1} role={online ? 'status' : 'alert'} className={styles.notice}>
       <h1>{online ? 'Hay conexión a internet' : 'Estás sin internet'}</h1>
-      <p>{online ? 'Podés seguir en el POS sin conexión o volver al POS online.' : 'El POS online está bloqueado. Para nuevas ventas, usá el POS sin conexión con tu PIN y la autorización vigente de este equipo.'}</p>
-      <p>Si intentaste confirmar una venta y no recibiste respuesta, no la vuelvas a cargar en el POS sin conexión. Cuando vuelva internet, reintentá esa misma venta en el POS online para recuperar el resultado sin duplicarla.</p>
+      <p>{online ? 'Podés seguir en el mostrador sin conexión o volver al mostrador con internet.' : 'El mostrador con internet está bloqueado. Para nuevas ventas, usá el mostrador sin conexión con tu PIN y la autorización vigente de este equipo.'}</p>
+      <p>Si intentaste confirmar una venta y no recibiste respuesta, no la vuelvas a cargar en el mostrador sin conexión. Cuando vuelva internet, reintentá esa misma venta en el mostrador con internet para recuperar el resultado sin duplicarla.</p>
       <p>El carrito online se conserva mientras mantengas esta pantalla abierta. Los pendientes offline siguen protegidos.</p>
-      {!local ? <button className={styles.action} type="button" onClick={() => setLocal(true)}>Pasar al POS sin conexión</button> : null}
-      {online ? <button className={styles.action} type="button" onClick={() => setLocal(false)}>Volver al POS online</button> : null}
+      {!local ? <button className={styles.action} type="button" onClick={() => setLocal(true)}>Pasar al mostrador sin conexión</button> : null}
+      {online ? <button className={styles.action} type="button" onClick={() => setLocal(false)}>Volver al mostrador con internet</button> : null}
     </div> : null}
     <div className={styles.mode} ref={onlineView} tabIndex={-1} hidden={!online || local} inert={!online || local}>
       {children}
       <p className={styles.offlineEntry}>¿Se cortó internet o vas a vender sin conexión?{' '}
-        <button className={styles.secondaryAction} type="button" onClick={() => setLocal(true)}>Preparar o abrir POS sin conexión</button></p>
+        <button className={styles.secondaryAction} type="button" onClick={() => setLocal(true)}>Preparar o abrir mostrador sin conexión</button></p>
     </div>
     <div className={styles.mode} hidden={!local} inert={!local}>{offlinePos}</div>
   </>;

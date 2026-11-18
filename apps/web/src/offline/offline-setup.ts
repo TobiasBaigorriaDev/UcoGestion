@@ -133,7 +133,7 @@ export class OfflineSetup {
 export async function loadOfflineSetup(organizationId: string, branchId: string, role: string): Promise<OfflineSetup> {
   const workspace = await loadCashWorkspace(organizationId, branchId);
   const deviceId = await findLocalCashDevice(organizationId, workspace.devices);
-  if (!deviceId && !['OWNER', 'ADMIN'].includes(role)) throw new Error('Pedile a OWNER o ADMIN que autorice este equipo.');
+  if (!deviceId && !['OWNER', 'ADMIN'].includes(role)) throw new Error('Pedile al dueño o a un administrador que autorice este equipo.');
   // A branch UUID names the temporary registration database; no business operations use it.
   const db = new OfflineDatabase(organizationId, deviceId ?? branchId);
   if (deviceId) {

@@ -48,17 +48,17 @@ export function BranchManagement({ organizationId, data, onCreate = createBranch
     } finally { setBusy(false); }
   }
   return <section className={styles.page} aria-labelledby="branches-heading">
-    <header className={styles.heading}><h1 id="branches-heading">Sucursales</h1><p>Consultá las sucursales disponibles en tu alcance de trabajo.</p></header>
+    <header className={styles.heading}><h1 id="branches-heading">Sucursales</h1><p>Los locales donde vendés y guardás mercadería.</p></header>
     <ErrorSummary error={error} />
     {message ? <p role="status">{message}</p> : null}
-    {data.actorRole === 'OWNER' ? <form className={styles.panel} onSubmit={handleSubmit(submit)} noValidate>
-      <h2>Agregar sucursal</h2><label htmlFor="branch-name">Nombre de la sucursal</label><div className={styles.fields}><div><input id="branch-name" aria-invalid={!!errors.name} {...register('name')} />{errors.name ? <p role="alert">Ingresá un nombre de hasta 255 caracteres.</p> : null}</div></div>
-      <button type="submit" disabled={busy}>{busy ? 'Creando…' : 'Crear sucursal'}</button>
-    </form> : null}
-    <section className={styles.panel} aria-labelledby="branch-list-heading"><h2 id="branch-list-heading">Sucursales disponibles</h2>
+    <section className={styles.panel} aria-labelledby="branch-list-heading"><h2 id="branch-list-heading">Tus sucursales</h2>
       {data.branches.length === 0 ? <p>No hay sucursales disponibles para tu usuario.</p> : <ul className={styles.rows}>{data.branches.map((branch) => <li className={styles.row} key={branch.id}><strong>{branch.name}</strong><span>{branch.status === 'ACTIVE' ? 'Activa' : 'Inactiva'}</span>
         {data.actorRole === 'OWNER' && branch.status === 'ACTIVE' ? <BranchDeactivation key={`${branch.id}:${branch.version}`} organizationId={organizationId} branch={branch} onBlockers={onBlockers} onDeactivate={onDeactivate} onReload={onReload} /> : null}
       </li>)}</ul>}
     </section>
+    {data.actorRole === 'OWNER' ? <form className={styles.panel} onSubmit={handleSubmit(submit)} noValidate>
+      <h2>Agregar sucursal</h2><label htmlFor="branch-name">Nombre de la sucursal</label><div className={styles.fields}><div><input id="branch-name" aria-invalid={!!errors.name} {...register('name')} />{errors.name ? <p role="alert">Ingresá un nombre de hasta 255 caracteres.</p> : null}</div></div>
+      <button type="submit" disabled={busy}>{busy ? 'Creando…' : 'Crear sucursal'}</button>
+    </form> : null}
   </section>;
 }

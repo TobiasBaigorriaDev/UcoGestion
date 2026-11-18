@@ -484,3 +484,39 @@ Plan §26. Solo presentación; los contratos y permisos se conservan.
   - sin conexión como acción secundaria, conservando RF-346/347 [RF-152–RF-154, RF-346, RF-347].
 - [x] D08-T04: Formato es-AR de dinero y cantidades, etiquetas traducidas de rol y medio de pago, y «Turno de caja» [RF-152–RF-154].
 - [x] D08-T05: Tokens cálidos sin vidrio operativo, DESIGN.md actualizado, gate de navegador y suite web.
+
+### D08 — fase 2: turno de caja (solicitud explícita 2026-11-16)
+
+Solo cambia la presentación. Los comandos, las claves de reintento, los locks, la sincronización final y las reglas de cierre (RF-84–RF-95, RF-155) no cambian.
+
+- [x] D08-T06: Turno de caja con resumen del efectivo esperado y estado en español. Cuando el equipo no está habilitado, ofrecer una salida por rol: OWNER/ADMIN lo habilitan desde «Este equipo sin conexión» y CASHIER recibe la indicación a quién pedírselo [RF-84–RF-95, RF-116].
+- [x] D08-T07: Cierre guiado en lenguaje de comercio:
+  - empezar, revisar ventas pendientes, contar y confirmar;
+  - «Faltan/Sobran $» antes de confirmar y cancelación explícita del cierre;
+  - los mismos comandos `begin-close`, `final-sync`, `close` y `abort-close` [RF-155].
+- [x] D08-T08: Importes de caja en formato argentino (entrada y salida), pruebas y gate de navegador.
+
+### D08 — fase 3: listados legibles (solicitud explícita 2026-11-16)
+
+- [x] D08-T09: Historial de gastos en lista para OWNER/ADMIN:
+  - reutiliza la lectura autorizada `GET /reports/expenses` (RF-146–RF-150), con filtros de fecha y estado, paginación por cursor y total del período;
+  - abrir una fila muestra el detalle existente con su anulación;
+  - CASHIER conserva el alta y la consulta por ID [RF-207–RF-210].
+- [x] D08-T10: Auditoría legible:
+  - acciones traducidas, persona por correo y filtros por acción y persona en lugar de texto libre o UUID;
+  - los eventos automáticos del sistema quedan ocultos por defecto con un control visible para mostrarlos.
+  - Contrato aditivo `userId` en `GET /users/management`, con la misma visibilidad por rol y sucursal [RF-140, RF-282].
+- [x] D08-T11: Formato `$` en compras, ventas, gastos, reportes y caja excepcional; medios de pago y estados traducidos [RF-152–RF-154].
+
+### D08 — fase 4: formularios, confirmaciones y errores (solicitud explícita 2026-11-16)
+
+- [x] D08-T12: Confirmación en el lugar antes de anular venta, gasto o compra y antes de revocar una invitación o un acceso. Explica la consecuencia, ofrece «Sí, …» y «No, volver», devuelve el foco y cancela con Escape. No cambia los comandos ni las claves idempotentes [RF-153, RF-154].
+- [x] D08-T13: Resumen de errores con título según el problema: sin conexión, sesión vencida, sin permiso, cambio concurrente, datos a revisar y servicio no disponible. Conserva el mensaje del servidor y la referencia [RF-154].
+- [x] D08-T14: Alta de clientes y proveedores plegada en «Nuevo …» después de la lista. Textos ambiguos corregidos: «Ocultar cuenta», «Revertir ajuste/transferencia» [RF-152–RF-154].
+
+### D08 — fase 5: pulido visual y revisión final (solicitud explícita 2026-11-17)
+
+- [x] D08-T15: Gráficos sin datos muestran «Sin movimientos en este período.» en lugar de un eje inventado; Reportes no repite el gráfico vacío. Notas de fechas sin zona IANA [RF-152, RF-154].
+- [x] D08-T16: Acciones de fila cortas con el nombre oculto para lectores de pantalla (`EntityAction`) en clientes, proveedores, categorías, cajas, productos, sucursales, usuarios, mínimos y ajustes. «Ver fiado» reemplaza «Cuenta corriente» [RF-152–RF-154].
+- [x] D08-T17: Idioma del negocio en Datos del negocio, Sucursales, Productos, Compras y venta sin internet («Mostrador sin conexión», «PIN sin conexión», «el dueño o un administrador», «(venta suelta)»). Aviso de stock negativo. Encabezado sin cortar la sucursal, sidebar más compacta, alta plegada con `+`, «Elegir icono» y «Revisar desactivación» secundarios, Nueva compra antes del historial [RF-152–RF-154].
+- [x] D08-T18 (fase 6, 2026-11-18): Compras y Transferencias con líneas sin `fieldset` visible y «Agregar otro producto» secundario; Historial de ajustes compacto con fecha, unidad, píldora y filtro; Usuarios en filas con «Editar»; Medios de pago con switch; selects amigables para zona horaria y moneda (conservan un valor guardado fuera de la lista); píldoras de estado en listados de Ajustes. Usuarios distingue «Pausar acceso» (reversible) de «Revocar acceso» (definitivo) [RF-152–RF-154].

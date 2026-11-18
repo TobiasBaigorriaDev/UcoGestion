@@ -33,9 +33,9 @@ it('recovers the original credit sale after a lost response even when refreshed 
   await screen.findByText('Respuesta perdida');
   act(() => { online = false; window.dispatchEvent(new Event('offline')); });
   expect(screen.queryByRole('button', { name: 'Confirmar venta' })).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Pasar al POS sin conexión' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Pasar al mostrador sin conexión' }));
   act(() => { online = true; window.dispatchEvent(new Event('online')); });
-  fireEvent.click(screen.getByRole('button', { name: 'Volver al POS online' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Volver al mostrador con internet' }));
   mocks.loadCustomerAccount.mockResolvedValue({ balance: '10.00', creditLimit: '10.00', available: '0.00', currency: 'ARS', version: 2, entries: [], nextCursor: null });
   mocks.quoteSale.mockResolvedValue({ ...originalQuote, quoteFingerprint: 'new-price-fingerprint' });
   await client.invalidateQueries({ queryKey: ['customer-account'] });

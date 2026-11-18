@@ -33,16 +33,16 @@ it('T218A opens with the bound device and retries the exact command after a lost
   const props={organizationId:org,branchId:branch,role:'CASHIER' as const,data,localDeviceId:device,onCommand:submit,onReload:reload};
   const view=render(<CashOperations {...props}/>);
   await userEvent.type(screen.getByRole('textbox',{name:'Efectivo inicial'}),'5.00');
-  await userEvent.click(screen.getByRole('button',{name:'Abrir sesión'}));
+  await userEvent.click(screen.getByRole('button',{name:'Abrir turno'}));
   await screen.findByText('Conexión interrumpida.');
   const key=submit.mock.calls[0]?.[2];
   view.unmount();
   render(<CashOperations {...props}/>);
   await userEvent.type(screen.getByRole('textbox',{name:'Efectivo inicial'}),'5.00');
-  await userEvent.click(screen.getByRole('button',{name:'Abrir sesión'}));
+  await userEvent.click(screen.getByRole('button',{name:'Abrir turno'}));
   await waitFor(()=>expect(reload).toHaveBeenCalled());
   expect(submit.mock.calls[1]).toEqual(['open',{branchId:branch,cashRegisterId:register,deviceId:device,openingCash:'5.00'},key]);
-  expect(screen.getByRole('status').textContent).toContain('Sesión abierta');
+  expect(screen.getByRole('status').textContent).toContain('Turno abierto');
 });
 
 it('T218A validates amount and reason, shows persisted state and denies another device and EMPLOYEE',async()=>{
@@ -51,7 +51,7 @@ it('T218A validates amount and reason, shows persisted state and denies another 
     status:'OPEN',openingCash:'5.00',expectedCash:'5.00',currencyCode:'ARS',openedAt:'2026-10-07T00:00:00Z'}]};
   const props={organizationId:org,branchId:branch,role:'CASHIER' as const,data:active,localDeviceId:device,onCommand:submit,onReload:vi.fn()};
   const view=render(<CashOperations {...props}/>);
-  expect(screen.getByText(/Esperado: 5.00 ARS/)).toBeTruthy();
+  expect(screen.getByText('$ 5,00')).toBeTruthy();
   await userEvent.click(screen.getByRole('button',{name:'Registrar movimiento'}));
   expect(submit).not.toHaveBeenCalled();
   await userEvent.type(screen.getByRole('textbox',{name:'Importe'}),'2.00');
@@ -67,7 +67,7 @@ it('T218A validates amount and reason, shows persisted state and denies another 
   expect(screen.getByText(/dispositivo asociado/)).toBeTruthy();
   other.unmount();
   render(<CashOperations {...props} role="EMPLOYEE"/>);
-  expect(screen.queryByRole('button',{name:'Abrir sesión'})).toBeNull();
+  expect(screen.queryByRole('button',{name:'Abrir turno'})).toBeNull();
   expect(screen.queryByRole('button',{name:'Registrar movimiento'})).toBeNull();
 });
 

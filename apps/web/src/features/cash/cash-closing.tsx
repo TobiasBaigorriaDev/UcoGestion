@@ -11,9 +11,12 @@ import { CashCommandRetry,cashCommand,cashRejectionIsDefinitive,type CashSession
 import { cashError } from './cash-operations';
 import { prepareCashClose,releaseCashAbort,finishCashClose,type SignedCashClose } from './cash-close-client';
 import styles from '../identity/management.module.css';
+import cashStyles from './cash.module.css';
+import { formatMoney } from '../../lib/format';
+import { parseMoneyInput } from '../../lib/money-input';
 
-const countSchema=z.object({countedCash:z.string().refine(value=>validateNonNegativeMoney(value)!==undefined,
-  'Ingresá el efectivo contado, no negativo y con hasta dos decimales.'),
+const countSchema=z.object({countedCash:z.string().refine(value=>{const amount=parseMoneyInput(value);return amount!==null && validateNonNegativeMoney(amount)!==undefined;},
+  'Ingresá el efectivo contado, por ejemplo 22300 o 22.300,50.'),
   reason:z.string().trim().max(2000,'El motivo no puede superar los 2000 caracteres.')});
 const beginSchema=z.object({cashSessionId:z.uuid(),closeAttemptId:z.uuid(),status:z.literal('CLOSING')});
 const syncSchema=z.object({cashSessionId:z.uuid(),closeAttemptId:z.uuid(),expectedCash:z.string(),ready:z.literal(true)});
@@ -57,7 +60,7 @@ export function CashClosing({organizationId,actorUserId,role,session,localDevice
       const result=beginSchema.parse(await onCommand('begin-close',{checkpoint:signed.checkpoint,signature:signed.signature},signed.key));
       if(result.cashSessionId!==session.id)throw new Error('OFFLINE_CHECKPOINT_INVALID');
       setAttempt(result.closeAttemptId);setExpected(null);setPhase('CLOSING');
-      setMessage('Sesión congelada. Verificá la sincronización final antes de contar.');onReload('CLOSING');
+      setMessage('Cierre empezado: las ventas en esta caja quedan en pausa.');onReload('CLOSING');
     });
   }
   async function synchronize() {
@@ -66,12 +69,12 @@ export function CashClosing({organizationId,actorUserId,role,session,localDevice
       const {result}=await command('final-sync',{cashSessionId:session.id,deviceId:session.deviceId,closeAttemptId:attempt});
       const sync=syncSchema.parse(result);
       if(sync.cashSessionId!==session.id || sync.closeAttemptId!==attempt)throw new Error('OFFLINE_CHECKPOINT_INVALID');
-      retry.complete('final-sync');setExpected(sync.expectedCash);setMessage('Sincronización final verificada. Ya podés ingresar el contado.');onReload('CLOSING');
+      retry.complete('final-sync');setExpected(sync.expectedCash);setMessage('Todas las ventas llegaron. Ya podés contar el efectivo.');onReload('CLOSING');
     });
   }
   async function confirm(values:z.infer<typeof countSchema>) {
     if(!attempt || expected===null)return;
-    const countedCash=Money.from(values.countedCash).toString(),difference=subtractMoney(countedCash,expected);
+    const countedCash=Money.from(parseMoneyInput(values.countedCash) ?? values.countedCash).toString(),difference=subtractMoney(countedCash,expected);
     if(difference!=='0.00' && !values.reason){form.setError('reason',{message:'Explicá la diferencia antes de cerrar.'},{shouldFocus:true});return;}
     await run(async()=>{
       const {result}=await command('close',{cashSessionId:session.id,deviceId:session.deviceId,closeAttemptId:attempt,
@@ -79,7 +82,7 @@ export function CashClosing({organizationId,actorUserId,role,session,localDevice
       const snapshot=closedSchema.parse(result);
       if(snapshot.cashSessionId!==session.id || snapshot.closeAttemptId!==attempt)throw new Error('OFFLINE_CHECKPOINT_INVALID');
       await onFinish(snapshot,attempt);retry.complete('close');setClosed(snapshot);setPhase('CLOSED');setExpected(null);form.reset();
-      setMessage('Sesión cerrada. Los importes y movimientos quedan conservados.');onReload('CLOSED');
+      setMessage('Caja cerrada. Los importes y movimientos quedan guardados.');onReload('CLOSED');
     });
   }
   async function abort() {
@@ -89,42 +92,59 @@ export function CashClosing({organizationId,actorUserId,role,session,localDevice
       const response=abortSchema.parse(result);
       if(response.cashSessionId!==session.id || response.closeAttemptId!==attempt)throw new Error('OFFLINE_CHECKPOINT_INVALID');
       await onAbortRelease(session.id,attempt,response);retry.complete('abort-close');setAttempt(null);setExpected(null);setPhase('OPEN');form.reset();
-      setMessage('Cierre abortado. La sesión vuelve a estar abierta.');onReload('OPEN');
+      setMessage('Cierre cancelado. La caja vuelve a estar abierta para vender.');onReload('OPEN');
     });
   }
   const canOperate=role!=='EMPLOYEE' && localDeviceId===session.deviceId;
-  const count=form.watch('countedCash'),difference=expected!==null && validateNonNegativeMoney(count)!==undefined
-    ? subtractMoney(Money.from(count).toString(),expected):null;
+  const currency=session.currencyCode,money=(value:string)=>formatMoney(value,currency);
+  const count=form.watch('countedCash'),counted=parseMoneyInput(count);
+  const difference=expected!==null && counted!==null && validateNonNegativeMoney(counted)!==undefined
+    ? subtractMoney(Money.from(counted).toString(),expected):null;
   const snapshot=closed ?? session.closure;
+  const finished=phase==='CLOSED' || phase==='CLOSED_CONFLICT_RESOLVED';
+  const stage=finished?4:phase==='CLOSING'?(expected!==null?2:1):0;
+  const stepState=(index:number)=>index<stage?'done':index===stage?'current':'pending';
+  const steps=['Empezar el cierre','Revisar ventas pendientes','Contar el efectivo','Confirmar el cierre'];
   return <section aria-label="Cierre de la sesión" className={styles.rows}>
-    <h2>Cierre de caja</h2><ErrorSummary error={error}/>{message?<p role="status">{message}</p>:null}
-    {phase==='OPEN'?<><p>Congelá nuevas operaciones y entregá todos los pendientes antes del cierre. La sesión seguirá bloqueada si la conexión falla.</p>
-      {canOperate?<button type="button" disabled={busy} onClick={()=>void begin()}>Congelar y comenzar cierre</button>
-        :<p>El cierre debe comenzar desde el dispositivo asociado.</p>}</>:null}
-    {phase==='CLOSING'?<><p>En cierre: no se admiten nuevas operaciones. Podés retomar este intento después de volver a cargar la pantalla.</p>
-      {canOperate && attempt?<><div className={styles.actions}><button type="button" disabled={busy} onClick={()=>void synchronize()}>Verificar sincronización final</button>
-        <button type="button" disabled={busy} onClick={()=>void abort()}>Abortar cierre</button></div>
-        <p>Abortar devuelve la sesión a abierta; los importes y operaciones se conservan.</p>
-        {expected!==null?<form noValidate onSubmit={form.handleSubmit(confirm)}>
-          <p>Esperado consolidado: {expected} {session.currencyCode}</p><div className={styles.fields}>
-            <div><label htmlFor={`cash-counted-${session.id}`}>Efectivo contado</label><input id={`cash-counted-${session.id}`} inputMode="decimal"
-              aria-invalid={!!form.formState.errors.countedCash} aria-describedby={`cash-counted-error-${session.id}`} {...form.register('countedCash')}/>
-              <p id={`cash-counted-error-${session.id}`}>{form.formState.errors.countedCash?.message ?? 'Contá el efectivo físico antes de confirmar.'}</p></div>
-            <div><label htmlFor={`cash-close-reason-${session.id}`}>Motivo del cierre</label><input id={`cash-close-reason-${session.id}`}
-              aria-invalid={!!form.formState.errors.reason} aria-describedby={`cash-close-reason-error-${session.id}`} {...form.register('reason')}/>
-              <p id={`cash-close-reason-error-${session.id}`}>{form.formState.errors.reason?.message ?? 'Es obligatorio si el contado difiere del esperado.'}</p></div></div>
-          {difference!==null?<p role="status">Diferencia antes de confirmar: {difference} {session.currencyCode}</p>:null}
-          <button type="submit" disabled={busy}>Confirmar cierre</button></form>:<p>Primero verificá pendientes, cadena y ACKs mediante la sincronización final.</p>}
-      </>:<p>Retomá el cierre desde el dispositivo asociado y actualizá el estado del servidor.</p>}</>:null}
-    {phase==='CLOSED' || phase==='CLOSED_CONFLICT_RESOLVED'?<><p>Sesión finalizada.</p>{snapshot?<>
-      <p>Esperado del cierre: {snapshot.expectedCash} {session.currencyCode} · Contado: {snapshot.countedCash} {session.currencyCode}</p>
-      <p>Diferencia: {snapshot.difference} {session.currencyCode}</p></>:null}
-      {canOperate?<><p>Si se interrumpió la respuesta del cierre, consolidá el estado local con esta sesión finalizada en el servidor.</p>
+    <h2>Cerrar la caja</h2><ErrorSummary error={error}/>{message?<p role="status">{message}</p>:null}
+    {!finished?<ol className={cashStyles.steps} aria-label="Pasos para cerrar la caja">
+      {steps.map((title,index)=><li key={title} data-state={stepState(index)}>
+        <div><h3>{title}</h3>
+          {index===0 && stage===0?<><p>Se frenan las ventas en esta caja para contar con tranquilidad. Si te arrepentís, podés cancelar y seguir vendiendo.</p>
+            {canOperate?<button type="button" className={cashStyles.primaryButton} disabled={busy} onClick={()=>void begin()}>Empezar el cierre</button>
+              :<p>El cierre se empieza desde el equipo donde se abrió el turno.</p>}</>:null}
+          {index===1 && stage===1?<>{canOperate && attempt?<><p>Comprobamos que todas las ventas de este equipo, incluidas las hechas sin conexión, ya llegaron al servidor.</p>
+            <button type="button" className={cashStyles.primaryButton} disabled={busy} onClick={()=>void synchronize()}>Revisar ventas pendientes</button></>
+            :<p>Retomá el cierre desde el equipo donde se abrió el turno.</p>}</>:null}
+          {index===2 && stage===2 && expected!==null?<form noValidate onSubmit={form.handleSubmit(confirm)}>
+            <p>En la caja debería haber <strong className={cashStyles.expectedInline}>{money(expected)}</strong></p>
+            <div className={styles.fields}>
+              <div><label htmlFor={`cash-counted-${session.id}`}>Efectivo contado</label><input id={`cash-counted-${session.id}`} inputMode="decimal"
+                aria-invalid={!!form.formState.errors.countedCash} aria-describedby={`cash-counted-error-${session.id}`} {...form.register('countedCash')}/>
+                <p id={`cash-counted-error-${session.id}`}>{form.formState.errors.countedCash?.message ?? 'Contá los billetes y monedas de la caja.'}</p></div>
+              <div><label htmlFor={`cash-close-reason-${session.id}`}>Motivo de la diferencia</label><input id={`cash-close-reason-${session.id}`}
+                aria-invalid={!!form.formState.errors.reason} aria-describedby={`cash-close-reason-error-${session.id}`} {...form.register('reason')}/>
+                <p id={`cash-close-reason-error-${session.id}`}>{form.formState.errors.reason?.message ?? 'Solo si lo contado no coincide.'}</p></div></div>
+            {difference!==null?<p role="status" className={cashStyles.difference}
+              data-kind={difference==='0.00'?'even':difference.startsWith('-')?'short':'over'}>
+              {difference==='0.00'?'El efectivo coincide':difference.startsWith('-')?`Faltan ${money(difference.slice(1))}`:`Sobran ${money(difference)}`}</p>:null}
+            <button type="submit" className={cashStyles.primaryButton} disabled={busy}>Confirmar cierre</button></form>:null}
+        </div>
+      </li>)}
+    </ol>:null}
+    {phase==='CLOSING' && canOperate && attempt?<p className={cashStyles.note}>
+      <button type="button" className={cashStyles.secondary} disabled={busy} onClick={()=>void abort()}>Cancelar el cierre</button>{' '}
+      La caja vuelve a quedar abierta para vender; no se pierde ningún importe.</p>:null}
+    {finished?<section aria-label="Caja cerrada" className={cashStyles.closedPanel}><h3>Caja cerrada</h3>{snapshot?<dl className={cashStyles.closed}>
+      <div><dt>Esperado</dt><dd>{money(snapshot.expectedCash)}</dd></div>
+      <div><dt>Contado</dt><dd>{money(snapshot.countedCash)}</dd></div>
+      <div><dt>Diferencia</dt><dd>{money(snapshot.difference)}</dd></div></dl>:null}
+      {canOperate?<><p className={cashStyles.note}>Si se cortó la conexión justo al cerrar, actualizá este equipo para que también lo dé por cerrado.</p>
         <button type="button" disabled={busy} onClick={()=>void run(async()=>{
-          await onFinish({cashSessionId:session.id,status:phase},undefined);setMessage('Cierre consolidado en este equipo.');
-        })}>Consolidar cierre en este equipo</button></>:null}
+          await onFinish({cashSessionId:session.id,status:phase},undefined);setMessage('Este equipo quedó actualizado con el cierre.');
+        })}>Actualizar este equipo con el cierre</button></>:null}
       <CashDifferenceReview organizationId={organizationId} actorUserId={actorUserId} role={role} session={session} onCommand={onCommand} onReload={()=>onReload()}/>
-    </>:null}
+    </section>:null}
   </section>;
 }
 
@@ -136,8 +156,8 @@ export function CashDifferenceReview({organizationId,actorUserId,role,session,on
   const form=useForm<z.infer<typeof schema>>({resolver:zodResolver(schema),defaultValues:{note:''}});
   if(!review)return null;
   if(done || review.status==='REVIEWED')return <p role="status">Diferencia revisada. El cierre y sus importes se conservan.</p>;
-  if(role!=='OWNER' && role!=='ADMIN')return <p>Diferencia pendiente de revisión por OWNER o ADMIN.</p>;
-  if(!review.canReview)return <p>Otro OWNER o ADMIN con alcance debe revisar esta diferencia; no se permite la autorrevisión si hay alternativa.</p>;
+  if(role!=='OWNER' && role!=='ADMIN')return <p>Diferencia pendiente de revisión del dueño o un administrador.</p>;
+  if(!review.canReview)return <p>Otro dueño o administrador de la sucursal debe revisar esta diferencia; no se permite la autorrevisión si hay alternativa.</p>;
   const retry=new CashCommandRetry(`${organizationId}:${actorUserId}:review:${review.id}`);
   return <form noValidate onSubmit={form.handleSubmit(async values=>{
     setBusy(true);setError(null);

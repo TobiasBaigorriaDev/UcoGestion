@@ -27,7 +27,7 @@ async page => {
   const createResponse = page.waitForResponse(response => response.request().method() === 'POST' && response.url().endsWith('/catalog/items'));
   await page.getByRole('button', { name: 'Crear ítem', exact: true }).click();
   check((await createResponse).status() === 201, 'Category assignment on creation failed');
-  await page.getByText('Precio: 1500.50', { exact: true }).waitFor();
+  await page.getByText(/^\$\s1\.500,50$/).first().waitFor();
   await page.getByText('Producto navegador', { exact: true }).click();
   await page.getByRole('button', { name: 'Editar Producto navegador', exact: true }).click();
   const category = page.getByRole('combobox', { name: 'Categoría de Producto navegador', exact: true });
@@ -47,7 +47,7 @@ async page => {
   await page.getByText('Producto navegador', { exact: true }).click();
   await page.getByRole('button', { name: 'Editar Producto navegador', exact: true }).click();
   check(await category.locator('option:checked').textContent() === 'Bebidas navegador', 'Assignment did not persist on reload');
-  await page.getByText('Precio: 1500.50', { exact: true }).waitFor();
+  await page.getByText(/^\$\s1\.500,50$/).first().waitFor();
   await page.addScriptTag({ content: source });
   check((await page.evaluate(async () => (await window.axe.run(document)).violations)).length === 0, 'Item form accessibility failed');
   check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'Item form overflows on mobile');

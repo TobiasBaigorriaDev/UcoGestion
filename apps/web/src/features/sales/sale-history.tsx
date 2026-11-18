@@ -1,12 +1,13 @@
 'use client';
 
+import { formatMoney } from '../../lib/format';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { saleCodeFromId } from '@uconext/shared';
 import { OrganizationTime } from '../../components/organization-time';
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
-import { dashboardPeriodRange, formatDashboardAmount,
+import { dashboardPeriodRange,
   type DashboardPreset } from '../insights/dashboard-presentation';
 import { TrendChart } from '../insights/trend-chart';
 import { loadSaleHistory, loadSaleTrends, type SaleHistoryFilters } from './sales-api';
@@ -99,7 +100,7 @@ export function SaleHistory({ organizationId, branchId, branches, timezone, onSe
         <option value="CANCELLED">Anuladas</option></select></div>
       <button type="submit">Aplicar filtros</button>
     </form>
-    <p>Las fechas incluyen todo el día según la zona horaria del negocio ({timezone}).</p>
+    <p>Las fechas incluyen el día completo.</p>
     {error ? <ErrorSummary error={error} /> : null}
     <section className={styles.trends} aria-labelledby="sale-trends-heading">
       <h3 id="sale-trends-heading">Ventas a través del tiempo</h3>
@@ -112,7 +113,7 @@ export function SaleHistory({ organizationId, branchId, branches, timezone, onSe
       {trends.data && visiblePoints.length ? <div className={styles.chartGrid}>
         <TrendChart title="Dinero vendido" values={visiblePoints.map(point => point.amount)}
           labels={trendLabels}
-          display={visiblePoints.map(point => `${formatDashboardAmount(point.amount)} ${trends.data.currency}`)}
+          display={visiblePoints.map(point => `${formatMoney(point.amount, trends.data.currency)}`)}
           currency={trends.data.currency} />
         <TrendChart title="Cantidad de ventas" values={visiblePoints.map(point => String(point.count))}
           labels={trendLabels}
@@ -130,7 +131,7 @@ export function SaleHistory({ organizationId, branchId, branches, timezone, onSe
               <OrganizationTime value={sale.confirmedAt} />
               <small>{branchOptions.find(branch => branch.id === sale.branchId)?.name ??
                 (sale.branchId || 'Sucursal no informada')}</small></span>
-            <strong className={styles.historyTotal}>{sale.total} {sale.currency}</strong>
+            <strong className={styles.historyTotal}>{formatMoney(sale.total, sale.currency)}</strong>
             <button type="button" aria-label={`Ver venta ${saleCodeFromId(sale.id)}`} onClick={() => onSelect(sale.id)}>
               <span>ID de venta</span><span className={styles.historyId}>{saleCodeFromId(sale.id)}</span>
             </button>

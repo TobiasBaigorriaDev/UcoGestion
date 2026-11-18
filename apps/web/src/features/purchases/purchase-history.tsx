@@ -1,5 +1,6 @@
 'use client';
 
+import { formatMoney } from '../../lib/format';
 import { formatStockQuantity } from '../../lib/format-stock-quantity';
 
 import { useEffect, useState, type FormEvent } from 'react';
@@ -8,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ErrorSummary } from '../../components/error-summary';
 import { OrganizationTime } from '../../components/organization-time';
 import { ApiProblemError } from '../../lib/api/client';
-import { dashboardPeriodRange, formatDashboardAmount,
+import { dashboardPeriodRange,
   type DashboardPreset } from '../insights/dashboard-presentation';
 import { TrendChart } from '../insights/trend-chart';
 import { loadPurchaseHistory, loadPurchaseTrends,
@@ -105,7 +106,7 @@ export function PurchaseHistory({ organizationId, branchId, branches, timezone, 
         <option value="PAID">Pagadas</option><option value="CANCELLED">Anuladas</option>
       </select></div><button type="submit">Aplicar filtros</button>
     </form>
-    <p>Las fechas incluyen todo el día según la zona horaria del negocio ({timezone}).</p>
+    <p>Las fechas incluyen el día completo.</p>
     {error ? <ErrorSummary error={error} /> : null}
     <section className={styles.trends} aria-labelledby="purchase-trends-heading">
       <h3 id="purchase-trends-heading">Compras a través del tiempo</h3>
@@ -117,7 +118,7 @@ export function PurchaseHistory({ organizationId, branchId, branches, timezone, 
         <button type="button" onClick={() => void trends.refetch()}>Reintentar gráficos</button></> : null}
       {trends.data && visiblePoints.length ? <div className={styles.chartGrid}>
         <TrendChart title="Gasto neto" values={visiblePoints.map(point => point.amount)} labels={labels}
-          display={visiblePoints.map(point => `${formatDashboardAmount(point.amount)} ${trends.data.currency}`)}
+          display={visiblePoints.map(point => `${formatMoney(point.amount, trends.data.currency)}`)}
           currency={trends.data.currency} />
         <TrendChart title="Cantidad de compras" values={visiblePoints.map(point => String(point.count))}
           labels={labels} display={visiblePoints.map(point => String(point.count))} />
@@ -136,7 +137,7 @@ export function PurchaseHistory({ organizationId, branchId, branches, timezone, 
             <OrganizationTime value={purchase.confirmedAt} />
             <small>{branchOptions.find(branch => branch.id === purchase.branchId)?.name ?? purchase.branchId}</small>
           </span>
-          <span><strong className={styles.historyTotal}>{formatDashboardAmount(purchase.total)} {purchase.currency}</strong>
+          <span><strong className={styles.historyTotal}>{formatMoney(purchase.total, purchase.currency)}</strong>
             <span>{purchase.items.map(item => `${item.itemName} × ${formatStockQuantity(item.quantity)}`).join(' · ')}</span></span>
           <button type="button" onClick={() => onSelect(purchase.id)}
             aria-label={`Ver compra ${purchase.id}`}>Ver detalle</button>

@@ -49,8 +49,8 @@ it('allows OWNER/ADMIN to create, rename, and deactivate cash registers with acc
   );
 
   expect(screen.getByRole('heading', { name: 'Cajas de la sucursal' })).toBeTruthy();
-  expect(screen.getByText('Caja Mostrador 1')).toBeTruthy();
-  expect(screen.getByText('Caja Depósito')).toBeTruthy();
+  expect(screen.getByText('Caja Mostrador 1', { selector: 'strong' })).toBeTruthy();
+  expect(screen.getByText('Caja Depósito', { selector: 'strong' })).toBeTruthy();
 
   // Create
   await userEvent.type(screen.getByRole('textbox', { name: 'Nombre de la caja nueva' }), 'Caja Nueva');

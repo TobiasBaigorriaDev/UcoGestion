@@ -34,13 +34,15 @@ it('allows OWNER/ADMIN to toggle payment methods with accessible feedback', asyn
 
   expect(screen.getByRole('heading', { name: 'Medios de pago' })).toBeTruthy();
   expect(screen.getByText('Efectivo')).toBeTruthy();
-  expect(screen.getByText('Tarjeta de Débito')).toBeTruthy();
-  expect(screen.getByText('Tarjeta de Crédito')).toBeTruthy();
+  expect(screen.getByText('Tarjeta de débito')).toBeTruthy();
+  expect(screen.getByText('Tarjeta de crédito')).toBeTruthy();
   expect(screen.getByText('Transferencia')).toBeTruthy();
   expect(screen.getByText('QR / Billetera digital')).toBeTruthy();
 
   // Toggle CREDIT_CARD from inactive to active
-  const creditToggle = screen.getByRole('button', { name: 'Habilitar Tarjeta de Crédito' });
+  const creditToggle = screen.getByRole('switch', { name: 'Aceptar Tarjeta de crédito' });
+  expect(creditToggle.getAttribute('aria-checked')).toBe('false');
+  expect(screen.getByRole('switch', { name: 'Aceptar Efectivo' }).getAttribute('aria-checked')).toBe('true');
   await userEvent.click(creditToggle);
   expect(onToggle).toHaveBeenCalledWith('org', 'CREDIT_CARD', true);
 
@@ -57,7 +59,7 @@ it('renders read-only view for CASHIER and EMPLOYEE without toggling capabilitie
     />,
   );
 
-  expect(screen.queryByRole('button', { name: /Habilitar|Deshabilitar/i })).toBeNull();
+  expect(screen.queryByRole('switch')).toBeNull();
   expect(screen.getAllByText('Habilitado').length).toBe(3);
   expect(screen.getAllByText('Deshabilitado').length).toBe(2);
 });
