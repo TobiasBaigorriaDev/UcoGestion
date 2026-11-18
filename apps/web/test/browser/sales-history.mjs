@@ -12,7 +12,9 @@ async page => {
   await history.getByLabel('Hasta', { exact: true }).fill('2025-01-01');
   await history.getByRole('button', { name: 'Aplicar filtros' }).click();
   await history.locator('svg polyline').first().waitFor({ state: 'attached' });
-  check(await history.locator('svg polyline').count() === 2, 'Sales trends are not line charts');
+  // The seeded sales total $ 0,00: money shows the empty state, while the sale count stays a line chart.
+  check(await history.locator('svg polyline').count() === 1, 'Sales count is not a line chart');
+  check(await history.getByText('Sin movimientos en este período.', { exact: true }).count() === 1, 'Zero-money trend did not show the empty state');
   const list = history.getByRole('list', { name: 'Ventas de las sucursales autorizadas' });
   await list.getByRole('listitem').first().waitFor();
   await page.waitForFunction(() => document.querySelectorAll('ul[aria-label="Ventas de las sucursales autorizadas"] > li').length === 25);

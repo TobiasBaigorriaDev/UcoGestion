@@ -14,7 +14,7 @@
 .panel button { min-height: 44px; padding: 8px 16px; border: 1px solid var(--color-primary); border-radius: var(--radius-button); color: var(--color-primary); background: var(--color-surface); font: inherit; font-weight: 600; cursor: pointer; transition: background-color 150ms ease-out; }
 .panel button:hover { background: var(--color-primary-soft); }
 .panel button:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
-.panel button:disabled { color: var(--color-text-muted); border-color: var(--color-divider); background: var(--color-background); cursor: not-allowed; }
+.panel button:disabled { color: var(--color-text-secondary); border-color: var(--color-divider); background: var(--color-background); cursor: not-allowed; }
 .field { margin-bottom: 1rem; }
 .hint { margin: .375rem 0 0; color: var(--color-text-muted); font-size: var(--text-label); }
 .error { color: var(--color-danger-text); font-weight: 600; }
@@ -30,8 +30,9 @@
 .searchFields input, .cart input { width: 100%; min-height: 44px; padding: 8px 12px; color: var(--color-text); border: 1px solid var(--color-control-border); border-radius: var(--radius-sm); background: var(--color-surface); font: inherit; }
 .searchFields input:focus-visible, .cart input:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 .productGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: .5rem; margin: 1rem 0; padding: 0; list-style: none; }
-.panel .productButton { display: grid; gap: .25rem; align-content: space-between; width: 100%; min-height: 4.5rem; padding: .625rem .75rem; border-color: var(--color-divider); border-radius: var(--radius-sm); color: var(--color-text); text-align: left; }
-.panel .productButton:hover { border-color: var(--color-primary); background: var(--color-primary-soft); }
+/* Explicit surface: other page styles that share this screen (offline settings) must not repaint product tiles. */
+.panel .productButton.productButton { display: grid; gap: .25rem; align-content: space-between; width: 100%; min-height: 4.5rem; padding: .625rem .75rem; border: 1px solid var(--color-divider); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font-weight: 400; text-align: left; }
+.panel .productButton.productButton:not(:disabled):hover { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-text); }
 .productName { font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; }
 .productPrice { color: var(--color-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
 .results, .cart { list-style: none; padding: 0; margin: 1rem 0 0; }

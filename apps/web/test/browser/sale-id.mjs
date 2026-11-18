@@ -67,7 +67,8 @@ async page => {
   }
   const axeSource = await (await page.request.get(`${origin}/apps/web/node_modules/axe-core/axe.min.js`)).text();
   await page.addScriptTag({ content: axeSource });
-  check((await page.evaluate(async () => (await window.axe.run(document)).violations)).length === 0, 'Offline interface accessibility failed');
+  const offlineViolations = await page.evaluate(async () => (await window.axe.run(document)).violations.map(item => ({ id: item.id, nodes: item.nodes.map(node => [node.target, node.any[0]?.message]) })));
+  check(offlineViolations.length === 0, `Offline interface accessibility failed: ${JSON.stringify(offlineViolations)}`);
   let dropped = false;
   await page.route('**/api/v1/offline/delivery/push', async route => {
     await route.fetch(); dropped = true; await route.abort('failed');
