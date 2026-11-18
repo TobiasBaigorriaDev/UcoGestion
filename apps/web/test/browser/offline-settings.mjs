@@ -48,6 +48,8 @@ async page => {
   await page.getByRole('button', { name: 'Sincronizar mis pendientes' }).click();
   await page.getByText('No tenés operaciones pendientes.', { exact: true }).waitFor();
   await page.evaluate(() => window.offlineSettingsHarness.retire());
+  // Retirement re-renders asynchronously; wait for the private detail to go before asserting it is gone.
+  await page.getByRole('heading', { name: 'Mis operaciones pendientes' }).waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
   check(await page.getByRole('heading', { name: 'Mis operaciones pendientes' }).count() === 0, 'Retired identity detail remained visible');
   await page.evaluate(() => window.offlineSettingsHarness.seedForeign());
   await page.getByText(/1 entregas pendientes en este equipo/).waitFor();
