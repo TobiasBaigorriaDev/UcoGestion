@@ -35,7 +35,7 @@ export class OrganizationCurrencyChangePolicy {
     if (request.actorRole !== 'OWNER') {
       throw new OrganizationCurrencyChangeDeniedError(
         'CURRENCY_CHANGE_FORBIDDEN',
-        'Solo OWNER puede modificar la moneda base.',
+        'Solo el dueño puede modificar la moneda base.',
       );
     }
     if (request.hasServerHistory) {

@@ -290,7 +290,7 @@ export class ConfigurationBarrierService {
     );
     if (!['OWNER', 'ADMIN'].includes(result.rows[0]?.role ?? '')) {
       throw new ConfigurationBarrierError('CONFIGURATION_BARRIER_FORBIDDEN',
-        'Solo OWNER o ADMIN pueden coordinar la barrera de configuración.');
+        'Solo el dueño o un administrador pueden coordinar la barrera de configuración.');
     }
   }
 

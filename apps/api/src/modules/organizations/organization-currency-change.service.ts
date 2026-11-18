@@ -165,7 +165,7 @@ export class OrganizationCurrencyChangeService {
       [context.organizationId, context.userId],
     );
     if (membership.rows[0]?.role !== 'OWNER') {
-      throw new OrganizationCurrencyChangeError('CURRENCY_CHANGE_FORBIDDEN', 'Solo OWNER puede cambiar la moneda base.');
+      throw new OrganizationCurrencyChangeError('CURRENCY_CHANGE_FORBIDDEN', 'Solo el dueño puede cambiar la moneda base.');
     }
   }
 

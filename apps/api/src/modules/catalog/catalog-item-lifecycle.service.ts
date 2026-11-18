@@ -431,7 +431,7 @@ export class CatalogItemLifecycleService {
     if (!['OWNER', 'ADMIN'].includes(membership.rows[0]?.role ?? '')) {
       throw new CatalogItemServiceError(
         'CATALOG_ITEM_LIFECYCLE_FORBIDDEN',
-        'Solo OWNER o ADMIN pueden administrar el ciclo de vida de los ítems.',
+        'Solo el dueño o un administrador pueden administrar el ciclo de vida de los ítems.',
       );
     }
   }

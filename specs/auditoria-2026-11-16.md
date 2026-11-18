@@ -77,3 +77,21 @@ Ejecutado en la rama `release/pre-production`. Detalle en [pre-production-closur
 - Hallazgo 6 resuelto: `production-readiness.md` está actualizado.
 - Hallazgo 9 aclarado: los tests de rollout requieren PowerShell 7 (`pwsh`) en la máquina local.
 - Nuevo: se corrigió el foco de teclado invisible en los filtros de fecha de los historiales (accesibilidad).
+
+## 7. Estado al 2026-11-18
+
+- **Todo en `main`**: preparación para producción (PR #1) y rediseño D08 fases 1–6 (PR #2, #3 y #7; las #4–#6 entraron con la #7). CI de `main` en verde, incluida la suite de navegador contra la API real.
+- **Rediseño D08**: menú agrupado, Mostrador, Turno de caja guiado, historiales en lista, confirmaciones en el lugar, errores claros, idioma del negocio y pulido de todas las pantallas (D08-T01–T18).
+- **Corregido al fusionar**: escenarios de navegador de la API desactualizados respecto del rediseño y contraste insuficiente de los productos en el mostrador sin conexión.
+- **Mensajes de la API** en idioma del negocio («Solo el dueño o un administrador…»), con una prueba que impide volver a mostrar códigos de rol.
+
+### Lo que falta para declarar LISTO PARA PRODUCCIÓN
+
+| Ítem | Qué falta | Quién |
+| --- | --- | --- |
+| T236K2–K4 | Matriz rol × comando con payload válido (la matriz de rutas ya cubre sesión, tenant y membresía inválidos). | Desarrollo: tarea propia. |
+| T224 / T227 | Instalación PWA y pruebas en Chrome/Edge con marca, Firefox y Safari reales. Safari requiere un dispositivo Apple. | Usuario con los dispositivos. |
+| P04–P12, T236AL | Proveedor, dominio, HTTPS, S3, correo, backup externo y monitoreo reales. | Decisión y cuentas del usuario. |
+| T236 | Puerta final `sdd-check` una vez cerrados los ítems anteriores. | Desarrollo, al final. |
+
+**Notas de entorno local (Windows + OneDrive):** Vite no resuelve imports desde `apps/web` dentro de OneDrive y Git a veces no puede cambiar de rama por el bloqueo de la carpeta `apps`. Las pruebas de navegador de la API corren bien en una copia fuera de OneDrive (`git worktree add`). En CI (Linux) nada de esto ocurre.

@@ -233,7 +233,7 @@ export class CashRegisterManagementService {
     if (!actor || !['OWNER', 'ADMIN'].includes(actor.role)) {
       throw new CashRegisterManagementError(
         'CASH_REGISTER_MANAGEMENT_FORBIDDEN',
-        'Solo OWNER o ADMIN pueden administrar cajas.',
+        'Solo el dueño o un administrador pueden administrar cajas.',
       );
     }
     const branch = await client.query<{ id: string }>(
@@ -259,7 +259,7 @@ export class CashRegisterManagementService {
       if (scope.rows.at(0)?.exists !== true) {
         throw new CashRegisterManagementError(
           'CASH_REGISTER_BRANCH_FORBIDDEN',
-          'ADMIN solo puede administrar cajas dentro de sus sucursales asignadas.',
+          'Un administrador solo puede administrar cajas de sus sucursales asignadas.',
         );
       }
     }

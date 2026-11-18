@@ -20,7 +20,7 @@ export class UserManagementReadService {
       );
       const actor = actorResult.rows.at(0);
       if (!actor || actor.role !== 'OWNER' && actor.role !== 'ADMIN') {
-        throw new ForbiddenException({ code: 'USER_MANAGEMENT_FORBIDDEN', title: 'Acceso denegado', detail: 'Solo OWNER o ADMIN pueden administrar usuarios.' });
+        throw new ForbiddenException({ code: 'USER_MANAGEMENT_FORBIDDEN', title: 'Acceso denegado', detail: 'Solo el dueño o un administrador pueden administrar usuarios.' });
       }
       const scope = await client.query<{ branchId: string }>(
         `SELECT branch_id AS "branchId" FROM effective_membership_branch_scope

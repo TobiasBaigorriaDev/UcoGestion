@@ -63,7 +63,7 @@ export class CatalogPriceService {
           [context.organizationId, context.userId],
         );
         if (!['OWNER', 'ADMIN'].includes(membership.rows[0]?.role ?? '')) {
-          throw new CatalogPriceError('CATALOG_PRICE_FORBIDDEN', 'Solo OWNER o ADMIN pueden cambiar precios.');
+          throw new CatalogPriceError('CATALOG_PRICE_FORBIDDEN', 'Solo el dueño o un administrador pueden cambiar precios.');
         }
 
         const organization = await client.query<{ base_currency: string }>(
@@ -129,7 +129,7 @@ export class CatalogPriceService {
              AND status = 'ACTIVE' AND revoked_at IS NULL`, [context.organizationId, context.userId],
           );
           if (!['OWNER', 'ADMIN'].includes(membership.rows[0]?.role ?? '')) {
-            throw new CatalogPriceError('CATALOG_PRICE_FORBIDDEN', 'Solo OWNER o ADMIN pueden cambiar precios.');
+            throw new CatalogPriceError('CATALOG_PRICE_FORBIDDEN', 'Solo el dueño o un administrador pueden cambiar precios.');
           }
         };
         await authorize();

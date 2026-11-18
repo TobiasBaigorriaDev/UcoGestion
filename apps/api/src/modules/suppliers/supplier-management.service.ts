@@ -654,7 +654,7 @@ export class SupplierManagementService {
     if (!role || (role !== 'OWNER' && role !== 'ADMIN')) {
       throw new SupplierManagementError(
         errorCode,
-        'Solo OWNER o ADMIN pueden realizar esta acción.',
+        'Solo el dueño o un administrador pueden realizar esta acción.',
       );
     }
   }

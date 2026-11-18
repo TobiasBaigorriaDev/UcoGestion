@@ -70,7 +70,7 @@ export class OrganizationTimezoneService {
           [context.organizationId, context.userId],
         );
         if (membership.rows[0]?.role !== 'OWNER') {
-          throw new OrganizationTimezonePermissionError('Solo OWNER puede modificar la zona horaria.');
+          throw new OrganizationTimezonePermissionError('Solo el dueño puede modificar la zona horaria.');
         }
 
         const updated = await client.query<OrganizationTimezoneRow>(

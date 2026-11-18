@@ -183,7 +183,7 @@ export class InvitationResendService {
     if (!actor || (actor.role !== 'OWNER' && actor.role !== 'ADMIN')) {
       throw new InvitationResendError(
         'INVITATION_RESEND_FORBIDDEN',
-        'Solo OWNER o ADMIN pueden reenviar invitaciones.',
+        'Solo el dueño o un administrador pueden reenviar invitaciones.',
       );
     }
     return actor;

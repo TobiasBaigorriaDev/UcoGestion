@@ -138,7 +138,7 @@ export class InvitationRevocationService {
     if (actor?.role !== 'OWNER' && actor?.role !== 'ADMIN') {
       throw new InvitationRevocationError(
         'INVITATION_REVOCATION_FORBIDDEN',
-        'Solo OWNER o ADMIN pueden revocar invitaciones pendientes.',
+        'Solo el dueño o un administrador pueden revocar invitaciones pendientes.',
       );
     }
     return actor;

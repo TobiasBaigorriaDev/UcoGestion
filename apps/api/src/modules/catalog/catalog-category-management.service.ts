@@ -438,7 +438,7 @@ export class CatalogCategoryManagementService {
     if (!['OWNER', 'ADMIN'].includes(membership.rows.at(0)?.role ?? '')) {
       throw new CatalogCategoryManagementError(
         'CATALOG_CATEGORY_MANAGEMENT_FORBIDDEN',
-        'Solo OWNER o ADMIN pueden administrar categorías de catálogo.',
+        'Solo el dueño o un administrador pueden administrar categorías de catálogo.',
       );
     }
   }

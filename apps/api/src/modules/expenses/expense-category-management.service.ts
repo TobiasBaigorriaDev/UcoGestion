@@ -253,7 +253,7 @@ export class ExpenseCategoryManagementService {
     if (!['OWNER', 'ADMIN'].includes(membership.rows.at(0)?.role ?? '')) {
       throw new ExpenseCategoryManagementError(
         'EXPENSE_CATEGORY_MANAGEMENT_FORBIDDEN',
-        'Solo OWNER o ADMIN pueden administrar categorías de gasto.',
+        'Solo el dueño o un administrador pueden administrar categorías de gasto.',
       );
     }
   }

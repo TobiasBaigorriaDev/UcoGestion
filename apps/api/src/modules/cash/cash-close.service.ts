@@ -47,7 +47,7 @@ export class CashCloseService {
       const policy=new CashSessionDevicePolicy(),idempotency=new IdempotencyService(client);
       const authorize=async()=>{
         const manager=await client.query("SELECT 1 FROM memberships WHERE organization_id=$1 AND user_id=$2 AND status='ACTIVE' AND revoked_at IS NULL AND role IN ('OWNER','ADMIN')",[context.organizationId,context.userId]);
-        if (!manager.rowCount) throw new CashSessionDeviceError('CASH_SESSION_ACTOR_FORBIDDEN','Solo OWNER o ADMIN puede conciliar.');
+        if (!manager.rowCount) throw new CashSessionDeviceError('CASH_SESSION_ACTOR_FORBIDDEN','Solo el dueño o un administrador puede conciliar.');
         return policy.requireAuthorizedActor(client,context,checkpoint.sessionId,checkpoint.deviceId,true);
       };
       const acquired=await idempotency.acquire({actorUserId:context.userId,organizationId:context.organizationId,

@@ -47,7 +47,7 @@ export class BranchDeactivationService {
   }
   private async requireOwner(client: PoolClient, context: TenantTransactionContext, branchId: string, lock = false) {
     const actor = (await client.query<{ role: string }>(`SELECT role FROM memberships WHERE organization_id=$1 AND user_id=$2 AND status='ACTIVE' AND revoked_at IS NULL ${lock ? 'FOR SHARE' : ''}`, [context.organizationId, context.userId])).rows[0];
-    if (actor?.role !== 'OWNER') throw new BranchDeactivationError('BRANCH_DEACTIVATION_FORBIDDEN', 'Solo OWNER puede desactivar sucursales.');
+    if (actor?.role !== 'OWNER') throw new BranchDeactivationError('BRANCH_DEACTIVATION_FORBIDDEN', 'Solo el dueño puede desactivar sucursales.');
     if (!(await client.query('SELECT id FROM branches WHERE organization_id=$1 AND id=$2', [context.organizationId,branchId])).rowCount) throw new BranchDeactivationError('BRANCH_NOT_AVAILABLE', 'Sucursal no disponible.');
   }
   private async readBlockers(client: PoolClient, organizationId: string, branchId: string): Promise<BranchDeactivationBlockers> {

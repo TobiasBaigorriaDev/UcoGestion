@@ -29,7 +29,7 @@ export class UnrecoverableDeviceService {
         [context.organizationId, context.userId],
       );
       if (membership.rows[0]?.role !== 'OWNER') {
-        throw new UnrecoverableDeviceError('DEVICE_DECLARATION_FORBIDDEN', 'Solo OWNER puede declarar irrecuperable un dispositivo.');
+        throw new UnrecoverableDeviceError('DEVICE_DECLARATION_FORBIDDEN', 'Solo el dueño puede declarar irrecuperable un dispositivo.');
       }
       await client.query('SELECT id FROM organizations WHERE id = $1 FOR UPDATE', [context.organizationId]);
       const device = await client.query(
