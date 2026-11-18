@@ -27,7 +27,8 @@ it('recovers the original credit sale after a lost response even when refreshed 
   await screen.findByRole('option', { name: 'Ana' });
   fireEvent.change(screen.getByLabelText('Cliente de la venta'), { target: { value: 'customer' } });
   fireEvent.click(screen.getByLabelText('A cuenta del cliente'));
-  await screen.findAllByText('10,00 ARS');
+  await screen.findByText(/Crédito disponible/);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Confirmar venta' }).hasAttribute('disabled')).toBe(false));
   fireEvent.click(screen.getByRole('button', { name: 'Confirmar venta' }));
   await screen.findByText('Respuesta perdida');
   act(() => { online = false; window.dispatchEvent(new Event('offline')); });
@@ -39,7 +40,7 @@ it('recovers the original credit sale after a lost response even when refreshed 
   mocks.quoteSale.mockResolvedValue({ ...originalQuote, quoteFingerprint: 'new-price-fingerprint' });
   await client.invalidateQueries({ queryKey: ['customer-account'] });
   await client.invalidateQueries({ queryKey: ['sale-quote'] });
-  await screen.findByText('0,00 ARS');
+  await waitFor(() => expect(screen.getByText(/Crédito disponible/).textContent).toContain('$ 0,00'));
   expect(screen.getByRole('button', { name: 'Confirmar venta' }).hasAttribute('disabled')).toBe(false);
   fireEvent.click(screen.getByRole('button', { name: 'Confirmar venta' }));
   await waitFor(() => expect(mocks.confirmSale).toHaveBeenCalledTimes(2));
@@ -62,7 +63,7 @@ it('requires an active customer, permits partial credit, blocks excess and sends
   await screen.findByText(/supera el crédito disponible/);
   fireEvent.click(screen.getByRole('button', { name: 'Agregar pago' }));
   fireEvent.change(screen.getByLabelText('Importe aplicado 1'), { target: { value: '4.00' } });
-  await screen.findByText('6,00 ARS');
+  await screen.findByText('$ 6,00');
   await waitFor(() => expect(screen.getByRole('button', { name: 'Confirmar venta' }).hasAttribute('disabled')).toBe(false));
   fireEvent.click(screen.getByRole('button', { name: 'Confirmar venta' }));
   await waitFor(() => expect(mocks.confirmSale).toHaveBeenCalled());

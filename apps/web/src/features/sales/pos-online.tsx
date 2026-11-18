@@ -9,6 +9,7 @@ import type { SaleConfirmation } from './sales-api';
 import { ReceiptActions } from './receipt-actions';
 import { SaleConfirmation as ConfirmedSale } from './sale-confirmation';
 import styles from './pos.module.css';
+import { formatMoney } from '../../lib/format';
 
 export function PosOnline({ organizationId, branchId, role, items }: {
   organizationId: string; branchId: string;
@@ -22,9 +23,9 @@ export function PosOnline({ organizationId, branchId, role, items }: {
     setSale(value); setLines([]); setRevision((current) => current + 1);
   };
   return <section className={styles.page}>
-    <header><h1>Venta online</h1><p>Agregá productos, revisá el total y confirmá el cobro.</p></header>
+    <header className={styles.posHeader}><h1>Mostrador</h1></header>
     {sale ? <ConfirmedSale saleId={sale.id} total={sale.total}>
-      {typeof sale.receipt.onAccountAmount === 'string' && sale.receipt.onAccountAmount !== '0.00' ? <p>A cuenta del cliente: {sale.receipt.onAccountAmount} {String(sale.receipt.currency ?? '')}</p> : null}
+      {typeof sale.receipt.onAccountAmount === 'string' && sale.receipt.onAccountAmount !== '0.00' ? <p>A cuenta del cliente: {formatMoney(sale.receipt.onAccountAmount, String(sale.receipt.currency ?? 'ARS'))}</p> : null}
       <ReceiptActions organizationId={organizationId} saleId={sale.id} />
     </ConfirmedSale> : null}
     <div className={styles.layout}>

@@ -35,3 +35,4 @@
 @media (min-width: 64rem) { .charts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .charts > section:last-child { grid-column: 1 / -1; } }
 @media (max-width: 30rem) { .metrics dd { font-size: var(--text-title); } .periodPanel { padding: 1rem; } .branchField { max-width: none; } .chartRow { grid-template-columns: minmax(0, 1fr); } .chartRow dd { text-align: left; max-width: 100%; } }
 @media (forced-colors: active) { .periodButtons button[aria-pressed='true'] { border-color: Highlight; } .barFill { fill: CanvasText; } }
+.amount { font-variant-numeric: tabular-nums; white-space: nowrap; }

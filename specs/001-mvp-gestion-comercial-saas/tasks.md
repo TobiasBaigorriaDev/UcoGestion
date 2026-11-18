@@ -469,3 +469,18 @@ Bloque autorizado: D03-T01–D03-T05, secuencial con TDD, conforme a plan §22. 
 - [x] T236AK [RF-124]: Verificar conflicto de apertura offline firmada con sesión online incompatible, conservar todas las operaciones del fixture en ambas sesiones y probar rollback, ACK, auditoría y replay; corregir timestamp inválido del fixture v1 sin cambiar vigencia productiva. Suite histórica 17/17 PASS. [Evidencia](production-readiness.md).
 - [ ] T236AL [RF-132, RF-151, RF-289]: Repetir gate completo tras error de fork, reconstruir/verificar imágenes del árbol actual, completar tasks-check y acreditar infraestructura real antes de un veredicto de producción. [Seguimiento](production-readiness.md).
 - [x] T236AM [RF-12, RF-151, T235]: Conservar origen web e identidad de release en el build raíz, invalidar caché al cambiar ambos y configurar el origen local de CI antes de compilar. Verificar con el pipeline Turbo real y el gate de navegador. Gate crítico 6/6 sobre el build con origen de CI. [Evidencia 2026-11-16](pre-production-closure-2026-11-16-evidence.md).
+
+## D08 — Rediseño de interfaz, fase 1 — solicitud explícita 2026-11-16
+
+Plan §26. Solo presentación; los contratos y permisos se conservan.
+
+- [x] D08-T01: Navegación agrupada por tarea con iconos, barra inferior móvil y contexto simplificado cuando hay una sola organización o sucursal [RF-152–RF-154].
+- [x] D08-T02: Inicio con accesos rápidos por rol y estado de caja del resumen autorizado [RF-142–RF-145].
+- [x] D08-T03: Mostrador:
+  - Enter agrega y hay accesos a productos;
+  - botones +/− para unidades enteras;
+  - total fijo y cobro en un toque;
+  - opciones secundarias;
+  - sin conexión como acción secundaria, conservando RF-346/347 [RF-152–RF-154, RF-346, RF-347].
+- [x] D08-T04: Formato es-AR de dinero y cantidades, etiquetas traducidas de rol y medio de pago, y «Turno de caja» [RF-152–RF-154].
+- [x] D08-T05: Tokens cálidos sin vidrio operativo, DESIGN.md actualizado, gate de navegador y suite web.

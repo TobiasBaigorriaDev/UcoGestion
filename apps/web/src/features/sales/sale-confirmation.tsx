@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { saleCodeFromId } from '@uconext/shared';
 import styles from './pos.module.css';
+import { formatMoney } from '../../lib/format';
 
 export function SaleConfirmation({ saleId, total, pendingSync = false, children }: {
   saleId: string; total: string; pendingSync?: boolean; children?: ReactNode;
@@ -22,7 +23,7 @@ export function SaleConfirmation({ saleId, total, pendingSync = false, children 
   }
   return <section ref={confirmation} tabIndex={-1} className={styles.success} aria-label="Confirmación de venta">
     <p role="status"><strong>{pendingSync ? 'Venta confirmada sin conexión' : 'Venta confirmada'}</strong></p>
-    <p>Total: {total}. El comprobante sigue disponible aunque falle la impresión.</p>
+    <p className={styles.confirmedTotal}>Total cobrado: <strong>{/^-?\d+\.\d{2}$/.test(total) ? formatMoney(total) : total}</strong></p>
     <div className={styles.saleIdentity}>
       <dl><dt>ID de venta</dt><dd className={styles.saleId}>{saleCode}</dd></dl>
       <button type="button" onClick={() => void copy()}>Copiar ID de venta</button>

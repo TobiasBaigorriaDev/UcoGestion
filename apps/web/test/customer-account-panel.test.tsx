@@ -18,13 +18,13 @@ function panel(role: 'OWNER' | 'CASHIER', client = new QueryClient({ defaultOpti
 it('recovers a full collection after lost response when a refresh already shows zero debt', async () => {
   mocks.collectCustomerDebt.mockRejectedValueOnce(new Error('Response lost')).mockResolvedValue({ id: 'entry', balance: '0.00', currency: 'ARS' });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  panel('CASHIER', client); await screen.findByText('30,00 ARS');
+  panel('CASHIER', client); await screen.findByText('$ 30,00');
   fireEvent.change(screen.getByLabelText('Importe a cobrar'), { target: { value: '30' } });
   fireEvent.click(screen.getByRole('button', { name: 'Registrar cobro' }));
   await screen.findByText(/No pudimos completar/);
   mocks.loadCustomerAccount.mockResolvedValue({ balance: '0.00', creditLimit: '100.00', available: '100.00', currency: 'ARS', version: 3, entries: [], nextCursor: null });
   await client.invalidateQueries({ queryKey: ['customer-account'] });
-  await screen.findByText('0,00 ARS');
+  await screen.findByText('$ 0,00');
   expect(screen.getByRole('button', { name: 'Registrar cobro' }).hasAttribute('disabled')).toBe(false);
   fireEvent.click(screen.getByRole('button', { name: 'Registrar cobro' }));
   await waitFor(() => expect(mocks.collectCustomerDebt).toHaveBeenCalledTimes(2));
@@ -33,13 +33,13 @@ it('recovers a full collection after lost response when a refresh already shows 
 it('replays the original limit version after a lost response and refreshed account', async () => {
   mocks.setCustomerCreditLimit.mockRejectedValueOnce(new Error('Response lost')).mockResolvedValue({});
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  panel('OWNER', client); await screen.findByText('30,00 ARS');
+  panel('OWNER', client); await screen.findByText('$ 30,00');
   fireEvent.change(screen.getByLabelText('Tope de deuda'), { target: { value: '150' } });
   fireEvent.click(screen.getByRole('button', { name: 'Guardar tope' }));
   await screen.findByText(/No pudimos completar/);
   mocks.loadCustomerAccount.mockResolvedValue({ balance: '30.00', creditLimit: '150.00', available: '120.00', currency: 'ARS', version: 3, entries: [], nextCursor: null });
   await client.invalidateQueries({ queryKey: ['customer-account'] });
-  await screen.findByText('150,00 ARS');
+  await screen.findByText('$ 150,00');
   fireEvent.click(screen.getByRole('button', { name: 'Guardar tope' }));
   await waitFor(() => expect(mocks.setCustomerCreditLimit).toHaveBeenCalledTimes(2));
   expect(mocks.setCustomerCreditLimit.mock.calls[1]).toEqual(mocks.setCustomerCreditLimit.mock.calls[0]);
@@ -47,7 +47,7 @@ it('replays the original limit version after a lost response and refreshed accou
 it('shows debt and credit, hides limit editing from cashier and keeps the same collection key after lost response', async () => {
   mocks.collectCustomerDebt.mockRejectedValueOnce(new Error('Response lost')).mockResolvedValue({ id: 'entry', balance: '20.00', currency: 'ARS' });
   const { container } = panel('CASHIER');
-  await screen.findByText('30,00 ARS');
+  await screen.findByText('$ 30,00');
   expect(screen.queryByRole('button', { name: 'Guardar tope' })).toBeNull();
   fireEvent.change(screen.getByLabelText('Importe a cobrar'), { target: { value: '10,00' } });
   fireEvent.click(screen.getByRole('button', { name: 'Registrar cobro' }));
@@ -60,7 +60,7 @@ it('shows debt and credit, hides limit editing from cashier and keeps the same c
 });
 it('lets owner update a versioned limit and prevents collecting over the visible debt', async () => {
   mocks.setCustomerCreditLimit.mockResolvedValue({});
-  panel('OWNER'); await screen.findByText('30,00 ARS');
+  panel('OWNER'); await screen.findByText('$ 30,00');
   fireEvent.change(screen.getByLabelText('Tope de deuda'), { target: { value: '150' } });
   fireEvent.click(screen.getByRole('button', { name: 'Guardar tope' }));
   await waitFor(() => expect(mocks.setCustomerCreditLimit).toHaveBeenCalled());

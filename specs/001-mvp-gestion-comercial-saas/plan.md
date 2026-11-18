@@ -1170,3 +1170,29 @@ RF-346–RF-347, solicitados explícitamente por el usuario, complementan §11 y
 
 30 pruebas afectadas PASS, Chromium desktop/móvil con axe y foco, motor offline versiones 1/2, expiración/reload y actualización PWA; lint/typecheck raíz y build web PASS. Revisión Impeccable **ship** y documentación visual sin cambios de sistema. [Archivos, comandos, garantías y límites](t236ah-pos-connection-evidence.md).
 
+
+## 26. D08 — Rediseño de interfaz, fase 1 (solicitud explícita 2026-11-16)
+
+Origen: crítica impeccable del 2026-11-16 (`.impeccable/critique/`, 15/40 en heurísticas). El usuario eligió: dirección «Mostrador + panel guiado», estilo «verde cálido de almacén», alcance por fases y lenguaje de almacén.
+
+Alcance: presentación únicamente. No cambia RF, contratos API, permisos, idempotencia, offline ni datos. Los RF afectados en su forma de presentación son RF-142–RF-145, RF-152–RF-154 y RF-346/347; las garantías de cada uno se conservan.
+
+- Navegación agrupada por tarea, con iconos y una barra inferior en móvil. Los grupos son Inicio, Vender, Caja, Stock, Clientes y proveedores, Dinero y Ajustes. Los ítems se filtran por rol igual que antes. Las rutas existentes no cambian.
+- El encabezado muestra la organización o la sucursal como texto cuando solo hay una opción disponible.
+- Inicio agrega accesos rápidos por rol y el estado de caja. Ese estado sale de la lectura existente de cajas abiertas del POS (`GET /sales/checkout-context`), sin endpoints nuevos.
+- Mostrador:
+  - Enter agrega el primer resultado y hay accesos a productos;
+  - los botones +/− aplican solo a unidades enteras;
+  - total destacado y fijo en móvil, y cobro en un toque por medio habilitado;
+  - el pago dividido, el cliente, el fiado y el descuento quedan como opciones secundarias;
+  - el modo sin conexión queda como acción secundaria y RF-346/347 se mantienen.
+- Lenguaje y formato:
+  - el dinero se muestra en es-AR (`$ 1.800,00`) y las cantidades con separador de miles;
+  - los roles y los medios de pago se muestran traducidos;
+  - «Sesión de caja» pasa a «Turno de caja» en la navegación y los títulos de esta fase.
+- Tokens: el fondo pasa a cálido neutro. El efecto vidrio sale de las superficies operativas. El verde Bosque y Plus Jakarta Sans se conservan. DESIGN.md se actualiza al cerrar la fase.
+
+Verificación:
+- pruebas de componentes por cada conducta nueva;
+- gate crítico de navegador (axe, foco y desborde en 1440/1024/768/390);
+- lint, typecheck y suite web.

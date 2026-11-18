@@ -1,7 +1,10 @@
 .page { display: grid; gap: 1.5rem; max-width: 72rem; margin-inline: auto; }
-.sessionBar { display: flex; justify-content: flex-end; padding: .5rem 1rem; background: var(--color-surface); border-bottom: 1px solid var(--color-divider); }
-.sessionBar button { min-height: 44px; padding: .5rem .75rem; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-text-secondary); font: inherit; font-size: var(--text-label); font-weight: 600; cursor: pointer; }
+/* Logout lives outside the offline boundary; it is placed over the shell header's top-right corner. */
+.sessionBar { position: absolute; z-index: 25; top: .75rem; right: 1rem; }
+.sessionBar button { min-height: 44px; padding: .5rem .75rem; border: 1px solid var(--color-divider); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); font: inherit; font-size: var(--text-label); font-weight: 600; cursor: pointer; }
 .sessionBar button:hover { color: var(--color-primary); background: var(--color-primary-soft); }
+@media (min-width: 48rem) { .sessionBar { right: 2rem; } }
+@media (min-width: 64rem) { .sessionBar { position: fixed; } }
 .heading h1 { margin: 0; font-size: var(--text-page-title); font-weight: 750; line-height: 1.25; letter-spacing: -.025em; text-wrap: balance; }
 .heading h2 { margin: 0; font-size: var(--text-headline); font-weight: 700; line-height: 1.3; text-wrap: balance; }
 .heading p { max-width: 70ch; color: var(--color-text-secondary); margin: .5rem 0 0; line-height: 1.65; }

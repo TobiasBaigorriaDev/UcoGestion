@@ -104,7 +104,7 @@ async page => {
     if (route.startsWith('/workspace/catalog') || route.startsWith('/workspace/inventory')) {
       const primary = page.getByRole('navigation', { name: 'Navegación principal' });
       const section = page.getByRole('navigation', { name: 'Catálogo e inventario' });
-      check(await primary.getByRole('link', { name: 'Catálogo e inventario' }).getAttribute('aria-current') === 'page',
+      check(await primary.getByRole('link', { name: 'Productos', exact: true }).getAttribute('aria-current') === 'page',
         `Main section is not active on ${route}`);
       check(await primary.getByRole('link', { name: 'Inventario', exact: true }).count() === 0,
         `Inventory still appears as a separate section on ${route}`);

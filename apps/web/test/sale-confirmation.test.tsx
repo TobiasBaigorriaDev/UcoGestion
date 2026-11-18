@@ -24,7 +24,7 @@ describe('D03 confirmation identity', () => {
     const { container } = render(<SaleConfirmation saleId={saleId} total="0.00" />);
     expect(document.activeElement).toBe(screen.getByRole('region', { name: 'Confirmación de venta' }));
     expect(screen.getByText(saleCode)).toBeDefined();
-    expect(screen.getByText(/Total: 0.00/)).toBeDefined();
+    expect(screen.getByText('$ 0,00')).toBeDefined();
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Copiar ID de venta' }));
     await user.keyboard('{Enter}');
