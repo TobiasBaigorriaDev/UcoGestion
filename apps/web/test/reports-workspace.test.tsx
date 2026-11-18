@@ -173,6 +173,18 @@ describe('reportes por rol', () => {
     expect((await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toEqual([]);
   });
 
+  it('no dibuja un gráfico vacío cuando el período no tiene operaciones', async () => {
+    const { container } = render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <ReportsWorkspace organizationId="o1" role="OWNER" timezone="America/Argentina/Buenos_Aires"
+        branches={[{ id: 'b', name: 'Centro' }]} load={async () => ({ dataset: 'sales' as const, items: [], nextCursor: null })}
+        now={new Date('2026-10-12T15:00:00Z')} />
+    </QueryClientProvider>);
+    await screen.findByText('Sin operaciones para este período.');
+    expect(container.querySelector('svg polyline')).toBeNull();
+    expect(screen.queryByText(/Máximo/)).toBeNull();
+    expect(screen.queryByText(/America\/Argentina/)).toBeNull();
+  });
+
   it('conserva el listado cuando falla una página de gráficos y permite reintentar', async () => {
     let fail = true;
     const load = vi.fn(async (_org: string, _dataset: ReportDataset, filters: ReportFilters) => {

@@ -176,13 +176,14 @@ export function OrganizationSettings({
   }
 
   return (
-    <section className={styles.form} aria-labelledby="settings-heading">
-      <h1 id="settings-heading">Configuración de la organización</h1>
+    <section className={`${styles.form} ${styles.pageForm}`} aria-labelledby="settings-heading">
+      <h1 id="settings-heading">Datos del negocio</h1>
+      <p>Lo que aparece en tus comprobantes, la hora de tus registros y la moneda con la que trabajás.</p>
       <ErrorSummary error={error} />
       {error?.code === 'VERSION_CONFLICT' ? <a href="" onClick={(event) => { event.preventDefault(); window.location.reload(); }}>Volver a cargar</a> : null}
       {message ? <p role="status">{message}</p> : null}
       <form className={styles.innerForm} onSubmit={profileForm.handleSubmit(submitProfile)} noValidate>
-        <h2>Perfil comercial</h2>
+        <h2>Datos para comprobantes</h2>
         <label htmlFor="displayName">Nombre comercial</label>
         <input id="displayName" disabled={!canEditProfile || busy} maxLength={200} aria-invalid={!!profileForm.formState.errors.displayName} {...profileForm.register('displayName')} />
         <label htmlFor="address">Dirección comercial</label>
@@ -198,8 +199,8 @@ export function OrganizationSettings({
         <h2>Zona horaria</h2>
         <label htmlFor="timezone">Zona horaria</label>
         <input id="timezone" disabled={role !== 'OWNER' || busy} aria-invalid={!!timezoneForm.formState.errors.timezone} {...timezoneForm.register('timezone')} />
-        {timezoneForm.formState.errors.timezone ? <p role="alert">Ingresá una zona horaria IANA válida.</p> : null}
-        <p>Solo OWNER puede cambiarla. Los timestamps históricos no se modifican.</p>
+        {timezoneForm.formState.errors.timezone ? <p role="alert">Ingresá una zona horaria válida, por ejemplo America/Argentina/Buenos_Aires.</p> : null}
+        <p>Solo el dueño puede cambiarla. Las operaciones ya registradas conservan su fecha y hora.</p>
         {role === 'OWNER' ? <button type="submit" disabled={busy}>Guardar zona horaria</button> : null}
       </form>
       <form className={styles.innerForm} onSubmit={currencyForm.handleSubmit(submitCurrency)} noValidate>
@@ -213,7 +214,7 @@ export function OrganizationSettings({
           {...currencyForm.register('currency')}
         />
         {currencyForm.formState.errors.currency ? <p role="alert">Ingresá un código ISO 4217 de 3 letras (por ejemplo ARS o USD).</p> : null}
-        <p>Solo OWNER puede cambiar la moneda base. Si la organización ya registró operaciones o incertidumbre offline, el cambio queda bloqueado.</p>
+        <p>Solo el dueño puede cambiarla, y únicamente antes de registrar la primera venta, compra o gasto.</p>
         {role === 'OWNER' ? <button type="submit" disabled={busy}>Guardar moneda</button> : null}
       </form>
     </section>

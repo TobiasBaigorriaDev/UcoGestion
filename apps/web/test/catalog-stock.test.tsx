@@ -9,7 +9,7 @@ afterEach(cleanup);
 it('shows fractional stock with a decimal comma and without trailing zeroes', () => {
   render(<CatalogStockSummary item={{ id: 'item-a', type: 'PRODUCT', status: 'ACTIVE', trackInventory: true }}
     branchName="Centro" stocks={[{ ...stock, baseUnit: 'FRACTIONAL', quantity: '1.250' }]} />);
-  expect(screen.getByText('1,25 unidades fraccionables')).toBeTruthy();
+  expect(screen.getByText('1,25 (venta suelta)')).toBeTruthy();
 });
 
 const stock = { branchId: 'branch-a', itemId: 'item-a', itemName: 'Yerba',
@@ -53,4 +53,12 @@ it('distinguishes services, non-inventory items, inactive products and missing b
   rerender(<CatalogStockSummary item={{ id: 'p', type: 'PRODUCT', status: 'ACTIVE', trackInventory: true }}
     stocks={[]} />);
   expect(screen.getByText('Seleccioná una sucursal para ver stock')).toBeTruthy();
+});
+
+it('warns in words when stock fell below zero after an offline sale', () => {
+  render(<CatalogStockSummary item={{ id: 'item-a', type: 'PRODUCT', status: 'ACTIVE', trackInventory: true }}
+    branchName="Centro" stocks={[{ ...stock, quantity: '-1.000' }]} />);
+  expect(screen.getByText('-1 unidades')).toBeTruthy();
+  expect(screen.getByText('Revisar stock: se vendió más de lo registrado')).toBeTruthy();
+  expect(screen.queryByText('Stock bajo')).toBeNull();
 });

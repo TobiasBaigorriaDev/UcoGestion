@@ -7,7 +7,7 @@ async page => {
   check(login.status() === 204, 'Account browser login failed');
   await page.reload();
   await page.getByRole('button', { name: 'Clientes', exact: true }).click();
-  await page.getByRole('button', { name: 'Cuenta corriente de Ana Cuenta', exact: true }).click();
+  await page.getByRole('button', { name: 'Ver fiado de Ana Cuenta', exact: true }).click();
   const account = page.getByRole('region', { name: 'Cuenta de Ana Cuenta', exact: true });
   await account.getByLabel('Tope de deuda').fill('7');
   await account.getByRole('button', { name: 'Guardar tope' }).click();
@@ -62,7 +62,7 @@ async page => {
   await page.unroute('**/api/v1/sales');
   await page.getByRole('button', { name: 'Clientes', exact: true }).click();
   await page.getByText('Deuda: 6,00 ARS', { exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Cuenta corriente de Ana Cuenta', exact: true }).click();
+  await page.getByRole('button', { name: 'Ver fiado de Ana Cuenta', exact: true }).click();
   await account.locator('dl').getByText('6,00 ARS', { exact: true }).waitFor();
   let dropped = false;
   await page.route('**/account/collections', async route => {

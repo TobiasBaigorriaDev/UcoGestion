@@ -178,7 +178,7 @@ export function ReportsWorkspace({ organizationId, role, branches, timezone, loa
       {dataset !== 'inventory' && period === 'custom' && <><div className={styles.field}><label htmlFor="report-from">Desde</label><input id="report-from" type="date" required value={draft.from} aria-invalid={invalidPeriod} aria-describedby={invalidPeriod ? 'report-period-error' : undefined} onChange={(event) => setDraft({ ...draft, from: event.target.value })} /></div>
       <div className={styles.field}><label htmlFor="report-to">Hasta</label><input id="report-to" type="date" required value={draft.to} aria-invalid={invalidPeriod} aria-describedby={invalidPeriod ? 'report-period-error' : undefined} onChange={(event) => setDraft({ ...draft, to: event.target.value })} /></div></>}
       <button className={styles.button} type="submit" disabled={invalidPeriod}>Aplicar filtros</button>
-      <p className={reportStyles.note}>{dataset === 'inventory' ? 'El inventario refleja el stock actual; no un período histórico.' : `Las fechas incluyen el día completo. Zona horaria: ${timezone}.`}</p>
+      <p className={reportStyles.note}>{dataset === 'inventory' ? 'El inventario refleja el stock actual; no un período histórico.' : 'Las fechas incluyen el día completo.'}</p>
       </div>
     </form>
     {invalidPeriod && <p id="report-period-error" role="alert">Elegí ambas fechas. Hasta debe ser igual o posterior a Desde.</p>}
@@ -189,8 +189,7 @@ export function ReportsWorkspace({ organizationId, role, branches, timezone, loa
       {range && chart.isPending && <p role="status">Cargando gráficos…</p>}
       {range && chart.error && <><p role="alert">{chart.error instanceof Error ? chart.error.message : 'No pudimos cargar los gráficos.'}</p><button className={reportStyles.secondary} type="button" onClick={() => void chart.refetch()}>Reintentar gráficos</button></>}
       {trends && (trends.labels.length ? <>
-        {!chart.data?.length && <p>Sin operaciones para este período.</p>}
-        <div className={reportStyles.charts}>
+        {!chart.data?.length ? <p className={reportStyles.empty}>Sin operaciones para este período.</p> : <div className={reportStyles.charts}>
           {trends.amounts.map(series => <TrendChart key={series.currency} headingLevel={3}
             title={dataset === 'expenses' ? `Gastos por categoría · ${series.currency}` : `Importe neto · ${series.currency}`} currency={series.currency}
             labels={trends.labels} values={series.values} display={series.values.map(value => `${formatMoney(value, series.currency)}`)}
@@ -200,7 +199,7 @@ export function ReportsWorkspace({ organizationId, role, branches, timezone, loa
             })) } : {})} />)}
           <TrendChart headingLevel={3} title={dataset === 'cash' ? 'Sesiones de caja' : dataset === 'inventory-movements' ? 'Movimientos de inventario' : 'Operaciones no anuladas'}
             labels={trends.labels} values={trends.counts} display={trends.counts} />
-        </div></> : <p>El período seleccionado todavía no empezó.</p>)}
+        </div>}</> : <p>El período seleccionado todavía no empezó.</p>)}
     </section>}
     {query.isPending && <p role="status">Cargando reporte…</p>}
     {query.error && <><ErrorSummary error={query.error instanceof ApiProblemError ? query.error : new ApiProblemError({ status: 0, code: 'REPORT_LOAD_FAILED', message: 'No pudimos cargar el reporte. Intentá nuevamente.' })} /><button type="button" className={styles.button} onClick={() => void query.refetch()}>Reintentar</button></>}

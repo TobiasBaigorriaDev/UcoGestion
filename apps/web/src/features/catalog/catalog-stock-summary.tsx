@@ -25,7 +25,8 @@ export function CatalogStockSummary({ item, branchName, stocks, failed = false }
   if (!stock) return <p className={styles.note}>Stock no disponible en {branchName}</p>;
   const quantity = formatStockQuantity(stock.quantity);
   return <p className={styles.stock}>
-    Disponible en {branchName}: <strong>{quantity} {stock.baseUnit === 'UNIT' ? 'unidades' : 'unidades fraccionables'}</strong>
-    {stock.lowStock ? <span className={styles.warning}>Stock bajo</span> : null}
+    Disponible en {branchName}: <strong>{quantity} {stock.baseUnit === 'UNIT' ? 'unidades' : '(venta suelta)'}</strong>
+    {stock.quantity.startsWith('-') ? <span className={styles.warning}>Revisar stock: se vendió más de lo registrado</span>
+      : stock.lowStock ? <span className={styles.warning}>Stock bajo</span> : null}
   </p>;
 }

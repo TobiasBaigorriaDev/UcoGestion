@@ -8,10 +8,10 @@ it('changes the PIN with confirmation, clears sensitive inputs and keeps pending
   const changePin = vi.fn().mockResolvedValue(undefined);
   render(<OfflineSettings role="OWNER" configured unlock={vi.fn().mockResolvedValue(status)} lock={vi.fn()}
     authorize={vi.fn()} refresh={vi.fn()} sync={vi.fn()} changePin={changePin} />);
-  await userEvent.type(screen.getByLabelText('PIN offline'), 'original-pin');
+  await userEvent.type(screen.getByLabelText('PIN sin conexión'), 'original-pin');
   await userEvent.click(screen.getByRole('button', { name: 'Desbloquear mi identidad' }));
   await screen.findByText('own-id');
-  await userEvent.click(screen.getByRole('button', { name: 'Cambiar PIN offline' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Cambiar PIN sin conexión' }));
   await userEvent.type(screen.getByLabelText('PIN actual'), 'original-pin');
   await userEvent.type(screen.getByLabelText('Nuevo PIN'), 'replacement-pin');
   await userEvent.type(screen.getByLabelText('Confirmar nuevo PIN'), 'different-pin');
@@ -23,7 +23,7 @@ it('changes the PIN with confirmation, clears sensitive inputs and keeps pending
   await userEvent.clear(screen.getByLabelText('Confirmar nuevo PIN'));
   await userEvent.type(screen.getByLabelText('Confirmar nuevo PIN'), 'replacement-pin');
   await userEvent.click(screen.getByRole('button', { name: 'Guardar nuevo PIN' }));
-  await screen.findByText('PIN offline actualizado. Tus datos y pendientes se conservaron.');
+  await screen.findByText('PIN sin conexión actualizado. Tus datos y pendientes se conservaron.');
   expect(changePin).toHaveBeenCalledWith('original-pin', 'replacement-pin');
   expect(screen.queryByLabelText('PIN actual')).toBeNull();
   expect(screen.getByText('own-id')).toBeTruthy();
@@ -33,10 +33,10 @@ it('locks private detail and reports an incorrect current PIN without leaking in
   const lock = vi.fn();
   render(<OfflineSettings role="OWNER" configured unlock={vi.fn().mockResolvedValue(status)} lock={lock}
     authorize={vi.fn()} refresh={vi.fn()} sync={vi.fn()} changePin={vi.fn().mockRejectedValue(new Error('PIN incorrecto.'))} />);
-  await userEvent.type(screen.getByLabelText('PIN offline'), 'original-pin');
+  await userEvent.type(screen.getByLabelText('PIN sin conexión'), 'original-pin');
   await userEvent.click(screen.getByRole('button', { name: 'Desbloquear mi identidad' }));
   await screen.findByText('own-id');
-  await userEvent.click(screen.getByRole('button', { name: 'Cambiar PIN offline' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Cambiar PIN sin conexión' }));
   await userEvent.type(screen.getByLabelText('PIN actual'), 'incorrect-pin');
   await userEvent.type(screen.getByLabelText('Nuevo PIN'), 'replacement-pin');
   await userEvent.type(screen.getByLabelText('Confirmar nuevo PIN'), 'replacement-pin');
@@ -48,7 +48,7 @@ it('locks private detail and reports an incorrect current PIN without leaking in
 it('refreshes own pending state after automatic signed delivery without requesting another delivery', async () => {
   const sync = vi.fn(), readStatus = vi.fn().mockResolvedValue({ ...status, pending: [] });
   render(<OfflineSettings role="OWNER" configured unlock={vi.fn().mockResolvedValue(status)} lock={vi.fn()} authorize={vi.fn()} refresh={vi.fn()} sync={sync} readStatus={readStatus} />);
-  await userEvent.type(screen.getByLabelText('PIN offline'), 'offline-pin');
+  await userEvent.type(screen.getByLabelText('PIN sin conexión'), 'offline-pin');
   await userEvent.click(screen.getByRole('button', { name: 'Desbloquear mi identidad' }));
   await screen.findByText('own-id');
   expect(screen.getByText(new Date(status.pending[0]!.occurredAt).toLocaleString('es-AR',{timeZone:status.timezone}))).toBeTruthy();
@@ -62,20 +62,20 @@ it('T220A keeps detail hidden until PIN unlock and clears it immediately when lo
   const unlock = vi.fn().mockResolvedValue(status), lock = vi.fn();
   render(<OfflineSettings role="CASHIER" configured unlock={unlock} lock={lock} authorize={vi.fn()} refresh={vi.fn()} sync={vi.fn().mockResolvedValue(status)} />);
   expect(screen.queryByText('own-id')).toBeNull();
-  await userEvent.type(screen.getByLabelText('PIN offline'), 'offline-pin');
+  await userEvent.type(screen.getByLabelText('PIN sin conexión'), 'offline-pin');
   await userEvent.click(screen.getByRole('button', { name: 'Desbloquear mi identidad' }));
   await waitFor(() => expect(screen.getByText('own-id')).toBeTruthy());
   expect(unlock).toHaveBeenCalledWith('offline-pin');
-  expect(screen.queryByLabelText('PIN offline')).toBeNull();
+  expect(screen.queryByLabelText('PIN sin conexión')).toBeNull();
   await userEvent.click(screen.getByRole('button', { name: 'Bloquear datos offline' }));
   expect(lock).toHaveBeenCalled();
   expect(screen.queryByText('own-id')).toBeNull();
-  expect((screen.getByLabelText('PIN offline') as HTMLInputElement).value).toBe('');
+  expect((screen.getByLabelText('PIN sin conexión') as HTMLInputElement).value).toBe('');
 });
 it('T220A displays expired authorization without enabling offline creation and preserves detail on recoverable sync error', async () => {
   render(<OfflineSettings role="OWNER" configured unlock={vi.fn().mockResolvedValue({ ...status, expired: true })}
     lock={vi.fn()} authorize={vi.fn()} refresh={vi.fn()} sync={vi.fn().mockRejectedValue(new Error('secret payload'))} />);
-  await userEvent.type(screen.getByLabelText('PIN offline'), 'offline-pin');
+  await userEvent.type(screen.getByLabelText('PIN sin conexión'), 'offline-pin');
   await userEvent.click(screen.getByRole('button', { name: 'Desbloquear mi identidad' }));
   await screen.findByText(/Autorización vencida/);
   await userEvent.click(screen.getByRole('button', { name: 'Sincronizar mis pendientes' }));

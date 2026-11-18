@@ -26,7 +26,7 @@ export function OfflinePinChange({ busy, onChange, onCancel }: {
       setSummary(null); try { await onChange(currentPin, newPin); } finally { reset(); }
     }, invalid => setSummary(new ApiProblemError({ status: 400, code: 'OFFLINE_PIN_INVALID', message: 'Revisá los campos para cambiar tu PIN.',
       fieldErrors: Object.fromEntries(Object.entries(invalid).map(([field, error]) => [field, error.message ?? 'Revisá este campo.'])) })))}>
-    <h2 id="offline-pin-change-heading">Cambiar PIN offline</h2>
+    <h2 id="offline-pin-change-heading">Cambiar PIN sin conexión</h2>
     <ErrorSummary error={summary} fieldIds={{ currentPin: 'offline-change-currentPin', newPin: 'offline-change-newPin', confirmation: 'offline-change-confirmation' }}
       fieldLabels={{ currentPin: 'PIN actual', newPin: 'Nuevo PIN', confirmation: 'Confirmar nuevo PIN' }} />
     <p>El cambio se aplica a tu usuario en este equipo. Conserva tus datos y operaciones pendientes, incluso sin conexión.</p>

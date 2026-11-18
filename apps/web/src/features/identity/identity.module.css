@@ -16,3 +16,7 @@
 .list span { font-size: var(--text-label); font-weight: 500; }
 .innerForm { display: grid; gap: .75rem; border-top: 1px solid var(--color-text-disabled); padding-top: 1.25rem; margin-top: .5rem; }
 .innerForm h2 { margin: 0; font-size: var(--text-headline); }
+.pageForm { width: min(100%, 40rem); margin: 0; box-shadow: none; }
+.innerForm h2 { font-weight: 700; }
+.innerForm { border-top-color: var(--color-divider); }
+.pageForm button { justify-self: start; padding-inline: 1.25rem; }

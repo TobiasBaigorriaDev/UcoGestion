@@ -100,7 +100,7 @@ export function SaleHistory({ organizationId, branchId, branches, timezone, onSe
         <option value="CANCELLED">Anuladas</option></select></div>
       <button type="submit">Aplicar filtros</button>
     </form>
-    <p>Las fechas incluyen todo el día según la zona horaria del negocio ({timezone}).</p>
+    <p>Las fechas incluyen el día completo.</p>
     {error ? <ErrorSummary error={error} /> : null}
     <section className={styles.trends} aria-labelledby="sale-trends-heading">
       <h3 id="sale-trends-heading">Ventas a través del tiempo</h3>

@@ -6,6 +6,7 @@ import { CashCommandRetry, cashRejectionIsDefinitive } from '../cash/cash-api';
 import { ErrorSummary } from '../../components/error-summary';
 import { useIdentityContext } from './identity-context';
 import styles from './management.module.css';
+import { EntityAction } from '../../components/entity-action';
 
 const count = z.string().regex(/^\d+$/);
 const blockersSchema = z.strictObject({ sessions: count, pending: count, conflicts: count, uncertainty: count });
@@ -63,7 +64,7 @@ export function BranchDeactivation({ organizationId, branch, onBlockers = loadBr
   if (done) return <p role="status">{branch.name} desactivada. El historial se conserva.</p>;
   return <div>
     <ErrorSummary error={error} />
-    <button type="button" disabled={busy} onClick={() => void review()}>{busy ? 'Verificando…' : `Revisar desactivación de ${branch.name}`}</button>
+    <button className={styles.secondary} type="button" disabled={busy} onClick={() => void review()}>{busy ? 'Verificando…' : <EntityAction label="Revisar desactivación" name={`de ${branch.name}`} />}</button>
     {blockers ? <section aria-label={`Desactivación de ${branch.name}`}>
       <p>El historial se conserva. Una sucursal inactiva no admite nuevas operaciones.</p>
       {blocked ? <><p role="status">La sucursal tiene bloqueos pendientes.</p><ul className={styles.branchBlockers}>
@@ -73,7 +74,7 @@ export function BranchDeactivation({ organizationId, branch, onBlockers = loadBr
         {blockers.uncertainty !== '0' ? <li>Incertidumbre offline: {blockers.uncertainty}. Sincronizá todos los equipos y completá la barrera de configuración. El vencimiento o la revocación no eliminan este bloqueo.</li> : null}
       </ul></> : <><p>No se detectaron bloqueos. Se verificarán otra vez al confirmar.</p>
         <div className={styles.checks}><label><input type="checkbox" checked={confirmed} disabled={busy} onChange={e => setConfirmed(e.target.checked)} />Confirmo la desactivación de {branch.name}.</label></div>
-        <button type="button" disabled={busy || !confirmed} onClick={() => void submit()}>Desactivar {branch.name}</button></>}
+        <button type="button" disabled={busy || !confirmed} onClick={() => void submit()}><EntityAction label="Desactivar" name={branch.name} /></button></>}
     </section> : null}
   </div>;
 }

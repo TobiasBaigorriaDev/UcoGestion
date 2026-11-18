@@ -45,9 +45,7 @@ export function PurchaseWorkspace({ organizationId, branchId, role, timezone, br
   const failure = catalog.error ?? suppliers.error ?? checkout.error;
   return <div className={styles.page}><header><h1>Compras</h1>
     <p>{role === 'EMPLOYEE' ? 'Registrá mercadería recibida o consultá tus recepciones.'
-      : 'Revisá el historial o registrá una nueva compra.'}</p></header>
-    {role !== 'EMPLOYEE' ? <PurchaseHistory organizationId={organizationId} branchId={branchId}
-      branches={branches} timezone={timezone} onSelect={setSelectedId} /> : null}
+      : 'Registrá la mercadería que compraste y revisá compras anteriores.'}</p></header>
     {failure ? <><ErrorSummary error={failure instanceof ApiProblemError ? failure
       : new ApiProblemError({ status: 0, code: 'PURCHASE_CONTEXT_FAILED',
         message: 'No pudimos cargar los datos de compra. Intentá nuevamente.' })} />
@@ -61,5 +59,7 @@ export function PurchaseWorkspace({ organizationId, branchId, role, timezone, br
     <PurchaseLookup organizationId={organizationId} branchId={branchId} role={role}
       selectedId={selectedId} onChanged={refreshHistory}
       paymentMethods={checkout.data?.paymentMethods ?? []} sessions={checkout.data?.sessions ?? []} /></div>}
+    {role !== 'EMPLOYEE' ? <PurchaseHistory organizationId={organizationId} branchId={branchId}
+      branches={branches} timezone={timezone} onSelect={setSelectedId} /> : null}
   </div>;
 }

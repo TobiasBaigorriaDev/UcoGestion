@@ -55,8 +55,8 @@ it('allows OWNER/ADMIN to create, edit, toggle status and delete customer with a
 
   // Accessible landmarks and structure
   expect(screen.getByRole('heading', { name: 'Clientes' })).toBeTruthy();
-  expect(screen.getByText('Acme Corp')).toBeTruthy();
-  expect(screen.getByText('Bodega La Consulta')).toBeTruthy();
+  expect(screen.getByText('Acme Corp', { selector: 'strong' })).toBeTruthy();
+  expect(screen.getByText('Bodega La Consulta', { selector: 'strong' })).toBeTruthy();
 
   // Create
   await userEvent.type(screen.getByRole('textbox', { name: 'Nombre del cliente nuevo' }), 'Nuevo Cliente');

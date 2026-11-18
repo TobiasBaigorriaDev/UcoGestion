@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiClient, ApiProblemError } from '../../lib/api/client';
 import styles from '../identity/management.module.css';
+import { EntityAction } from '../../components/entity-action';
 
 export interface ManagedSupplier {
   readonly id: string;
@@ -228,7 +229,7 @@ export function SupplierManagement({
     <section className={styles.page} aria-labelledby="suppliers-heading">
       <header className={styles.heading}>
         <h1 id="suppliers-heading">Proveedores</h1>
-        <p>Registro y datos de contacto de proveedores para órdenes de compra y recepción de stock.</p>
+        <p>A quién le comprás mercadería y cómo contactarlo.</p>
       </header>
       <ErrorSummary error={error} />
       {message ? <p role="status">{message}</p> : null}
@@ -402,13 +403,13 @@ function SupplierItemEditor({
       {canManage ? (
         <div className={styles.actions}>
           <button type="button" onClick={() => setMode(mode === 'edit' ? 'closed' : 'edit')}>
-            Editar {supplier.name}
+            <EntityAction label="Editar" name={supplier.name} />
           </button>
           <button type="button" onClick={() => void toggleStatus()} disabled={busy}>
-            {supplier.status === 'ACTIVE' ? `Desactivar ${supplier.name}` : `Activar ${supplier.name}`}
+            <EntityAction label={supplier.status === 'ACTIVE' ? 'Desactivar' : 'Activar'} name={supplier.name} />
           </button>
           <button type="button" onClick={() => setMode(mode === 'delete' ? 'closed' : 'delete')}>
-            Eliminar {supplier.name}
+            <EntityAction label="Eliminar" name={supplier.name} />
           </button>
         </div>
       ) : null}
@@ -442,7 +443,7 @@ function SupplierItemEditor({
               <input id={`supplier-edit-notes-${supplier.id}`} {...editForm.register('notes')} />
             </div>
           </div>
-          <button type="submit" disabled={busy}>Guardar cambios de {supplier.name}</button>
+          <button type="submit" disabled={busy}><EntityAction label="Guardar cambios" name={`de ${supplier.name}`} /></button>
         </form>
       ) : null}
 
@@ -452,7 +453,7 @@ function SupplierItemEditor({
           <p>Solo se puede eliminar si no posee historial de compras o recepción previo. En caso contrario, se debe desactivar.</p>
           <div className={styles.actions}>
             <button type="button" onClick={() => void confirmDelete()} disabled={busy}>
-              Confirmar eliminación de {supplier.name}
+              <EntityAction label="Confirmar eliminación" name={`de ${supplier.name}`} />
             </button>
             <button type="button" onClick={() => setMode('closed')} disabled={busy}>
               Cancelar

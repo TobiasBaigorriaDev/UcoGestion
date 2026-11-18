@@ -513,3 +513,10 @@ Solo cambia la presentación. Los comandos, las claves de reintento, los locks, 
 - [x] D08-T12: Confirmación en el lugar antes de anular venta, gasto o compra y antes de revocar una invitación o un acceso. Explica la consecuencia, ofrece «Sí, …» y «No, volver», devuelve el foco y cancela con Escape. No cambia los comandos ni las claves idempotentes [RF-153, RF-154].
 - [x] D08-T13: Resumen de errores con título según el problema: sin conexión, sesión vencida, sin permiso, cambio concurrente, datos a revisar y servicio no disponible. Conserva el mensaje del servidor y la referencia [RF-154].
 - [x] D08-T14: Alta de clientes y proveedores plegada en «Nuevo …» después de la lista. Textos ambiguos corregidos: «Ocultar cuenta», «Revertir ajuste/transferencia» [RF-152–RF-154].
+
+### D08 — fase 5: pulido visual y revisión final (solicitud explícita 2026-11-17)
+
+- [x] D08-T15: Gráficos sin datos muestran «Sin movimientos en este período.» en lugar de un eje inventado; Reportes no repite el gráfico vacío. Notas de fechas sin zona IANA [RF-152, RF-154].
+- [x] D08-T16: Acciones de fila cortas con el nombre oculto para lectores de pantalla (`EntityAction`) en clientes, proveedores, categorías, cajas, productos, sucursales, usuarios, mínimos y ajustes. «Ver fiado» reemplaza «Cuenta corriente» [RF-152–RF-154].
+- [x] D08-T17: Idioma del negocio en Datos del negocio, Sucursales, Productos, Compras y venta sin internet («Mostrador sin conexión», «PIN sin conexión», «el dueño o un administrador», «(venta suelta)»). Aviso de stock negativo. Encabezado sin cortar la sucursal, sidebar más compacta, alta plegada con `+`, «Elegir icono» y «Revisar desactivación» secundarios, Nueva compra antes del historial [RF-152–RF-154].
+- [ ] D08-T18 (siguiente fase): Compras y Transferencias con líneas sin `fieldset` visible y «Agregar otro producto» secundario; Historial de ajustes compacto con fecha, unidad, píldora y filtro; Usuarios en filas con «Editar»; Medios de pago con switch; selects amigables para zona horaria y moneda; píldoras de estado en listados de Ajustes.

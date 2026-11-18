@@ -12,6 +12,7 @@ import styles from '../identity/management.module.css';
 import categoryStyles from './catalog-category-management.module.css';
 import { CategoryIconPicker } from './components/category-icon-picker';
 import { CategoryIcon } from './components/category-icon';
+import { EntityAction } from '../../components/entity-action';
 
 const categorySchema = z.object({ id: z.string(), name: z.string(), status: z.enum(['ACTIVE', 'INACTIVE']), version: z.number().int().positive(), icon: categoryIconSchema.optional() });
 const categoriesSchema = z.object({ categories: z.array(categorySchema) });
@@ -125,11 +126,11 @@ export function CatalogCategoryManagement({ organizationId, categories, onReload
       {categories.length === 0 ? <p>No hay categorías. Podés crear una arriba.</p> : <ul className={styles.rows}>{categories.map((category) => <li className={styles.row} key={category.id}>
         <div className={styles.memberTitle}>{!expense ? <CategoryIcon icon={category.icon} /> : null}<strong>{category.name}</strong><span>{category.status === 'ACTIVE' ? 'Activa' : 'Inactiva'}</span></div>
         <div className={styles.actions}>
-          {!expense ? <button type="button" disabled={busy} onClick={() => { setEditingId(category.id); setConfirmId(null); setEditIcon(category.icon ?? null); editForm.reset({ name: category.name }); }}>Editar {category.name}</button> : null}
+          {!expense ? <button type="button" disabled={busy} onClick={() => { setEditingId(category.id); setConfirmId(null); setEditIcon(category.icon ?? null); editForm.reset({ name: category.name }); }}><EntityAction label="Editar" name={category.name} /></button> : null}
           <button type="button" disabled={busy} onClick={() => void perform(() => onChangeStatus(organizationId, category.id, category.version, category.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'), category.status === 'ACTIVE' ? 'Categoría desactivada.' : 'Categoría activada.')}>
-            {category.status === 'ACTIVE' ? `Desactivar ${category.name}` : `Activar ${category.name}`}
+            <EntityAction label={category.status === 'ACTIVE' ? 'Desactivar' : 'Activar'} name={category.name} />
           </button>
-          <button type="button" disabled={busy} onClick={() => setConfirmId(category.id)}>Eliminar {category.name}</button>
+          <button type="button" disabled={busy} onClick={() => setConfirmId(category.id)}><EntityAction label="Eliminar" name={category.name} /></button>
         </div>
         {editingId === category.id ? <form className={categoryStyles.editor} onSubmit={editForm.handleSubmit(({ name }) => perform(async () => {
           if (editIcon !== (category.icon ?? null)) await onUpdate(organizationId, category.id, category.version, name.trim(), editIcon);
@@ -142,13 +143,13 @@ export function CatalogCategoryManagement({ organizationId, categories, onReload
           {editForm.formState.errors.name ? <p id={`category-edit-error-${category.id}`} role="alert">Ingresá un nombre de hasta 255 caracteres.</p> : null}
           <CategoryIconPicker value={editIcon} onChange={setEditIcon} disabled={busy} label={`Cambiar icono de ${category.name}`} />
           <div className={styles.actions}>
-            <button type="submit" disabled={busy}>Guardar nombre de {category.name}</button>
-            <button type="button" disabled={busy} onClick={() => setEditingId(null)}>Cancelar edición de {category.name}</button>
+            <button type="submit" disabled={busy}><EntityAction label="Guardar nombre" name={`de ${category.name}`} /></button>
+            <button type="button" disabled={busy} onClick={() => setEditingId(null)}><EntityAction label="Cancelar edición" name={`de ${category.name}`} /></button>
           </div>
         </form> : null}
         {confirmId === category.id ? <div className={styles.actions} role="group" aria-label={`Confirmar eliminación de ${category.name}`}>
           <p>La eliminación es definitiva y solo se permite sin historial ni operaciones offline pendientes.</p>
-          <button type="button" disabled={busy} onClick={() => void perform(() => onDelete(organizationId, category.id, category.version), 'Categoría eliminada.')}>Confirmar eliminación de {category.name}</button>
+          <button type="button" disabled={busy} onClick={() => void perform(() => onDelete(organizationId, category.id, category.version), 'Categoría eliminada.')}><EntityAction label="Confirmar eliminación" name={`de ${category.name}`} /></button>
           <button type="button" disabled={busy} onClick={() => setConfirmId(null)}>Cancelar</button>
         </div> : null}
       </li>)}</ul>}

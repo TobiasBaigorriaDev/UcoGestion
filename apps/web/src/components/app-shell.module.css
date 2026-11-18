@@ -3,7 +3,7 @@
 .skipLink:focus-visible { transform: none; outline-color: var(--color-on-primary); }
 .visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-.header { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; justify-content: space-between; padding: .75rem 7.5rem .75rem 1rem; border-bottom: 1px solid var(--color-divider); background: var(--color-surface); }
+.header { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; justify-content: space-between; padding: .75rem 9rem .75rem 1rem; border-bottom: 1px solid var(--color-divider); background: var(--color-surface); }
 .brand { display: inline-flex; align-items: center; gap: .6rem; min-height: 44px; color: var(--color-primary); font-size: var(--text-title); font-weight: 800; letter-spacing: -.02em; text-decoration: none; }
 .brandMark { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: var(--radius-sm); background: var(--color-primary); color: var(--color-on-primary); font-size: var(--text-title); }
 .context { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; min-width: 0; }
@@ -35,14 +35,14 @@
 .bottomLink:focus-visible { outline-offset: -4px; }
 
 @media (min-width: 48rem) {
-  .header { padding-inline: 2rem 9rem; }
+  .header { padding-inline: 2rem 10.5rem; }
   .main { padding: 2rem 2rem calc(var(--bottom-bar-height) + 2.5rem); }
 }
 
 @media (min-width: 64rem) {
   .shell { grid-template-columns: 15rem minmax(0, 1fr); grid-template-rows: auto 1fr; align-items: start; }
   .header { grid-column: 1 / -1; position: sticky; top: 0; z-index: 20; }
-  .navigation, .navigation[data-open='true'] { position: sticky; inset: auto; top: 4.25rem; z-index: auto; display: flex; flex-direction: column; gap: 1.25rem; max-height: calc(100dvh - 4.25rem); padding: 1.5rem .875rem 2rem; overflow-y: auto; border-right: 1px solid var(--color-divider); background: var(--color-sidebar); scrollbar-width: thin; scrollbar-color: var(--color-control-border) transparent; }
+  .navigation, .navigation[data-open='true'] { position: sticky; inset: auto; top: 4.25rem; z-index: auto; display: flex; flex-direction: column; gap: .75rem; max-height: calc(100dvh - 4.25rem); padding: 1.25rem .875rem 2rem; overflow-y: auto; border-right: 1px solid var(--color-divider); background: var(--color-sidebar); scrollbar-width: thin; scrollbar-color: var(--color-control-border) transparent; }
   .navigation a { font-size: var(--text-label); }
   .bottomBar { display: none; }
   .main { padding: 2rem 2.5rem 4rem; }

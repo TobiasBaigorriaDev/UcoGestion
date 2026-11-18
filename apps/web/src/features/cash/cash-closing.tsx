@@ -156,8 +156,8 @@ export function CashDifferenceReview({organizationId,actorUserId,role,session,on
   const form=useForm<z.infer<typeof schema>>({resolver:zodResolver(schema),defaultValues:{note:''}});
   if(!review)return null;
   if(done || review.status==='REVIEWED')return <p role="status">Diferencia revisada. El cierre y sus importes se conservan.</p>;
-  if(role!=='OWNER' && role!=='ADMIN')return <p>Diferencia pendiente de revisión por OWNER o ADMIN.</p>;
-  if(!review.canReview)return <p>Otro OWNER o ADMIN con alcance debe revisar esta diferencia; no se permite la autorrevisión si hay alternativa.</p>;
+  if(role!=='OWNER' && role!=='ADMIN')return <p>Diferencia pendiente de revisión del dueño o un administrador.</p>;
+  if(!review.canReview)return <p>Otro dueño o administrador de la sucursal debe revisar esta diferencia; no se permite la autorrevisión si hay alternativa.</p>;
   const retry=new CashCommandRetry(`${organizationId}:${actorUserId}:review:${review.id}`);
   return <form noValidate onSubmit={form.handleSubmit(async values=>{
     setBusy(true);setError(null);

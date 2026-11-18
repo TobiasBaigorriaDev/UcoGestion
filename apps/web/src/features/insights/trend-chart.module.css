@@ -19,3 +19,4 @@
 .chartDetails td { text-align: right; font-weight: 650; }
 @media (forced-colors: active) { .chartLine, .chartGridLine, .chartAxis { stroke: CanvasText; } .chartPoint { fill: CanvasText; stroke: Canvas; } }
 @media (forced-colors: active) { .chartLine, .legend line { stroke: CanvasText !important; } .chartPoint { fill: CanvasText !important; } }
+.empty { margin: 0; padding: 1.5rem 1rem; border: 1px dashed var(--color-control-border); border-radius: var(--radius-sm); color: var(--color-text-secondary); text-align: center; }

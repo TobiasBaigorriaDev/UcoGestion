@@ -9,6 +9,7 @@ import { ApiProblemError } from '../../lib/api/client';
 import { compensateAdjustment, confirmAdjustment, type Adjustment, type StockItem } from './inventory-api';
 import styles from '../identity/management.module.css';
 import adjustmentStyles from './inventory-adjustments.module.css';
+import { EntityAction } from '../../components/entity-action';
 
 const reasons = [
   ['CONTEO_FISICO', 'Conteo físico'], ['ROTURA', 'Rotura'], ['PERDIDA', 'Pérdida'],
@@ -110,9 +111,9 @@ export function InventoryAdjustments({ compact = false, historyOnly = false, org
           {adjustment.observation ? <p>{adjustment.observation}</p> : null}
           {role !== 'CASHIER' && !adjustment.compensatedBy && !adjustment.compensates ?
             confirmId === adjustment.id ? <div><p>Se registra un movimiento contrario que deja el stock como estaba. El ajuste original queda en el historial.</p>
-              <div className={styles.actions}><button type="button" disabled={busy} onClick={() => void compensate(adjustment.id)}>Sí, revertir el ajuste de {adjustment.itemName}</button>
+              <div className={styles.actions}><button type="button" disabled={busy} onClick={() => void compensate(adjustment.id)}><EntityAction label="Sí, revertir el ajuste" name={`de ${adjustment.itemName}`} /></button>
                 <button type="button" onClick={() => setConfirmId(null)}>Cancelar</button></div></div>
-              : <button type="button" disabled={busy} onClick={() => setConfirmId(adjustment.id)}>Revertir ajuste de {adjustment.itemName}</button> : null}
+              : <button type="button" disabled={busy} onClick={() => setConfirmId(adjustment.id)}><EntityAction label="Revertir ajuste" name={`de ${adjustment.itemName}`} /></button> : null}
         </li>)}</ul>}
       {nextCursor && onLoadMore ? <button type="button" onClick={onLoadMore}>Cargar más ajustes</button> : null}
     </section> : null}

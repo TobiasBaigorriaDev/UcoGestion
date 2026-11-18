@@ -20,7 +20,7 @@ export function OfflineWorkspace({ organizationId, branchId, role }: {
     return () => { live = false; controller?.close(); };
   }, [organizationId, branchId, role, attempt]);
   if (role === 'EMPLOYEE') return <p role="alert">Tu rol no permite operar el POS offline.</p>;
-  if (failed) return <section><h1>POS sin conexión</h1><p role="alert">No pudimos validar este equipo. Conectate e iniciá sesión nuevamente. Si aún no está autorizado, pedile a OWNER o ADMIN que lo prepare.</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Reintentar validación online</button></section>;
+  if (failed) return <section><h1>Mostrador sin conexión</h1><p role="alert">No pudimos validar este equipo. Conectate e iniciá sesión nuevamente. Si aún no está autorizado, pedile al dueño o a un administrador que lo prepare.</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Reintentar validación online</button></section>;
   if (!setup) return <p role="status">Validando identidad y equipo online…</p>;
   return <OfflineSettings role={role} configured={setup.configured} deviceAuthorized={setup.deviceAuthorized} unlock={setup.unlock}
     authorize={setup.authorize} refresh={setup.refresh} sync={setup.sync} lock={setup.lock} readStatus={setup.readStatus} changePin={setup.changePin}

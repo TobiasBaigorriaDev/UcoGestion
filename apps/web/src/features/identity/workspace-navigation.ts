@@ -19,7 +19,7 @@ export function workspaceNavigation(role: WorkspaceRole | undefined): {
     ...(sells ? [{ label: 'Vender', items: [counter, { href: '/workspace/sales', label: 'Ventas', icon: 'receipt' }] } satisfies NavigationGroup] : []),
     ...(sells ? [{ label: 'Caja', items: [shift,
       { href: '/workspace/cash-registers', label: 'Cajas registradoras', icon: 'banknote' },
-      { href: '/workspace/offline', label: 'Este equipo sin conexión', icon: 'device' }] } satisfies NavigationGroup] : []),
+      { href: '/workspace/offline', label: 'Sin conexión', icon: 'device' }] } satisfies NavigationGroup] : []),
     { label: 'Stock', items: [products, ...(role === 'CASHIER' ? [] : [purchases])] },
     { label: 'Clientes y proveedores', items: [
       { href: '/workspace/customers', label: 'Clientes', icon: 'users' },

@@ -106,7 +106,7 @@ export function PurchaseHistory({ organizationId, branchId, branches, timezone, 
         <option value="PAID">Pagadas</option><option value="CANCELLED">Anuladas</option>
       </select></div><button type="submit">Aplicar filtros</button>
     </form>
-    <p>Las fechas incluyen todo el día según la zona horaria del negocio ({timezone}).</p>
+    <p>Las fechas incluyen el día completo.</p>
     {error ? <ErrorSummary error={error} /> : null}
     <section className={styles.trends} aria-labelledby="purchase-trends-heading">
       <h3 id="purchase-trends-heading">Compras a través del tiempo</h3>

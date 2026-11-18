@@ -26,7 +26,7 @@ async page => {
   page = await page.context().newPage(); await page.goto(sessionPage.url());
   region = page.getByRole('region', { name: 'Confirmación de venta' });
   await page.getByRole('button', { name: 'Venta offline', exact: true }).click();
-  await page.getByLabel('PIN offline', { exact: true }).fill('offline-pin');
+  await page.getByLabel('PIN sin conexión', { exact: true }).fill('offline-pin');
   await page.getByRole('button', { name: 'Autorizar este equipo y crear PIN' }).click();
   await page.getByRole('button', { name: 'Abrir caja sin conexión' }).waitFor();
   await page.getByLabel('Caja', { exact: true }).selectOption({ label: 'Caja offline' });
@@ -55,7 +55,7 @@ async page => {
   await page.close(); page = sessionPage; await page.reload();
   region = page.getByRole('region', { name: 'Confirmación de venta' });
   await page.getByRole('button', { name: 'Venta offline', exact: true }).click();
-  await page.getByLabel('PIN offline', { exact: true }).fill('offline-pin');
+  await page.getByLabel('PIN sin conexión', { exact: true }).fill('offline-pin');
   await page.getByRole('button', { name: 'Desbloquear mi identidad' }).click();
   await page.getByRole('button', { name: 'Ver comprobante de venta pendiente' }).click();
   await region.getByRole('button', { name: 'Ver comprobante local', exact: true }).click();

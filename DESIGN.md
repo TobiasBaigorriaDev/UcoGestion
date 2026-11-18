@@ -202,12 +202,17 @@ La profundidad viene de superficies sólidas con borde fino y sombras cortas con
 - **Hover:** Transición a `#15803D` con escala sutil `scale-[0.98]` en activo.
 - **Secondary:** Fondo Surface, borde Control Border, texto Text Primary; hover con borde y texto Bosque.
 - **Touch target:** Área interactiva mínima de 44×44px, aun cuando el contenido visual sea menor.
+- **Acciones de fila:** Secundarias y con el verbo solo (`Editar`, `Desactivar`, `Revertir`). El nombre del registro va oculto visualmente con `EntityAction`, así el lector de pantalla anuncia «Editar Distribuidora Sur» sin repetir el nombre en pantalla.
+- **Un primario por panel:** Acciones auxiliares (elegir icono, revisar una desactivación) son secundarias.
 
 ### Forms and feedback
 
 - Labels persistentes; el placeholder nunca sustituye al label y usa `text-muted` con opacidad 1.
 - Errores junto al campo y en un resumen enfocable, enlazados mediante semántica ARIA.
 - Estados de carga, vacío, éxito, advertencia, conflicto, offline y permiso denegado usan icono/texto además de color.
+- **Estados vacíos de gráficos:** Si todos los valores del período son cero, no se dibuja eje ni línea; se muestra «Sin movimientos en este período.» en un recuadro punteado.
+- **Altas plegadas:** «Nuevo cliente» / «Nuevo proveedor» llevan un cuadrado Bosque con `+` (se vuelve `−` al abrir) para leerse como acción.
+- Las notas de fechas dicen «Las fechas incluyen el día completo.»; la zona horaria técnica (IANA) solo aparece en Datos del negocio.
 - El foco visible debe conservar contraste de al menos 3:1 contra cada superficie. Los `input type="date"` usan `:focus-within`, porque Chromium no aplica `:focus-visible` al host.
 
 ### Panels
@@ -230,6 +235,8 @@ La categoría de catálogo puede elegir entre 52 iconos SVG Lucide orientados a 
 ### Don't:
 - **Don't** usar vidrio, desenfoque ni bordes laterales de color como decoración.
 - **Don't** mostrar códigos internos (`CASH`, `OWNER`, `OPEN`) ni importes con punto decimal (`1800.00`).
+- **Don't** usar «POS», «offline» ni «unidades fraccionables» en la interfaz: se dice «Mostrador sin conexión», «PIN sin conexión» y «(venta suelta)».
+- **Don't** dejar un stock negativo sin aviso: se marca «Revisar stock: se vendió más de lo registrado».
 - **Don't** usar el color verde vibrante `#22C55E` como fondo decorativo estático.
 
 ### Cuestionario de edición de productos

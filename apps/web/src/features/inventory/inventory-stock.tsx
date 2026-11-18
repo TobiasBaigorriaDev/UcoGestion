@@ -8,6 +8,7 @@ import { formatStockQuantity } from '../../lib/format-stock-quantity';
 import type { StockItem } from './inventory-api';
 import { saveStockThreshold } from './inventory-api';
 import styles from '../identity/management.module.css';
+import { EntityAction } from '../../components/entity-action';
 
 type Role = 'OWNER' | 'ADMIN' | 'EMPLOYEE' | 'CASHIER';
 const minimumPattern = /^(?:0|[1-9]\d{0,16})(?:\.\d{1,3})?$/;
@@ -69,7 +70,7 @@ export function InventoryStock({ compact = false, organizationId, role, branches
           {nextCursor ? ' Cargá más productos para revisar el resto.' : ''}</p> : null}
         </> : null}
         <ul className={styles.rows}>{visibleStocks.map((item) => <li className={styles.row} key={item.itemId}>
-          <div className={styles.memberTitle}><strong>{item.itemName}</strong><span>Disponible: {formatStockQuantity(item.quantity)} {item.baseUnit === 'UNIT' ? 'unidades' : 'unidades fraccionables'}</span></div>
+          <div className={styles.memberTitle}><strong>{item.itemName}</strong><span>Disponible: {formatStockQuantity(item.quantity)} {item.baseUnit === 'UNIT' ? 'unidades' : '(venta suelta)'}</span></div>
           <p>{item.threshold === null ? 'Sin mínimo configurado' : `Mínimo: ${formatStockQuantity(item.threshold)}`}</p>
           <p>{item.lowStock ? <strong>Alerta: Stock bajo. Alcanzó o quedó por debajo del mínimo.</strong> : 'Sin alerta de stock bajo.'}</p>
           {role !== 'CASHIER' ? <div className={styles.fields}><div>
@@ -83,7 +84,7 @@ export function InventoryStock({ compact = false, organizationId, role, branches
             <span>{item.baseUnit === 'UNIT' ? 'Vacío elimina el mínimo. Ingresá unidades enteras.'
               : 'Vacío elimina el mínimo. Hasta tres decimales.'}</span>
             <button type="button" disabled={busyId !== null} onClick={() => void save(item)}>
-              {busyId === item.itemId ? 'Guardando…' : `Guardar mínimo de ${item.itemName}`}</button>
+              {busyId === item.itemId ? 'Guardando…' : <EntityAction label="Guardar mínimo" name={`de ${item.itemName}`} />}</button>
           </div></div> : null}
         </li>)}</ul></>}
       {nextCursor && onLoadMore ? <button type="button" onClick={onLoadMore}>Cargar más productos</button> : null}

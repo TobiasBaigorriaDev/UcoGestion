@@ -19,6 +19,7 @@ import { CatalogProductStockActions } from './catalog-product-stock-actions';
 import type { StockItem } from '../inventory/inventory-api';
 import styles from '../identity/management.module.css';
 import catalogStyles from './catalog-item-management.module.css';
+import { EntityAction } from '../../components/entity-action';
 
 const itemSchema = z.object({
   id: z.string(),
@@ -310,7 +311,7 @@ export function CatalogItemManagement({
     <section className={styles.page} aria-labelledby="items-heading">
       <header className={styles.heading}>
         <h1 id="items-heading">Productos</h1>
-        <p>Consultá y actualizá los productos y servicios de tu organización.</p>
+        <p>Precios y stock de lo que vendés.</p>
       </header>
       <button className={catalogStyles.createAction} type="button" aria-expanded={creating}
         aria-controls="new-catalog-item" onClick={() => setCreating(value => !value)}>
@@ -386,7 +387,7 @@ export function CatalogItemManagement({
       {message ? <p role="status">{message}</p> : null}
 
       <section className={`${styles.panel} ${catalogStyles.catalogList}`} aria-labelledby="items-list-heading">
-        <h2 id="items-list-heading">Ítems de la organización</h2>
+        <h2 id="items-list-heading">Tus productos y servicios</h2>
         <CatalogSearch query={query} onQueryChange={setQuery} total={items.length} matched={visibleItems.length} />
         <CatalogSort value={order} onChange={setOrder} />
         <CatalogGrouping checked={grouped} onChange={setGrouped} />
@@ -567,7 +568,7 @@ function ItemEditor({
         setError(null);
         setEditing(!editing);
         setNextStatus(item.status);
-      }}>Editar {item.name}</button>
+      }}><EntityAction label="Editar" name={item.name} /></button>
       {editing ? <div id={`product-editor-${item.id}`} className={catalogStyles.editorBody}>
       <ErrorSummary error={error} />
       <p>Guardá cada apartado para aplicar sus cambios.</p>
@@ -597,7 +598,7 @@ function ItemEditor({
               <input id={`edit-barcode-${item.id}`} {...edit.register('barcode')} />
             </div>
           </div>
-          <button type="submit" disabled={busy}>Guardar cambios de {item.name}</button>
+          <button type="submit" disabled={busy}><EntityAction label="Guardar cambios" name={`de ${item.name}`} /></button>
         </form>
         <form onSubmit={price.handleSubmit(savePrice)} noValidate>
           <h3>Precio de venta</h3>
@@ -609,7 +610,7 @@ function ItemEditor({
             {...price.register('price')}
           />
           {price.formState.errors.price ? <p role="alert">Ingresá un importe con dos decimales, por ejemplo 150.00.</p> : null}
-          <button type="submit" disabled={busy}>Guardar precio de {item.name}</button>
+          <button type="submit" disabled={busy}><EntityAction label="Guardar precio" name={`de ${item.name}`} /></button>
         </form>
         <form onSubmit={structure.handleSubmit(saveStructure)} noValidate>
           <h3>Estructura de {item.name}</h3>
@@ -639,7 +640,7 @@ function ItemEditor({
           ) : (
             <p>Los servicios no controlan inventario.</p>
           )}
-          <button type="submit" disabled={busy}>Guardar estructura de {item.name}</button>
+          <button type="submit" disabled={busy}><EntityAction label="Guardar estructura" name={`de ${item.name}`} /></button>
         </form>
       <form onSubmit={event => { event.preventDefault(); void toggleStatus(); }}>
         <h3>Disponibilidad</h3>
@@ -648,7 +649,7 @@ function ItemEditor({
           <option value="ACTIVE">Activo</option>
           <option value="INACTIVE">Inactivo</option>
         </select>
-        <button type="submit" disabled={busy || nextStatus === item.status}>Guardar estado de {item.name}</button>
+        <button type="submit" disabled={busy || nextStatus === item.status}><EntityAction label="Guardar estado" name={`de ${item.name}`} /></button>
       </form>
       <details className={catalogStyles.deleteSection}>
         <summary>Eliminar {item.name}</summary>
@@ -657,7 +658,7 @@ function ItemEditor({
           <p>Si el ítem posee referencias históricas o incertidumbre offline, la operación será rechazada y deberás desactivarlo.</p>
           <div className={styles.actions}>
             <button type="button" onClick={() => void confirmDelete()} disabled={busy}>
-              Confirmar eliminación de {item.name}
+              <EntityAction label="Confirmar eliminación" name={`de ${item.name}`} />
             </button>
             <button type="button" onClick={() => setEditing(false)} disabled={busy}>
               Cancelar
