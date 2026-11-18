@@ -104,6 +104,9 @@
 .historyFilters input:focus-visible, .historyFilters input[type="date"]:focus-within, .historyFilters select:focus-visible, .historyFilters button:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 .periodButtons { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 16px; }
 .periodButtons button[aria-pressed='true'] { background: var(--color-primary); color: var(--color-on-primary); }
+/* No colour transition: a pressed toggle must never pass through a low-contrast intermediate state. */
+.panel .periodButtons button { transition: none; }
+.panel .periodButtons button[aria-pressed='true']:hover { background: var(--color-accent); color: var(--color-on-primary); }
 .branchFilter { max-width: 360px; margin-bottom: 16px; }
 .trends { margin: 24px 0 32px; padding-top: 20px; border-top: 1px solid var(--color-divider); }
 .trends h3 { margin: 0 0 4px; font-size: var(--text-title); }
