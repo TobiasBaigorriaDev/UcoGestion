@@ -325,7 +325,7 @@ export class MembershipAdministrationService {
     if (remaining.rows.at(0)?.exists !== true) {
       throw new MembershipAdministrationError(
         'ORGANIZATION_OWNER_REQUIRED',
-        'La organización activa debe conservar al menos un OWNER activo.',
+        'El negocio debe conservar al menos un dueño activo.',
       );
     }
   }
@@ -368,13 +368,13 @@ export class MembershipAdministrationService {
     if (actor.role !== 'OWNER' && actor.role !== 'ADMIN') {
       throw new MembershipAdministrationError(
         'MEMBERSHIP_MANAGEMENT_FORBIDDEN',
-        'Solo OWNER o ADMIN pueden administrar membresías.',
+        'Solo el dueño o un administrador pueden administrar membresías.',
       );
     }
     if (actor.role !== 'OWNER' && (target.role === 'OWNER' || resultingRole === 'OWNER')) {
       throw new MembershipAdministrationError(
         'OWNER_MEMBERSHIP_FORBIDDEN',
-        'Solo OWNER puede administrar una membresía OWNER.',
+        'Solo el dueño puede administrar el acceso de otro dueño.',
       );
     }
   }
@@ -383,7 +383,7 @@ export class MembershipAdministrationService {
     if (branchIds.length !== 0) {
       throw new NonOwnerMembershipPolicyError(
         'MEMBERSHIP_BRANCH_INVALID',
-        'OWNER obtiene alcance global y no admite sucursales explícitas.',
+        'El dueño accede a todas las sucursales; no se le asignan sucursales.',
       );
     }
     return [];

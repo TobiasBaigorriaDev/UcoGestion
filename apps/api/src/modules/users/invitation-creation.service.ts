@@ -183,7 +183,7 @@ export class InvitationCreationService {
       if (actor.role !== 'OWNER') {
         throw new InvitationCreationPolicyError(
           'INVITATION_OWNER_FORBIDDEN',
-          'Solo OWNER puede invitar otra membresía OWNER.',
+          'Solo el dueño puede invitar a otro dueño.',
         );
       }
       if (input.branchIds.length !== 0) {

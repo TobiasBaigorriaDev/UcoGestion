@@ -76,7 +76,7 @@ export function PlatformOnboarding({ provision = provisionOrganization }: { prov
 
   if (result) return <section className={styles.form} role="status">
     <h1>Organización creada</h1>
-    <p>Se confirmaron la organización, su primera sucursal y la membresía OWNER en una sola operación.</p>
+    <p>Se confirmaron la organización, su primera sucursal y el acceso del dueño en una sola operación.</p>
     <dl><dt>ID de organización</dt><dd>{result.organizationId}</dd><dt>ID de sucursal</dt><dd>{result.branchId}</dd></dl>
     <button type="button" onClick={() => { setResult(null); setRequestId(crypto.randomUUID()); }}>Crear otra organización</button>
   </section>;

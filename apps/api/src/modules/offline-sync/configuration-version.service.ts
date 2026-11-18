@@ -71,7 +71,7 @@ export class ConfigurationVersionService {
         [context.organizationId, context.userId],
       );
       if (!['OWNER', 'ADMIN'].includes(membership.rows[0]?.role ?? '')) {
-        throw new ConfigurationVersionError('CONFIGURATION_FORBIDDEN', 'Solo OWNER o ADMIN pueden emitir configuración.');
+        throw new ConfigurationVersionError('CONFIGURATION_FORBIDDEN', 'Solo el dueño o un administrador pueden emitir configuración.');
       }
       const org = await client.query<{ base_currency: string; config_epoch: number }>(
         'SELECT base_currency, config_epoch::integer AS config_epoch FROM organizations WHERE id = $1 FOR UPDATE',

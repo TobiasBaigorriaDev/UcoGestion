@@ -48,7 +48,7 @@ export class NonOwnerMembershipPolicy {
     if (request.actorRole !== 'OWNER' && request.actorRole !== 'ADMIN') {
       throw new NonOwnerMembershipPolicyError(
         'MEMBERSHIP_MANAGEMENT_FORBIDDEN',
-        'Solo OWNER o ADMIN pueden preparar una membresía no propietaria.',
+        'Solo el dueño o un administrador pueden dar acceso a una persona.',
       );
     }
 
@@ -91,7 +91,7 @@ export class NonOwnerMembershipPolicy {
       if (request.targetBranchIds.some((branchId) => !actorBranchIds.has(branchId))) {
         throw new NonOwnerMembershipPolicyError(
           'MEMBERSHIP_BRANCH_SCOPE_FORBIDDEN',
-          'ADMIN no puede conceder sucursales fuera de su propio alcance.',
+          'Un administrador no puede asignar sucursales fuera de su alcance.',
         );
       }
     }

@@ -328,7 +328,7 @@ export class CatalogItemCreationService {
     if (!['OWNER', 'ADMIN'].includes(membership.rows.at(0)?.role ?? '')) {
       throw new CatalogItemCreationError(
         'CATALOG_ITEM_CREATION_FORBIDDEN',
-        'Solo OWNER o ADMIN pueden crear ítems de catálogo.',
+        'Solo el dueño o un administrador pueden crear ítems de catálogo.',
       );
     }
   }

@@ -91,7 +91,7 @@ export class PaymentMethodSettingsService {
     if (!['OWNER', 'ADMIN'].includes(membership.rows.at(0)?.role ?? '')) {
       throw new PaymentMethodSettingsError(
         'PAYMENT_METHOD_SETTINGS_FORBIDDEN',
-        'Solo OWNER o ADMIN pueden configurar medios de pago.',
+        'Solo el dueño o un administrador pueden configurar medios de pago.',
       );
     }
   }

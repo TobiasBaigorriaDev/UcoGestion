@@ -147,7 +147,7 @@ export class CashController {
 
   private handleError(error: unknown): never {
     if (error instanceof CashDifferenceReviewError) throw new ForbiddenException({
-      code:error.code,title:'Autorrevisión rechazada',detail:'Otro OWNER o ADMIN con alcance debe revisar la diferencia.' });
+      code:error.code,title:'Autorrevisión rechazada',detail:'Otro dueño o administrador de la sucursal debe revisar la diferencia.' });
     if (error instanceof CashCloseError) throw new ConflictException({
       code: error.code, title: 'Cierre de caja rechazado', detail: 'La sesión o su checkpoint no permiten completar el cierre.' });
     if (error instanceof ConcurrentCashModificationError) throw new ConflictException({

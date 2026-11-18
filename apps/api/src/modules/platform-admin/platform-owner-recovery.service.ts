@@ -22,7 +22,7 @@ export class OwnerRecoveryNotAllowedError extends Error {
   readonly code = 'OWNER_RECOVERY_NOT_ALLOWED';
 
   constructor() {
-    super('La recuperación excepcional solo está disponible para una organización activa sin OWNER vigente.');
+    super('La recuperación excepcional solo está disponible para una organización activa sin dueño vigente.');
     this.name = 'OwnerRecoveryNotAllowedError';
   }
 }

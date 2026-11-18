@@ -595,7 +595,7 @@ export class CustomerManagementService {
     if (!role || (role !== 'OWNER' && role !== 'ADMIN')) {
       throw new CustomerManagementError(
         errorCode,
-        'Solo OWNER o ADMIN pueden realizar esta acción.',
+        'Solo el dueño o un administrador pueden realizar esta acción.',
       );
     }
   }

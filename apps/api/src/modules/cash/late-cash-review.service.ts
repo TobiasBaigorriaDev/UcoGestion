@@ -22,7 +22,7 @@ export class LateCashReviewService {
         const allowed=await client.query(`SELECT 1 FROM memberships m WHERE m.organization_id=$1 AND m.user_id=$2 AND m.status='ACTIVE'
           AND m.revoked_at IS NULL AND (m.role='OWNER' OR m.role='ADMIN' AND EXISTS (SELECT 1 FROM effective_membership_branch_scope s
           WHERE s.organization_id=m.organization_id AND s.membership_id=m.id AND s.branch_id=$3))`,[context.organizationId,context.userId,session.branch_id]);
-        if (!allowed.rowCount) throw new CashSessionDeviceError('CASH_SESSION_ACTOR_FORBIDDEN','Solo OWNER o ADMIN dentro de alcance puede revisar recuperaciones.');
+        if (!allowed.rowCount) throw new CashSessionDeviceError('CASH_SESSION_ACTOR_FORBIDDEN','Solo el dueño o un administrador de la sucursal puede revisar recuperaciones.');
       };
       await authorize();
       const idempotency=new IdempotencyService(client);

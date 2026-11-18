@@ -68,7 +68,7 @@ export class OrganizationProfileService {
           [context.organizationId, context.userId],
         );
         if (!['OWNER', 'ADMIN'].includes(membership.rows[0]?.role ?? '')) {
-          throw new OrganizationProfilePermissionError('Solo OWNER o ADMIN pueden modificar el perfil comercial.');
+          throw new OrganizationProfilePermissionError('Solo el dueño o un administrador pueden modificar el perfil comercial.');
         }
 
         const updated = await client.query<OrganizationProfileRow>(

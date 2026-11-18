@@ -83,7 +83,7 @@ export class DeviceAuthorizationService {
     );
     const actor = membership.rows.at(0);
     if (!actor || !['OWNER', 'ADMIN'].includes(actor.role)) {
-      throw new DeviceAuthorizationError('DEVICE_AUTHORIZATION_FORBIDDEN', 'Solo OWNER o ADMIN pueden autorizar dispositivos.');
+      throw new DeviceAuthorizationError('DEVICE_AUTHORIZATION_FORBIDDEN', 'Solo el dueño o un administrador pueden autorizar dispositivos.');
     }
     const branch = await client.query<{ id: string }>(
       `SELECT id FROM branches WHERE organization_id = $1 AND id = $2 AND status = 'ACTIVE'`,

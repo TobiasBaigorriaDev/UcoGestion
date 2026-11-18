@@ -106,7 +106,7 @@ export class BranchManagementService {
     if (membership.rows.at(0)?.role !== 'OWNER') {
       throw new BranchManagementError(
         'BRANCH_MANAGEMENT_FORBIDDEN',
-        'Solo OWNER puede crear una sucursal.',
+        'Solo el dueño puede crear una sucursal.',
       );
     }
   }

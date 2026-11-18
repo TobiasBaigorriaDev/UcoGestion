@@ -33,7 +33,7 @@ export class CatalogItemEditService {
            AND status = 'ACTIVE' AND revoked_at IS NULL`, [context.organizationId, context.userId],
         );
         if (!['OWNER', 'ADMIN'].includes(actor.rows[0]?.role ?? '')) {
-          throw new CatalogItemEditError('CATALOG_ITEM_EDIT_FORBIDDEN', 'Solo OWNER o ADMIN pueden editar ítems.');
+          throw new CatalogItemEditError('CATALOG_ITEM_EDIT_FORBIDDEN', 'Solo el dueño o un administrador pueden editar ítems.');
         }
         const idempotency = new IdempotencyService(client);
         const acquired = await idempotency.acquire({ actorUserId: context.userId,

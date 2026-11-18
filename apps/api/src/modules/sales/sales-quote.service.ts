@@ -88,7 +88,7 @@ export class SalesQuoteService {
         `SELECT role FROM memberships WHERE organization_id = $1 AND user_id = $2
          AND status = 'ACTIVE' AND revoked_at IS NULL`, [organizationId, userId]);
       if (!['OWNER', 'ADMIN'].includes(membership.rows[0]?.role ?? '')) {
-        throw new SalesQuoteError('SALE_DISCOUNT_FORBIDDEN', 'Solo OWNER o ADMIN pueden aplicar descuentos.');
+        throw new SalesQuoteError('SALE_DISCOUNT_FORBIDDEN', 'Solo el dueño o un administrador pueden aplicar descuentos.');
       }
       if (discount.kind === 'PERCENTAGE' && validatePercentageDiscount(discount.value) !== undefined) {
         discountAmount = calculatePercentageDiscount(subtotal, discount.value);
