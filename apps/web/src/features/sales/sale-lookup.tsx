@@ -14,6 +14,7 @@ import { cancelSale, loadCheckoutContext, loadSaleDetail } from './sales-api';
 import { ReceiptActions } from './receipt-actions';
 import { SaleHistory } from './sale-history';
 import styles from './pos.module.css';
+import { ConfirmAction } from '../../components/confirm-action';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -122,9 +123,10 @@ function SaleLookupWorkspace({ organizationId, branchId, role, branches, timezon
               {session.registerName}</option>)}</select>
           {sessions.data && !sessions.data.sessions.length ? <p role="alert">Abrí una sesión válida en esta sucursal antes de reintegrar efectivo.</p> : null}
           {sessions.error ? <ErrorSummary error={problem(sessions.error)} /> : null}</> : null}
-        <button className={styles.danger} type="button" disabled={busy || !reason.trim() ||
-          (needsCash && !selected)} onClick={() => void cancel()}>
-          {busy ? 'Anulando…' : 'Anular venta'}</button>
+        <ConfirmAction label="Anular venta" confirmLabel="Sí, anular la venta" busy={busy} busyLabel="Anulando…"
+          disabled={!reason.trim() || (needsCash && !selected)} onConfirm={() => void cancel()}>
+          <p>Se repone el stock, se devuelve el efectivo cobrado desde la caja elegida y, si fue fiada, se descuenta la deuda. La anulación queda registrada y no se puede deshacer.</p>
+        </ConfirmAction>
       </div> : null}
     </section> : null}
   </section>;

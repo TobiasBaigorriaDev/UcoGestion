@@ -234,8 +234,9 @@ export function SupplierManagement({
       {message ? <p role="status">{message}</p> : null}
 
       {canManage ? (
-        <form className={styles.panel} onSubmit={form.handleSubmit(submitCreate)} noValidate>
-          <h2>Nuevo proveedor</h2>
+        <details className={`${styles.panel} ${styles.createPanel}`} open={suppliers.length === 0 || undefined}>
+        <summary>Nuevo proveedor</summary>
+        <form onSubmit={form.handleSubmit(submitCreate)} noValidate>
           <div className={styles.fields}>
             <div>
               <label htmlFor="supplier-new-name">Nombre del proveedor nuevo</label>
@@ -264,7 +265,7 @@ export function SupplierManagement({
             </div>
           </div>
           <button type="submit" disabled={busy}>{busy ? 'Creando…' : 'Crear proveedor'}</button>
-        </form>
+        </form></details>
       ) : null}
 
       <section className={styles.panel} aria-labelledby="suppliers-list-heading">

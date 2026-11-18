@@ -50,3 +50,8 @@
 
 @media (prefers-reduced-motion: reduce) { .navigation a { transition: none; } }
 @media (forced-colors: active) { .navigation a[aria-current='page'], .bottomLink[aria-current='page'] { outline: 2px solid Highlight; } }
+/* Buttons rendered without a component class (retry after an error, simple actions) still look like the system. */
+.main > button:not([class]) { min-height: 44px; padding: .5rem 1rem; border: 1px solid var(--color-control-border); border-radius: var(--radius-button); background: var(--color-surface); color: var(--color-text); font: inherit; font-weight: 600; cursor: pointer; }
+.main > button:not([class]):hover { border-color: var(--color-primary); color: var(--color-primary); }
+.main > button:not([class]):disabled { color: var(--color-text-muted); border-color: var(--color-divider); cursor: not-allowed; }
+.main > button:not([class]):focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }

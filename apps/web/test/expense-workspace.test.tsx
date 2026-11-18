@@ -57,6 +57,7 @@ it('T173B cancels cash expense using a valid session and hides repeat cancellati
   await userEvent.type(await screen.findByLabelText('Motivo de anulación'), 'Error');
   await userEvent.selectOptions(screen.getByLabelText('Turno para devolver el efectivo'), 'session');
   await userEvent.click(screen.getByRole('button', { name: 'Anular gasto' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Sí, anular el gasto' }));
   expect(cancel).toHaveBeenCalledWith('org', id, { reason: 'Error', cashSessionId: 'session',
     deviceId: 'device' }, expect.any(String));
   expect(await screen.findByText('Anulado')).toBeTruthy();

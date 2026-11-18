@@ -133,10 +133,10 @@ export function InventoryTransfers({ organizationId, role, branches, originBranc
           <ul>{transfer.lines.map((line) => <li key={line.itemId}>{line.itemName}: {formatStockQuantity(line.quantity)}</li>)}</ul>
           <span>{transfer.compensatedBy ? 'Compensada' : transfer.compensates ? 'Compensación confirmada' : 'Confirmada'}</span>
           {role !== 'CASHIER' && !transfer.compensatedBy && !transfer.compensates ?
-            confirmId === transfer.id ? <div><p>La compensación revertirá las líneas si hay stock suficiente en destino. El original seguirá en el historial.</p>
-              <div className={styles.actions}><button type="button" disabled={busy} onClick={() => void compensate(transfer.id)}>Confirmar compensación</button>
+            confirmId === transfer.id ? <div><p>Se devuelven los productos a la sucursal de origen, si hay stock suficiente en el destino. La transferencia original queda en el historial.</p>
+              <div className={styles.actions}><button type="button" disabled={busy} onClick={() => void compensate(transfer.id)}>Sí, revertir la transferencia</button>
                 <button type="button" onClick={() => setConfirmId(null)}>Cancelar</button></div></div>
-              : <button type="button" disabled={busy} onClick={() => setConfirmId(transfer.id)}>Compensar transferencia</button> : null}
+              : <button type="button" disabled={busy} onClick={() => setConfirmId(transfer.id)}>Revertir transferencia</button> : null}
         </li>)}</ul>}
       {nextCursor && onLoadMore ? <button type="button" onClick={onLoadMore}>Cargar más transferencias</button> : null}
     </section>

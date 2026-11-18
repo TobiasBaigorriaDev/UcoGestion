@@ -188,6 +188,7 @@ describe('T152B sale lookup', () => {
     expect(screen.getByRole('button', { name: 'Anular venta' }).hasAttribute('disabled')).toBe(true);
     fireEvent.change(screen.getByLabelText('Motivo de anulación'), { target: { value: 'Error de carga' } });
     fireEvent.click(screen.getByRole('button', { name: 'Anular venta' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, anular la venta' }));
     await waitFor(() => expect(mocks.cancelSale).toHaveBeenCalledTimes(1));
     expect(mocks.cancelSale.mock.calls[0]?.[2]).toMatchObject({ reason: 'Error de carga' });
     await screen.findByText(/Error de carga/);

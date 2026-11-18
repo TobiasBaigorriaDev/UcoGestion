@@ -7,6 +7,7 @@ import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
 import { cancelExpense, createExpense, loadExpense, type ExpenseDetail } from './expenses-api';
 import styles from '../identity/management.module.css';
+import { ConfirmAction } from '../../components/confirm-action';
 import { formatMoney, paymentMethodLabel } from '../../lib/format';
 import { parseMoneyInput } from '../../lib/money-input';
 import { loadReport } from '../insights/insights-api';
@@ -149,8 +150,10 @@ export function ExpenseWorkspace({ organizationId, branchId, role, categories, p
             <option value="">Elegí un turno abierto</option>{sessions.map((session) =>
               <option key={session.id} value={session.id}>{session.registerName}</option>)}</select>
           {!sessions.length ? <p role="alert">Abrí un turno de caja para devolver el efectivo.</p> : null}</> : null}
-        <button type="button" disabled={busy || !canCancel} onClick={() => void submitCancel()}>
-          {busy ? 'Anulando…' : 'Anular gasto'}</button></div> : null}
+        <ConfirmAction label="Anular gasto" confirmLabel="Sí, anular el gasto" busy={busy} busyLabel="Anulando…"
+          disabled={!canCancel} onConfirm={() => void submitCancel()}>
+          <p>{cashCancellation ? 'El efectivo vuelve a la caja elegida. ' : ''}La anulación queda registrada y no se puede deshacer.</p>
+        </ConfirmAction></div> : null}
     </section> : null}
   </section>;
 }

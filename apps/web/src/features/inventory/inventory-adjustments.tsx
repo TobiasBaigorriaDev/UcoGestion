@@ -72,7 +72,7 @@ export function InventoryAdjustments({ compact = false, historyOnly = false, org
   }
   return <section className={styles.page} aria-label={compact ? "Cambiar stock" : undefined} aria-labelledby={compact ? undefined : "adjustment-heading"}>
     {!compact ? <><header className={styles.heading}><h1 id="adjustment-heading">{historyOnly ? "Historial de ajustes" : "Ajustes de inventario"}</h1>
-      <p>Registrá cambios con motivo. Los ajustes confirmados se corrigen con una compensación.</p></header>
+      <p>Registrá cambios con motivo. Si te equivocaste, revertí el ajuste: queda registrado como un movimiento nuevo.</p></header>
     <p><a href="/workspace/catalog">Volver a productos</a></p>
     </> : null}
     <ErrorSummary error={error} fieldIds={{ itemId: `${fieldPrefix}-item`, quantity: `${fieldPrefix}-quantity` }}
@@ -109,10 +109,10 @@ export function InventoryAdjustments({ compact = false, historyOnly = false, org
           <span>{adjustment.compensatedBy ? 'Compensado' : adjustment.compensates ? 'Compensación confirmada' : 'Confirmado'}</span>
           {adjustment.observation ? <p>{adjustment.observation}</p> : null}
           {role !== 'CASHIER' && !adjustment.compensatedBy && !adjustment.compensates ?
-            confirmId === adjustment.id ? <div><p>Se creará un ajuste compensatorio. El original seguirá en el historial.</p>
-              <div className={styles.actions}><button type="button" disabled={busy} onClick={() => void compensate(adjustment.id)}>Confirmar compensación de {adjustment.itemName}</button>
+            confirmId === adjustment.id ? <div><p>Se registra un movimiento contrario que deja el stock como estaba. El ajuste original queda en el historial.</p>
+              <div className={styles.actions}><button type="button" disabled={busy} onClick={() => void compensate(adjustment.id)}>Sí, revertir el ajuste de {adjustment.itemName}</button>
                 <button type="button" onClick={() => setConfirmId(null)}>Cancelar</button></div></div>
-              : <button type="button" disabled={busy} onClick={() => setConfirmId(adjustment.id)}>Compensar ajuste de {adjustment.itemName}</button> : null}
+              : <button type="button" disabled={busy} onClick={() => setConfirmId(adjustment.id)}>Revertir ajuste de {adjustment.itemName}</button> : null}
         </li>)}</ul>}
       {nextCursor && onLoadMore ? <button type="button" onClick={onLoadMore}>Cargar más ajustes</button> : null}
     </section> : null}

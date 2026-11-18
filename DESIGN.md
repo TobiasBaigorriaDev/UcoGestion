@@ -160,6 +160,13 @@ Separadores `#D9DDD1` delimitan filas y navegación sin competir con los datos. 
 - La búsqueda por ID queda plegada en «Buscar un gasto por su ID»; para CASHIER está abierta.
 - Auditoría: tabla Fecha, «Qué pasó» (acción traducida), Persona (correo o «Otra persona») y Sucursal. Los filtros son listas: «Qué pasó» y «Persona». «Mostrar también tareas automáticas del sistema» está apagado por defecto.
 
+**Confirmaciones y errores.**
+- Anular venta, gasto o compra y revocar una invitación o un acceso usan `ConfirmAction`: el botón en rojo de borde se convierte en el mismo lugar en «¿…?», con la consecuencia, «No, volver» (con foco) y «Sí, …» en rojo sólido. Escape vuelve atrás. No hay modales.
+- Revertir ajustes y transferencias conserva su paso de confirmación, con la palabra «Revertir».
+- `ErrorSummary` titula según el problema: «No hay conexión con el servidor», «Tu sesión venció», «No tenés permiso para hacer esto», «Alguien cambió estos datos mientras trabajabas», «Revisá los datos», «El servicio no está disponible en este momento» o «Algo salió mal de nuestro lado». Debajo mantiene el mensaje del servidor y la referencia.
+- Con la sesión vencida se ofrece «Iniciar sesión».
+- Las altas de clientes y proveedores quedan plegadas en «Nuevo cliente» o «Nuevo proveedor» y se abren solas si la lista está vacía.
+
 **Formato.** El dinero se muestra siempre como `$ 1.800,00` (`formatMoney`). Las cantidades agrupan miles (`22.000`). Los roles, medios de pago y estados de turno se muestran en español.
 
 Catálogo e inventario comparten una entrada en la navegación principal. Dentro de esa sección, una navegación local identifica Productos y, según el rol, Historial de ajustes, Transferencias y Categorías. Productos presenta inicialmente nombre, precio y stock. Seleccionar una fila despliega detalles y dos entradas: Editar y Cambiar stock. Precio, estructura, estado y eliminación se ofrecen dentro de Editar. Cambiar stock abre un formulario vertical de nuevo ajuste; Historial de ajustes conserva consulta y compensaciones sin duplicar el alta. El ajuste de existencias y el mínimo por sucursal se gestionan dentro del producto, conservando motivos, historial y permisos. La ruta anterior de Stock redirige a Productos. La consulta muestra el stock de la sucursal activa junto a cada producto inventariable; nunca interpreta un saldo ausente como cero. Para OWNER/ADMIN también reúne la gestión de ítems: búsqueda, edición, precio, estado y eliminación sujeta al historial. El alta se abre cuando se necesita, inmediatamente debajo de su botón y antes del listado; las acciones menos frecuentes se despliegan por producto. La ruta anterior de ítems conserva enlaces directos y las acciones siguen sujetas a sus permisos propios.

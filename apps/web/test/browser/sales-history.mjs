@@ -30,6 +30,7 @@ async page => {
   await detail.getByRole('button', { name: 'Ver para imprimir' }).waitFor();
   await detail.getByLabel('Motivo de anulación').fill('Error de carga');
   await detail.getByRole('button', { name: 'Anular venta', exact: true }).click();
+  await detail.getByRole('button', { name: 'Sí, anular la venta', exact: true }).click();
   await detail.getByText(/Error de carga/).waitFor();
   await history.getByLabel('Estado de venta').selectOption('CANCELLED');
   await history.getByRole('button', { name: 'Aplicar filtros' }).click();

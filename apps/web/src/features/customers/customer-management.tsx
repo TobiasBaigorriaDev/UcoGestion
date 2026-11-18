@@ -247,8 +247,9 @@ export function CustomerManagement({
       {message ? <p role="status">{message}</p> : null}
 
       {canCreate ? (
-        <form className={styles.panel} onSubmit={form.handleSubmit(submitCreate)} noValidate>
-          <h2>Nuevo cliente</h2>
+        <details className={`${styles.panel} ${styles.createPanel}`} open={customers.length === 0 || undefined}>
+        <summary>Nuevo cliente</summary>
+        <form onSubmit={form.handleSubmit(submitCreate)} noValidate>
           <div className={styles.fields}>
             <div>
               <label htmlFor="customer-new-name">Nombre del cliente nuevo</label>
@@ -277,7 +278,7 @@ export function CustomerManagement({
             </div>
           </div>
           <button type="submit" disabled={busy}>{busy ? 'Creando…' : 'Crear cliente'}</button>
-        </form>
+        </form></details>
       ) : null}
 
       <section className={styles.panel} aria-labelledby="customers-list-heading">
@@ -340,7 +341,7 @@ function CustomerAccountDisclosure({ organizationId, branchId, customer, role, o
   const [open, setOpen] = useState(false);
   const regionId = `account-${customer.id}`;
   return <div><button type="button" aria-expanded={open} aria-controls={regionId} onClick={() => setOpen(!open)}>
-    {open ? 'Cerrar cuenta' : 'Cuenta corriente'} de {customer.name}</button>
+    {open ? 'Ocultar cuenta corriente' : 'Cuenta corriente'} de {customer.name}</button>
     {open ? <div id={regionId}><CustomerAccountPanel organizationId={organizationId} branchId={branchId}
       customerId={customer.id} customerName={customer.name} role={role} onReload={onReload} /></div> : null}
   </div>;

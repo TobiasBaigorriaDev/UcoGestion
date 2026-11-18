@@ -1,0 +1,13 @@
+.trigger { min-height: 44px; padding: .5rem 1rem; border: 1px solid var(--color-danger-text); border-radius: var(--radius-button); background: var(--color-surface); color: var(--color-danger-text); font: inherit; font-weight: 650; cursor: pointer; }
+.trigger:hover { background: #fdecea; }
+.trigger:disabled { border-color: var(--color-divider); color: var(--color-text-muted); background: var(--color-background); cursor: not-allowed; }
+.question { display: grid; gap: .5rem; margin-top: .5rem; padding: 1rem; border: 1px solid #f1b8b3; border-radius: var(--radius-button); background: #fdecea; color: var(--color-text); }
+.title { margin: 0; font-weight: 750; }
+.consequence { color: var(--color-text-secondary); }
+.consequence p { margin: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .25rem; }
+.back, .confirm { min-height: 44px; padding: .5rem 1rem; border-radius: var(--radius-button); font: inherit; font-weight: 650; cursor: pointer; }
+.back { border: 1px solid var(--color-control-border); background: var(--color-surface); color: var(--color-text); }
+.confirm { border: 1px solid var(--color-danger-text); background: var(--color-danger-text); color: #fff; }
+.confirm:disabled { opacity: .7; cursor: not-allowed; }
+.trigger:focus-visible, .back:focus-visible, .confirm:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }

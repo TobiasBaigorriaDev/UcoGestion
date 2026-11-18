@@ -507,3 +507,9 @@ Solo cambia la presentación. Los comandos, las claves de reintento, los locks, 
   - los eventos automáticos del sistema quedan ocultos por defecto con un control visible para mostrarlos.
   - Contrato aditivo `userId` en `GET /users/management`, con la misma visibilidad por rol y sucursal [RF-140, RF-282].
 - [x] D08-T11: Formato `$` en compras, ventas, gastos, reportes y caja excepcional; medios de pago y estados traducidos [RF-152–RF-154].
+
+### D08 — fase 4: formularios, confirmaciones y errores (solicitud explícita 2026-11-16)
+
+- [x] D08-T12: Confirmación en el lugar antes de anular venta, gasto o compra y antes de revocar una invitación o un acceso. Explica la consecuencia, ofrece «Sí, …» y «No, volver», devuelve el foco y cancela con Escape. No cambia los comandos ni las claves idempotentes [RF-153, RF-154].
+- [x] D08-T13: Resumen de errores con título según el problema: sin conexión, sesión vencida, sin permiso, cambio concurrente, datos a revisar y servicio no disponible. Conserva el mensaje del servidor y la referencia [RF-154].
+- [x] D08-T14: Alta de clientes y proveedores plegada en «Nuevo …» después de la lista. Textos ambiguos corregidos: «Ocultar cuenta», «Revertir ajuste/transferencia» [RF-152–RF-154].

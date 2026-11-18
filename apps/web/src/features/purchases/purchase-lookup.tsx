@@ -11,6 +11,7 @@ import { ApiProblemError } from '../../lib/api/client';
 
 import { cancelPurchase, loadPurchase, payPurchase, type PurchaseDetail } from './purchases-api';
 import styles from '../identity/management.module.css';
+import { ConfirmAction } from '../../components/confirm-action';
 import workspaceStyles from './purchase-workspace.module.css';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -166,8 +167,10 @@ export function PurchaseLookup({ organizationId, branchId, role, paymentMethods,
           <select id="purchase-return-session" value={sessionId} onChange={(event) => { setSessionId(event.target.value); key.current = null; }}>
             <option value="">Seleccioná una sesión</option>{sessions.map((entry) => <option key={entry.id} value={entry.id}>{entry.registerName}</option>)}</select>
           {!sessions.length ? <p role="alert">Abrí una sesión válida antes de devolver efectivo.</p> : null}</> : null}
-        <button type="button" disabled={busy || !reason.trim() || needsCashOnCancel && !selectedSession}
-          onClick={() => void performCancel()}>{busy ? 'Anulando…' : 'Anular compra'}</button></section> : null}
+        <ConfirmAction label="Anular compra" confirmLabel="Sí, anular la compra" busy={busy} busyLabel="Anulando…"
+          disabled={!reason.trim() || needsCashOnCancel && !selectedSession} onConfirm={() => void performCancel()}>
+          <p>Se descuenta del stock lo recibido{needsCashOnCancel ? ' y el efectivo pagado vuelve a la caja elegida' : ''}. La anulación queda registrada y no se puede deshacer.</p>
+        </ConfirmAction></section> : null}
     </section> : null}
   </section>;
 }

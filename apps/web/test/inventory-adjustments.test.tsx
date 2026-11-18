@@ -30,8 +30,8 @@ it('T114B restricts employee reasons, validates UNIT precision, and exposes conf
   await userEvent.type(screen.getByLabelText('Cantidad'), '1');
   await userEvent.click(screen.getByRole('button', { name: 'Confirmar ajuste' }));
   expect(confirm).toHaveBeenCalledWith('o1', expect.objectContaining({ branchId: 'b1', itemId: 'i1', quantity: '1' }));
-  await userEvent.click(screen.getByRole('button', { name: /compensar ajuste/i }));
-  await userEvent.click(screen.getByRole('button', { name: /confirmar compensación/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^revertir ajuste/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^sí, revertir/i }));
   expect(compensate).toHaveBeenCalledWith('o1', 'a1', null);
   expect((await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toEqual([]);
 });
@@ -56,7 +56,7 @@ it('keeps history and compensation while moving creation into products', async (
   expect(screen.queryByRole('button', { name: 'Confirmar ajuste' })).toBeNull();
   expect(screen.queryByRole('textbox', { name: 'Cantidad' })).toBeNull();
   expect(screen.getByRole('heading', { level: 1, name: 'Historial de ajustes' })).toBeTruthy();
-  await userEvent.click(screen.getByRole('button', { name: /compensar ajuste/i }));
-  await userEvent.click(screen.getByRole('button', { name: /confirmar compensación/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^revertir ajuste/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^sí, revertir/i }));
   expect(compensate).toHaveBeenCalledWith('o1', 'a1', null);
 });

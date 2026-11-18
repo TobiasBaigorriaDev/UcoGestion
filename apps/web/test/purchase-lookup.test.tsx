@@ -43,6 +43,7 @@ it('T173C cancels paid purchase with reason and no session for noncash', async (
   await userEvent.click(screen.getByRole('button', { name: 'Consultar compra' }));
   await userEvent.type(await screen.findByLabelText('Motivo de anulación'), 'Error');
   await userEvent.click(screen.getByRole('button', { name: 'Anular compra' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Sí, anular la compra' }));
   expect(cancel).toHaveBeenCalledWith('org', id, { reason: 'Error' }, expect.any(String));
   expect(await screen.findByText('Anulada')).toBeTruthy();
   expect(onChanged).toHaveBeenCalledOnce();
