@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { runMigrations } from '../src/database/migrate.js';
 import { createGlobalUser } from '../src/modules/auth/global-user.repository.js';
-import { hashPassword, PASSWORD_HASH_VERSION, verifyPassword } from '../src/modules/auth/password.js';
+import { hashPassword, PASSWORD_HASH_VERSION, verifyPassword } from '../src/core/security/password.js';
 
 describe('global users', () => {
   let container: StartedPostgreSqlContainer;

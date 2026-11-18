@@ -2,17 +2,35 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "lint": {
+      "dependsOn": [
+        "^build"
+      ],
       "outputs": []
     },
     "typecheck": {
+      "dependsOn": [
+        "^build"
+      ],
       "outputs": []
     },
     "test": {
+      "dependsOn": [
+        "^build"
+      ],
       "outputs": []
     },
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "env": [
+        "NEXT_PUBLIC_WEB_ORIGIN",
+        "UCONEXT_BUILD_ID"
+      ],
+      "outputs": [
+        "dist/**",
+        ".next/**"
+      ]
     }
   }
 }

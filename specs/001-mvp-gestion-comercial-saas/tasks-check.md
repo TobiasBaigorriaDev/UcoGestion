@@ -1,14 +1,20 @@
 # Tareas para cerrar SDD Check — MVP UcoNext
 
-Estado: **PENDIENTE DE EJECUCIÓN**. Fecha de preparación: 2026-10-10.
+Estado: **EN EJECUCIÓN; veredicto global pendiente**. Fecha de preparación: 2026-10-10. Último avance: 2026-10-13.
 
 Este archivo organiza el trabajo necesario para obtener el veredicto **SPEC CUMPLIDA**. El MVP ya tiene funcionalidad probada; estos pendientes son garantías que todavía no cuentan con evidencia completa. No son 18 defectos confirmados. Revisar los tests puede demostrar que basta ampliarlos o puede revelar una corrección necesaria.
+
+**Cómo usar esta lista:** empezar por CHECK-01, completar las matrices y casos que siguen, y cerrar con CHECK-20. El agente puede ejecutar las revisiones y correcciones autorizadas; no tenés que implementar personalmente los tests. Una referencia pendiente identifica el requisito y la prueba que falta acreditar. Solo marcar `[x]` cuando exista la evidencia indicada en «Terminado cuando».
+
+Para el despliegue, seguir también [preparación de producción](production-readiness.md). Se buscará una alternativa de costo cero, según tu preferencia. La elección y disponibilidad de una cuenta, un origen HTTPS y los servicios necesarios siguen pendientes; pasar los tests locales no demuestra que esos servicios estén desplegados.
 
 Base: auditoría del 2026-10-10, commit `f46e82bdadd54123280012a855a4663429106ad0`: **298 de 316 requisitos cubiertos, 18 pendientes y ningún RF con violación reproducida**. El informe completo y su matriz siguen siendo la evidencia de ese corte:
 
 - [Informe SDD Check](../../output/sdd-check-2026-10-10.md).
 - [Matriz y evidencia estructurada](../../output/sdd-check-2026-10-10.json).
 - [Spec cerrado](spec.md), [constitución](../../constitution.md), [plan aprobado](plan.md) y [tareas de construcción](tasks.md).
+
+**Actualización de alcance del corte, 2026-10-13:** el spec 001 actual contiene 347 RF, y la ampliación aprobada [002 — cuentas corrientes](../002-cuentas-corrientes/spec.md) contiene otros 26 RF propios. La cifra 298/316 es histórica; no acredita los requisitos agregados ni los cambios posteriores. El cierre actual incluye ambos specs y las tareas D03/D05 todavía abiertas. La preparación de servidores y operación se sigue en [production-readiness.md](production-readiness.md).
 
 ## Cómo usar este archivo
 
@@ -25,12 +31,14 @@ Para marcar una tarea como completada, adjuntar casos probados, archivos y aserc
 ## 1. Permisos y aislamiento — comenzar aquí
 
 - [ ] **CHECK-01 — Inventariar acciones, rutas y relaciones que deben cubrirse.**
+  - Avance 2026-10-13: [inventario regenerable](authorization-inventory.md) con 131 rutas HTTP, servicios/métodos, tests candidatos y declaraciones históricas de FK. Falta revisar aserciones por fila y esquema efectivo; sigue pendiente.
   - Enumerar desde el spec, plan y API las acciones y lecturas por módulo, roles permitidos, sucursales involucradas y asociaciones tenant.
   - Cruzar cada fila con pruebas existentes y señalar las faltantes; incluir operaciones administrativas, comerciales, dispositivos, configuración, sincronización y compensaciones.
   - **Terminado cuando:** existe una matriz verificable `acción/ruta → rol → scope → relación → test/aserción`, sin extrapolar un caso de un módulo a otro.
   - **Dependencias:** ninguna. Alimenta CHECK-02 a CHECK-05, CHECK-13 y CHECK-14.
 
 - [ ] **CHECK-02 — Completar autorización de los cuatro roles (RF-21 / T236K2).**
+  - Avance 2026-10-13: `apps/api/test/authorization-read-http.e2e.test.ts`, 64 pruebas PASS para 15 rutas de lectura × cuatro roles y desactivación de membresías. Roles, tenant, scope y respuestas vacías según contrato; no cierra acciones/rutas restantes. [Evidencia](production-readiness.md).
   - Revisar `apps/api/test/operational-role-policy.test.ts`, `owner-branch-scope.integration.test.ts` y `t236k-authorization.integration.test.ts`.
   - Cubrir acciones y lecturas faltantes de CHECK-01 mediante membresías reales OWNER, ADMIN, CASHIER y EMPLOYEE, incluyendo rutas HTTP y cotización POS.
   - Probar permisos válidos y rechazos por rol, organización, sucursal y actor inactivo; verificar ausencia de efectos comerciales ante rechazo.
@@ -74,7 +82,8 @@ Para marcar una tarea como completada, adjuntar casos probados, archivos y aserc
 
 ## 3. Operación offline y recuperación
 
-- [ ] **CHECK-08 — Conservar ambas sesiones de caja y sus operaciones en un conflicto (RF-124).**
+- [x] **CHECK-08 — Conservar ambas sesiones de caja y sus operaciones en un conflicto (RF-124).**
+  - Evidencia 2026-10-13: caso RF-124 en `historical-ingestion.integration.test.ts`, suite afectada 17/17 PASS, rollback por fallo de ACK, replay exacto, snapshots de ambas sesiones, documentos/pagos/ítems/movimientos, sync y auditoría. [Detalle y logs](production-readiness.md). No cierra la auditoría global por inferencia.
   - Revisar `apps/api/test/cash-foundation.integration.test.ts`.
   - Crear sesiones incompatibles con operaciones identificables en ambas; sincronizar la apertura offline y comprobar `CONFLICTED` para esa sesión.
   - Comparar todas las operaciones, documentos, movimientos y vínculos de ambas sesiones antes/después y después de un reintento, incluyendo cualquier efecto legítimo previsto por el contrato.
@@ -126,6 +135,7 @@ Para marcar una tarea como completada, adjuntar casos probados, archivos y aserc
 Estas cuatro tareas comparten una misma matriz de ejecución; separar criterios evita confundir un navegador que arranca con uno que cumple todos los flujos.
 
 - [ ] **CHECK-15 — Completar compatibilidad e instalación PWA (RF-289 / T224 / T227).**
+  - Avance 2026-10-13: capability gate, operación/cierre de caja, resiliencia y actualización offline pasan en Chromium 155.0.8059.12, Windows 10.0.26200. [Cinco resultados conservados](production-readiness.md). El recorrido UI completo aún falla por fixture incompleto y faltan los demás navegadores/versiones; esta tarea continúa pendiente.
   - Revisar `apps/web/test/browser/pwa-install.mjs`, `pwa-capability.mjs` y el runner `ops/browser/run.mjs`.
   - Ejecutar las dos últimas versiones estables de Chrome, Edge, Firefox y Safari reales al momento de verificar. Registrar nombre, versión exacta, OS, capacidades, fecha y resultado por escenario.
   - Probar instalación standalone, iconos 192/512, offline donde existan capacidades y degradación online segura donde falten. Resolver los bloqueos de Firefox/WebKit observados en Windows o usar un entorno compatible documentado.
@@ -162,15 +172,22 @@ Estas cuatro tareas comparten una misma matriz de ejecución; separar criterios 
   - **Dependencias:** reutilizar matrices CHECK-02/03/13.
 
 - [ ] **CHECK-20 — Ejecutar revisión final y obtener veredicto (T236).**
-  - Requiere CHECK-01 a CHECK-19 completas con evidencia; reconciliar T224, T227, T236K2/K3/K4/K8 en `tasks.md` mediante la etapa correspondiente, sin marcar completado por anticipación.
+  - Requiere CHECK-01 a CHECK-19 y CHECK-21 completas con evidencia; reconciliar T224, T227, T236K2/K3/K4/K8 y las tareas D03/D05 abiertas en `tasks.md` mediante la etapa correspondiente, sin marcar completado por anticipación.
   - Ejecutar checks raíz y gates afectados sobre la misma revisión de código. Conservar logs, versiones, resultados y comandos exactos; ejecutar fixtures de navegador compartidos secuencialmente para evitar interferencia de caché Vite.
-  - Volver a **sdd-check**: revisar uno por uno los **316 RF**, sus aserciones y ejecuciones. Comprobar todos los principios/reglas constitucionales; revisar explícitamente atomicidad, idempotencia, auditoría, observabilidad, errores y reintentos de bloques críticos.
+  - Volver a **sdd-check**: revisar uno por uno los **347 RF actuales del spec 001 y los 26 RF del spec 002**, manteniendo separados sus IDs, aserciones y ejecuciones. Recontar requisitos si cambian los specs aprobados. Comprobar todos los principios/reglas constitucionales; revisar explícitamente atomicidad, idempotencia, auditoría, observabilidad, errores y reintentos de bloques críticos.
   - Verificar que los cambios no hayan invalidado los 298 RF previamente cubiertos. Evidencia histórica o logs de otro commit no sustituyen la ejecución final correspondiente.
-  - **Terminado cuando:** 316/316 RF tienen cobertura real con tests verdes, no queda tarea requerida abierta ni violación constitucional y el reporte emite **SPEC CUMPLIDA**. Si una condición falla, conservar **PENDIENTES** con causa concreta.
+  - **Terminado cuando:** el 100% de los RF actuales de ambos specs tiene cobertura real con tests verdes, no queda tarea requerida abierta ni violación constitucional y los reportes emiten **SPEC CUMPLIDA**. Si una condición falla, conservar **PENDIENTES** con causa concreta.
+
+- [ ] **CHECK-21 — Verificar las ampliaciones aprobadas posteriores al corte original.**
+  - Revisar RF-317–RF-347: identidad/código corto de venta, historial y tendencias de ventas/compras, iconos de categorías, cambio de PIN y continuidad POS ante pérdida de red; completar D03-T05 y D05-T01/T02/T03 solo con evidencia actual.
+  - Revisar separadamente RF-01–RF-26 del spec 002: deuda, límites, cobros/reversiones, ventas a cuenta, permisos y concurrencia con PostgreSQL real, contratos HTTP y frontend. Preservar los cambios de implementación existentes.
+  - **Terminado cuando:** cada ampliación tiene matriz requisito → aserción → ejecución; no se confunde una tarea marcada `[x]` con una auditoría completa ni se reutiliza el veredicto de 316 RF.
 
 ### Comandos de referencia para CHECK-20
 
 Usar los scripts raíz existentes y agregar las suites afectadas que exijan las tareas; estos comandos no sustituyen la matriz real de versiones de navegador ni el entorno HTTPS.
+
+El origen web se incorpora durante la compilación. Para el runner local de navegador, construir web con `NEXT_PUBLIC_WEB_ORIGIN=http://localhost:3001` antes de ejecutarlo; configurarlo únicamente al arrancar no repara un build sin origen. Si ese puerto ya está ocupado, usar `BROWSER_WEB_PORT` y compilar con el mismo origen, por ejemplo puerto 3021 y `NEXT_PUBLIC_WEB_ORIGIN=http://localhost:3021`. No detener servicios ajenos para liberar el puerto. Para producción, usar el origen HTTPS definitivo y reconstruir según `infra/deploy/README.md`. No reutilizar el build local como release productiva.
 
 ```powershell
 pnpm lint

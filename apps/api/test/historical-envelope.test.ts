@@ -2,7 +2,7 @@ import { createCipheriv, createHash, generateKeyPairSync, publicEncrypt, randomB
 
 import { describe, expect, it } from 'vitest';
 
-import { DeviceCertificate } from '../src/modules/offline-sync/device-certificate.js';
+import { DeviceCertificate } from '../src/core/security/device-certificate.js';
 import { HistoricalEnvelopeValidator, canonicalEnvelopeJson } from '../src/modules/offline-sync/historical-envelope-validator.js';
 import { RsaSyncEnvelopeDecryptor } from '../src/modules/offline-sync/sync-envelope-decryptor.js';
 

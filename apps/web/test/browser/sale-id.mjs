@@ -73,7 +73,7 @@ async page => {
     await route.fetch(); dropped = true; await route.abort('failed');
   });
   await page.getByRole('button', { name: 'Sincronizar mis pendientes' }).click();
-  await page.getByRole('alert').filter({ hasText: 'No pudimos completar la acción' }).waitFor();
+  await page.getByRole('alert').filter({ hasText: 'No pudimos sincronizar los pendientes' }).waitFor();
   check(dropped, 'Lost ACK regression did not reach the real backend');
   check(await region.locator('dd').first().innerText() === offlineId, 'Lost ACK changed ID');
   await page.unroute('**/api/v1/offline/delivery/push');

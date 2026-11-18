@@ -45,6 +45,13 @@ export const parseCanonicalDecimal = (value: unknown): CanonicalDecimal => {
   return value as CanonicalDecimal;
 };
 
+/** Spanish quantity presentation only; stored and editable precision stays intact. */
+export const formatQuantityForDisplay = (value: string): string => {
+  const quantity = new CalculationDecimal(parseCanonicalDecimal(value));
+  return quantity.isInteger() ? quantity.toFixed(0)
+    : quantity.toFixed(2, Decimal.ROUND_HALF_UP).replace('.', ',');
+};
+
 export const parseUtcTimestamp = (value: unknown): UtcTimestamp => {
   if (typeof value !== 'string' || !utcTimestampPattern.test(value)) {
     throw new TypeError('Expected a canonical UTC timestamp');
@@ -207,6 +214,22 @@ export const sumMoney = (amounts: readonly string[]): string =>
 
 export const subtractMoney = (left: string, right: string): string =>
   new CalculationDecimal(parseCanonicalDecimal(left)).minus(new CalculationDecimal(parseCanonicalDecimal(right))).toFixed(2);
+
+/** Exact settlement; credit is an explicit online decision, never a payment method. */
+export function calculateSaleSettlement(total: string, payments: readonly string[], onAccount: boolean): {
+  paidAmount: string; onAccountAmount: string;
+} {
+  if (!/^(?:0|[1-9]\d{0,17})\.\d{2}$/.test(total) || payments.some(amount =>
+    !/^(?:0|[1-9]\d{0,17})(?:\.\d{1,2})?$/.test(amount) || validatePositiveMoney(amount) === undefined)) {
+    throw new RangeError('Invalid sale settlement amounts');
+  }
+  const paidAmount = sumMoney(payments);
+  const onAccountAmount = subtractMoney(total, paidAmount);
+  if (onAccountAmount.startsWith('-') || (!onAccount && onAccountAmount !== '0.00') || (total === '0.00' && payments.length)) {
+    throw new RangeError('Payments do not settle this sale');
+  }
+  return { paidAmount, onAccountAmount };
+}
 
 export const calculatePercentageDiscount = (subtotal: string, percentage: string): string =>
   new CalculationDecimal(parseCanonicalDecimal(subtotal)).times(new CalculationDecimal(parseCanonicalDecimal(percentage)))

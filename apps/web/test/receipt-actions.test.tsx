@@ -24,7 +24,7 @@ describe('T152D receipt recovery', () => {
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    render(<><p>Venta confirmada</p><ReceiptActions organizationId="org" saleId="sale" /></>);
+    render(<><p>Venta confirmada</p><ReceiptActions organizationId="org" saleId="11111111-1111-4111-8111-111111111111" /></>);
     fireEvent.click(screen.getByRole('button', { name: 'Descargar PDF' }));
     await screen.findByRole('alert');
     expect(screen.getByText('Venta confirmada')).toBeDefined();

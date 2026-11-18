@@ -30,3 +30,26 @@
   margin: 0.75rem 0 0;
   line-height: 1.5;
 }
+
+.mode[hidden] { display: none; }
+
+.mode:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 1.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-button);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.action:hover { filter: brightness(0.92); }
+.action:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }

@@ -1,0 +1,28 @@
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+ ❯ test/historical-ingestion.integration.test.ts (17 tests | 1 failed) 15371ms
+     × T236J ingests retained v1 bytes as unknown despite a current category, with rollback and exact replay 252ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/historical-ingestion.integration.test.ts > historical delivery transactions > T236J ingests retained v1 bytes as unknown despite a current category, with rollback and exact replay
+AssertionError: expected 'SECURITY_REJECTED' to be 'ACKED' // Object.is equality
+
+Expected: "ACKED"
+Received: "SECURITY_REJECTED"
+
+ ❯ test/historical-ingestion.integration.test.ts:475:82
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 16 passed (17)
+   Start at  13:01:48
+   Duration  19.90s (transform 1.14s, setup 0ms, import 4.13s, tests 15.37s, environment 0ms)
+
+undefined
+C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\api:
+[ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL] Command failed with exit code 1: vitest run --config vitest.config.mts test/historical-ingestion.integration.test.ts

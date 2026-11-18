@@ -26,7 +26,7 @@ import { InvitationRevocationService } from '../src/modules/users/invitation-rev
 import { InvitationResendService } from '../src/modules/users/invitation-resend.service.js';
 import { OfflineBootstrapService } from '../src/modules/offline-sync/offline-bootstrap.service.js';
 import { RsaSyncEnvelopeDecryptor } from '../src/modules/offline-sync/sync-envelope-decryptor.js';
-import { DeviceCertificate } from '../src/modules/offline-sync/device-certificate.js';
+import { DeviceCertificate } from '../src/core/security/device-certificate.js';
 import { CatalogPriceService } from '../src/modules/catalog/catalog-price.service.js';
 import { SalesOperationsService } from '../src/modules/sales/sales-operations.service.js';
 

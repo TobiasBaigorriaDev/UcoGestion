@@ -4,8 +4,7 @@ import type { PoolClient } from 'pg';
 
 import { IdempotencyKeyReusedError, IdempotencyReplayForbiddenError, IdempotencyService } from '../../core/idempotency/idempotency.service.js';
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
-import { CategoryLifecycleError, CategoryLifecyclePolicy, type CategoryLifecycleErrorCode } from '../catalog/category-lifecycle.policy.js';
-import { PostgresCategoryServerReferencePredicate } from '../catalog/category-server-reference.predicate.js';
+import { CategoryLifecycleError, CategoryLifecyclePolicy, type CategoryLifecycleErrorCode, PostgresCategoryServerReferencePredicate } from '../catalog/index.js';
 
 export interface ExpenseCategoryCreateInput {
   readonly name: string;

@@ -1,0 +1,64 @@
+$ next build
+▲ Next.js 16.3.5 (Turbopack)
+✓ Running next.config.ts took 96ms
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+
+  To migrate automatically, run:
+  npx @next/codemod@canary middleware-to-proxy .
+
+  Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.6s
+  Running TypeScript ...
+  Finished TypeScript in 23.0s ...
+  Collecting page data using 21 workers ...
+  Generating static pages using 21 workers (0/35) ...
+  Generating static pages using 21 workers (8/35) 
+  Generating static pages using 21 workers (17/35) 
+  Generating static pages using 21 workers (26/35) 
+✓ Generating static pages using 21 workers (35/35) in 1206ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /accept-invitation
+├ ƒ /forgot-password
+├ ○ /icon.svg
+├ ƒ /login
+├ ○ /manifest.webmanifest
+├ ƒ /organizations/select
+├ ƒ /platform/organizations/new
+├ ƒ /preview
+├ ƒ /reset-password
+├ ƒ /workspace
+├ ƒ /workspace/audit
+├ ƒ /workspace/branches
+├ ƒ /workspace/cash-registers
+├ ƒ /workspace/cash-sessions
+├ ƒ /workspace/catalog
+├ ƒ /workspace/catalog/categories
+├ ƒ /workspace/catalog/items
+├ ƒ /workspace/customers
+├ ƒ /workspace/expense-categories
+├ ƒ /workspace/expenses
+├ ƒ /workspace/inventory
+├ ƒ /workspace/inventory/adjustments
+├ ƒ /workspace/inventory/transfers
+├ ƒ /workspace/offline
+├ ƒ /workspace/payment-methods
+├ ƒ /workspace/pos
+├ ƒ /workspace/purchases
+├ ƒ /workspace/reports
+├ ƒ /workspace/sales
+├ ƒ /workspace/settings
+├ ƒ /workspace/suppliers
+└ ƒ /workspace/users
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

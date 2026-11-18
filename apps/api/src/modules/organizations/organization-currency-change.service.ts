@@ -8,7 +8,7 @@ import {
   IdempotencyService,
 } from '../../core/idempotency/idempotency.service.js';
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
-import { ResourceSafetyService } from '../offline-sync/resource-safety.service.js';
+import { ResourceSafetyService } from '../offline-sync/index.js';
 import {
   OrganizationCurrencyChangePolicy,
   OrganizationCurrencyChangeDeniedError,

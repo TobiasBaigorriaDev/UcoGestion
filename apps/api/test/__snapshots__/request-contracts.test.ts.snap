@@ -951,6 +951,106 @@ exports[`OpenAPI contract > keeps a snapshot of the public API schema 1`] = `
         ],
       },
     },
+    "/api/v1/customers/{customerId}/account": {
+      "get": {
+        "operationId": "CustomerAccountsController_read",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CustomerAccounts",
+        ],
+      },
+    },
+    "/api/v1/customers/{customerId}/account/collections": {
+      "post": {
+        "operationId": "CustomerAccountsController_collect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CustomerAccounts",
+        ],
+      },
+    },
+    "/api/v1/customers/{customerId}/account/collections/{entryId}/reverse": {
+      "post": {
+        "operationId": "CustomerAccountsController_reverse",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+          {
+            "in": "path",
+            "name": "entryId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CustomerAccounts",
+        ],
+      },
+    },
+    "/api/v1/customers/{customerId}/account/limit": {
+      "patch": {
+        "operationId": "CustomerAccountsController_setLimit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customerId",
+            "required": true,
+            "schema": {
+              "type": "string",
+            },
+          },
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+          },
+        },
+        "tags": [
+          "CustomerAccounts",
+        ],
+      },
+    },
     "/api/v1/customers/{customerId}/status": {
       "patch": {
         "operationId": "CustomersController_changeStatus",

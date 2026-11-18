@@ -35,6 +35,16 @@ Plataforma web/PWA multi-tenant para gestionar la operación comercial de peque�
 
 ## Requisitos funcionales
 
+> Continuidad del POS ante pérdida de red — solicitada explícitamente por el usuario el 2026-10-13.
+
+- **RF-346**: Cuando el POS online abierto pierda conectividad, debe bloquear y ocultar sus controles, enfocar un aviso accesible y ofrecer pasar al POS sin conexión en la misma pantalla, con PIN, dispositivo y grant vigentes exigidos por las reglas existentes. La superficie offline se valida mientras hay conexión; no se exige navegar ni descargar otra página durante el corte.
+- **RF-347**: El corte y el cambio de modo deben conservar en memoria el carrito online y la identidad idempotente de una confirmación con resultado incierto mientras permanezca abierta la pantalla. El aviso debe indicar que no se recree esa venta offline y que se reintente la original al recuperar conexión. Si el usuario eligió el modo offline, el regreso al POS online es explícito; no se trasladan automáticamente ventas entre modos.
+
+> Cambio de PIN offline — autorizado explícitamente por el usuario el 2026-10-13.
+
+- **RF-344**: Una identidad offline preparada debe poder cambiar su PIN ingresando el PIN actual, uno nuevo de al menos 8 caracteres y su confirmación. El PIN nuevo debe ser distinto del actual. El PIN actual se valida con el backoff y bloqueo existentes; no se permite recuperar un PIN olvidado por esta vía.
+- **RF-345**: El cambio debe conservar la misma DEK, los registros cifrados, grants, identidad/dispositivo, cola sellada y ACKs; actualizar únicamente la envoltura del usuario de forma atómica con salt e IV nuevos. Un fallo, cambio concurrente, bloqueo de identidad o revocación conocida no puede dejar una credencial parcial ni descartar pendientes. Debe funcionar sin conexión, no extender autorización y no transmitir PINs al servidor.
+
 - **RF-01**: Cuando un administrador de plataforma cree una organización, el sistema debe crearla junto con su primera sucursal y su usuario OWNER mediante un onboarding asistido.
 - **RF-02**: Cuando una persona no pertenezca a una organización, el sistema no debe permitirle consultar ni operar datos de dicha organización.
 - **RF-03**: Cuando un usuario pertenezca a más de una organización, el sistema debe permitirle seleccionar y cambiar su organización activa entre sus membresías vigentes.
@@ -118,7 +128,7 @@ Presentación de categorías — ampliación solicitada explícitamente el 2026-
 - **RF-75**: Cuando se confirme una venta con productos controlados por inventario y conexión disponible, el sistema debe rechazarla si no hay stock suficiente en la sucursal.
 - **RF-76**: Cuando se confirme una venta con ítems sin control de inventario, el sistema no debe validar ni modificar existencias para dichos ítems.
 - **RF-77**: Cuando se confirme una venta, el sistema debe permitir asociar opcionalmente un cliente y tratar la ausencia como consumidor final sin crear un cliente ficticio.
-- **RF-78**: Cuando se confirme una venta con total mayor que cero, el sistema debe exigir que quede totalmente pagada con uno o más medios habilitados para la organización.
+- **RF-78**: Cuando se confirme una venta con total mayor que cero, el sistema debe exigir que quede totalmente pagada con uno o más medios habilitados para la organización, salvo una venta online explícitamente a cuenta bajo [la ampliación autorizada de cuentas corrientes](../002-cuentas-corrientes/spec.md).
 - **RF-79**: Cuando se cobre en efectivo un importe recibido superior al efectivo aplicado, el sistema debe calcular y registrar el vuelto sin alterar el total de venta ni el efecto neto de caja.
 - **RF-80**: Cuando se confirme una venta, el sistema debe guardar subtotal, descuento, total, ítems, precios unitarios, pagos y vuelto como valores históricos persistidos.
 - **RF-81**: Cuando se confirme una venta, el sistema debe generar un comprobante digital interno identificado como “Comprobante no fiscal”.
@@ -410,7 +420,7 @@ Una persona debe poder obtener el ID visible de una venta en su confirmación o 
 - Roles personalizados y permisos configurables.
 - Devoluciones parciales de ventas y devoluciones parciales a proveedores.
 - Pagos parciales, cuotas, cuentas corrientes, vencimientos y múltiples pagos de compras.
-- Ventas fiadas, pagos posteriores y cuentas corrientes de clientes.
+- Ventas fiadas offline. Las ventas online a cuenta y cobros posteriores quedan incorporados por [la ampliación autorizada del 2026-10-12](../002-cuentas-corrientes/spec.md).
 - Transferencias con despacho, recepción, estado en tránsito o diferencias de recepción.
 - Operación offline para funciones distintas de apertura de caja y POS; cierre definitivo y anulaciones offline.
 - Aplicaciones nativas para Windows, Android o iOS.

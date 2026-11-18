@@ -1,0 +1,34 @@
+{
+  "mode": "critical",
+  "browser": "chromium",
+  "requestedScenario": "cash-closing",
+  "expectedScenarios": [
+    "cash-closing"
+  ],
+  "results": [
+    {
+      "scenario": "cash-closing",
+      "browser": "chromium",
+      "version": "155.0.8059.12",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.8059.12 Safari/537.36",
+      "os": "win32 10.0.26200",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "scenarios": [
+          "real-checkpoint-signature",
+          "lost-begin-reload",
+          "lost-abort-retry",
+          "lost-abort-reload",
+          "fresh-attempt-key",
+          "final-sync-count",
+          "reason",
+          "review",
+          "keyboard",
+          "axe-desktop-mobile",
+          "network-return"
+        ]
+      }
+    }
+  ]
+}

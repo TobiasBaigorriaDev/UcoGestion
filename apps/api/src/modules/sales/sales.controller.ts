@@ -14,6 +14,7 @@ import { parseCursorPageQuery } from '../../core/validation/pagination.js';
 import { ZodValidationPipe } from '../../core/validation/zod-validation.pipe.js';
 import type { TenantTransactionContext } from '../../database/tenant-transaction.js';
 import { CashSessionDeviceError } from '../cash/index.js';
+import { CustomerAccountError } from '../customers/index.js';
 import { SaleCancellationError, SaleCashRefundError } from './sale-cancellation-preparation.js';
 import { AmbiguousSaleCodeError, ConcurrentSaleModificationError, SaleCheckoutContextError,
   SalesOperationsService } from './sales-operations.service.js';
@@ -28,7 +29,7 @@ const discountSchema = z.strictObject({ kind: z.enum(['PERCENTAGE', 'FIXED']), v
 const quoteSchema = z.strictObject({ branchId: z.uuid(), lines: linesSchema,
   discount: discountSchema.optional() });
 const confirmationSchema = quoteSchema.extend({ cashSessionId: z.uuid(), deviceId: z.uuid(),
-  clientOperationId: z.uuid(), customerId: z.uuid().nullable().optional(),
+  clientOperationId: z.uuid(), customerId: z.uuid().nullable().optional(), onAccount: z.boolean().optional(),
   payments: z.array(z.strictObject({ method: z.string().min(1), appliedAmount: z.string(),
     receivedAmount: z.string().optional() })),
   quoteFingerprint: z.string().regex(/^[a-f0-9]{64}$/), previousKey: z.string().optional(),
@@ -179,6 +180,8 @@ export class SalesController {
   }
 
   private handleError(error: unknown): never {
+    if (error instanceof CustomerAccountError) throw new ConflictException({ code: error.code,
+      title: 'Cuenta corriente', detail: error.message });
     if (error instanceof SaleCheckoutContextError) throw new ForbiddenException({
       code: error.code, title: 'Caja no disponible', detail: error.message });
     if (error instanceof SaleCancellationError) {

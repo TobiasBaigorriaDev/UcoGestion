@@ -1,5 +1,18 @@
-param([string]$PublicOrigin)
+param([Parameter(Mandatory)][string]$PublicOrigin)
 $ErrorActionPreference = 'Stop'
+# Validate before pulling images or applying any database migration. Do not
+# include the input in diagnostics: an invalid URL may contain credentials.
+$candidateOrigin = $null
+if (-not [Uri]::TryCreate($PublicOrigin, [UriKind]::Absolute, [ref]$candidateOrigin) -or
+    $candidateOrigin.Scheme -ne 'https' -or
+    $candidateOrigin.IsLoopback -or
+    [string]::IsNullOrWhiteSpace($candidateOrigin.Host) -or
+    $candidateOrigin.AbsolutePath -ne '/' -or
+    $candidateOrigin.Query -ne '' -or
+    $candidateOrigin.Fragment -ne '' -or
+    $candidateOrigin.UserInfo -ne '') {
+  throw 'PublicOrigin must be a public HTTPS origin without credentials, path, query or fragment.'
+}
 foreach ($name in @('API_IMAGE', 'WORKER_IMAGE', 'WEB_IMAGE')) {
   $value = [Environment]::GetEnvironmentVariable($name)
   if ($value -notmatch '@sha256:[a-f0-9]{64}$') { throw "$name must identify an immutable image digest." }

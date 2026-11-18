@@ -7,7 +7,7 @@ import { AuditEventWriter } from '../../core/audit/audit-event-writer.js';
 import { TenantTransaction } from '../../database/tenant-transaction.js';
 import { OfflineSaleImporter } from '../sales/index.js';
 import { OfflineCashOpeningImporter } from '../cash/index.js';
-import type { DeviceCertificateClaims } from './device-certificate.js';
+import type { DeviceCertificateClaims } from '../../core/security/device-certificate.js';
 import { HistoricalEnvelopeValidator } from './historical-envelope-validator.js';
 import { readHistoricalEnvelopeContext } from './historical-envelope-context.js';
 import { readEnvelopeOrder } from './offline-envelope-order.js';

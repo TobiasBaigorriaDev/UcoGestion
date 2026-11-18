@@ -5,6 +5,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
+import { formatStockQuantity } from '../../lib/format-stock-quantity';
 import { downloadReportCsv, loadReport, loadReportExport, queueReportExport,
   type ReportDataset, type ReportFilters, type ReportPage } from './insights-api';
 import type { ReportExport } from './insights-api';
@@ -50,6 +51,15 @@ function display(value: unknown): string {
   if (value == null) return '—';
   return typeof value === 'string' || typeof value === 'number' ? String(value) : '—';
 }
+function inventoryEffect(value: unknown): { label: string; direction?: 'increase' | 'decrease' } {
+  switch (value) {
+    case 'INCREASE': return { label: 'Ingreso', direction: 'increase' };
+    case 'DECREASE': return { label: 'Egreso', direction: 'decrease' };
+    case 'TRANSFER_IN': return { label: 'Entrada por traslado', direction: 'increase' };
+    case 'TRANSFER_OUT': return { label: 'Salida por traslado', direction: 'decrease' };
+    default: return { label: '—' };
+  }
+}
 function displayField(field: string, value: unknown, timezone: string): string {
   if (typeof value === 'string' && (field === 'occurredAt' || field === 'openedAt')) {
     const date = new Date(value);
@@ -92,7 +102,10 @@ export function ReportsWorkspace({ organizationId, role, branches, timezone, loa
     getNextPageParam: (page) => page.nextCursor ?? undefined });
   const exportStatus = useQuery({ queryKey: ['report-export', organizationId, exportId],
     queryFn: () => loadExport(organizationId, exportId!), enabled: !!exportId,
-    refetchInterval: (query) => query.state.data?.status === 'QUEUED' || query.state.data?.status === 'PROCESSING' ? 3000 : false });
+    refetchInterval: (query) => query.state.data?.status === 'QUEUED' || query.state.data?.status === 'RUNNING' ? 3000 : false });
+  useEffect(() => {
+    if (['READY', 'FAILED', 'EXPIRED'].includes(exportStatus.data?.status ?? '')) exportKey.current = null;
+  }, [exportStatus.data?.status, exportId]);
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
   const range = reportChartRange(filters);
   const chart = useQuery({ queryKey: ['report-chart', organizationId, dataset, filters],
@@ -140,7 +153,6 @@ export function ReportsWorkspace({ organizationId, role, branches, timezone, loa
   async function pdf() {
     setBusy('pdf'); setExportError(null);
     try {
-      if (exportStatus.data?.status === 'EXPIRED' || exportStatus.data?.status === 'FAILED') exportKey.current = null;
       exportKey.current ??= crypto.randomUUID();
       const result = await queueExport(organizationId, dataset, filters, exportKey.current);
       setExportId(result.id);
@@ -196,6 +208,9 @@ export function ReportsWorkspace({ organizationId, role, branches, timezone, loa
       {query.data.pages[0]?.net !== undefined && <p>Importe neto: <strong>{formatDashboardAmount(query.data.pages[0].net)}</strong>. Las operaciones anuladas permanecen visibles con su estado.</p>}
       {items.length ? <div className={styles.tableWrap}><table className={`${styles.table} ${reportStyles.table}`}><caption>Registros del reporte con los filtros aplicados</caption><thead><tr>{fields[dataset].map((field) => <th scope="col" key={field}>{columnLabels[field]}</th>)}</tr></thead><tbody>{items.map((item) => <tr key={`${item.branchId}:${item.id}`}>{fields[dataset].map((field) => <td key={field} data-label={columnLabels[field]}>{field === 'branchId' ? branches.find((branch) => branch.id === item.branchId)?.name ?? item.branchId
         : field === 'status' ? <span className={reportStyles.status} data-cancelled={item.status === 'CANCELLED'}>{displayField(field, item[field], timezone)}</span>
+        : field === 'effectKind' ? <span className={reportStyles.effect} data-direction={inventoryEffect(item[field]).direction}>{inventoryEffect(item[field]).label}</span>
+        : ['quantity', 'minimum', 'delta'].includes(field) && typeof item[field] === 'string'
+          ? formatStockQuantity(item[field])
         : (field === 'total' || field === 'amount' || field === 'expectedCash' || field === 'difference') && typeof item[field] === 'string' ? formatDashboardAmount(item[field])
         : displayField(field, item[field], timezone)}</td>)}</tr>)}</tbody></table></div> : <p>Sin registros para los filtros elegidos.</p>}
       {query.hasNextPage && <button type="button" className={styles.button} disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>{query.isFetchingNextPage ? 'Cargando…' : 'Cargar más registros'}</button>}

@@ -13,8 +13,7 @@ import { SessionRevocationService } from './session-revocation.service.js';
 import { RequestIntegrityGuard } from './request-integrity.guard.js';
 import { TenantAccessGuard } from './tenant-access.guard.js';
 import { TenantMembershipService } from './tenant-membership.service.js';
-import { ExistingAccountInvitationAcceptanceService } from '../users/existing-account-invitation-acceptance.service.js';
-import { NewAccountInvitationAcceptanceService } from '../users/new-account-invitation-acceptance.service.js';
+import { ExistingAccountInvitationAcceptanceService, NewAccountInvitationAcceptanceService } from '../users/index.js';
 
 @Injectable()
 class GlobalAuthDatabase implements OnModuleDestroy {

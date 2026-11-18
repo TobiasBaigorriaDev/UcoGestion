@@ -17,6 +17,7 @@ export type CheckoutContext = z.infer<typeof contextSchema>;
 const confirmationSchema = z.object({ id: z.uuid(), total: z.string(), receipt: z.object({ label: z.string() }).passthrough() });
 export type SaleConfirmation = z.infer<typeof confirmationSchema>;
 const detailSchema = z.object({ id: z.string(), branchId: z.string(), status: z.enum(['CONFIRMED', 'CANCELLED']),
+  onAccountAmount: z.string().default('0.00'),
   total: z.string(), currency: z.string(), confirmedAt: z.string(), canCancel: z.boolean(),
   cancellation: z.object({ reason: z.string(), cancelledAt: z.string() }).nullable(),
   items: z.array(z.object({ name: z.string(), quantity: z.string(), unitPrice: z.string(), lineTotal: z.string() })),
@@ -81,6 +82,7 @@ export async function quoteSale(organizationId: string, branchId: string, lines:
 
 export async function confirmSale(organizationId: string, input: {
   branchId: string; cashSessionId: string; deviceId: string; clientOperationId: string;
+  customerId?: string; onAccount?: boolean;
   lines: readonly CartLine[]; discount?: SaleDiscount; payments: readonly PosPayment[];
   quoteFingerprint: string; previousKey?: string; acceptedPriceChange?: true;
 }, key: string): Promise<SaleConfirmation> {

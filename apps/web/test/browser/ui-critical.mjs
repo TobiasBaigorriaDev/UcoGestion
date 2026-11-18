@@ -47,6 +47,10 @@ async page => {
     if (path === '/inventory/adjustments') return json({ adjustments: [], nextCursor: null });
     if (path === '/inventory/transfers') return json({ transfers: [], nextCursor: null });
     if (path === '/sales/checkout-context') return json({ sessions: [], paymentMethods: ['CASH', 'TRANSFER'] });
+    if (path === '/cash-sessions') return json({ actorUserId: org, registers: [], devices: [], sessions: [], nextCursor: null });
+    if (path === '/sales/trends' || path === '/purchases/trends') return json({ currency: 'ARS', points: [{ date: '2026-10-09', amount: '125.00', count: 1 }] });
+    if (path === '/sales') return json({ items: [{ id: item, branchId: branch, status: 'CONFIRMED', total: '125.00', currency: 'ARS', confirmedAt: '2026-10-09T12:00:00Z' }], nextCursor: null });
+    if (path === '/purchases') return json({ items: [{ id: item, branchId: branch, status: 'PAID', total: '80.00', currency: 'ARS', supplierName: 'Proveedor', confirmedAt: '2026-10-09T12:00:00Z', items: [{ itemName: 'Producto', quantity: '2', lineTotal: '80.00' }] }], nextCursor: null });
     if (path === '/dashboard') return json(dashboard);
     if (path === '/audit') return json({ items: [{ id: item, actorUserId: org, branchId: branch, entityType: 'sale', entityId: item, action: 'CONFIRMED', occurredAt: '2026-10-09T12:00:00Z' }], nextCursor: null });
     if (path.startsWith('/reports/')) return json({ dataset: 'sales', items: [{ id: item, branchId: branch, occurredAt: '2026-10-09T12:00:00Z', status: 'CONFIRMED', total: '125.00', currencyCode: 'ARS' }], nextCursor: null });
@@ -118,8 +122,8 @@ async page => {
         if (route === '/workspace') {
           for (const label of ['Ventas netas', 'Cantidad de ventas', 'Ticket promedio', 'Gastos netos', 'Compras netas', 'Resultado operativo'])
             check(await page.locator('dt').filter({ hasText: label }).count() === 1, `Missing textual metric ${label}`);
-          for (const [title, text] of [['Medios de pago', 'Efectivo125,00'], ['Más vendidos', 'ManzanasCantidad: 2.000125,00'],
-            ['Stock bajo', 'Manzanas2.000 de mínimo 3.000'], ['Resumen de cajas', 'Centro · OPEN1 sesiones · 125,00']]) {
+          for (const [title, text] of [['Medios de pago', 'Efectivo125,00'], ['Más vendidos', 'ManzanasCantidad: 2125,00'],
+            ['Stock bajo', 'Manzanas2 de mínimo 3'], ['Resumen de cajas', 'Centro · OPEN1 sesiones · 125,00']]) {
             const section = page.locator('section').filter({ has: page.getByRole('heading', { name: title, exact: true }) });
             check((await section.locator('dl, ul').first().innerText()).replace(/\s+/g, '') === text.replace(/\s+/g, ''), `Text alternative differs: ${title}`);
           }
@@ -146,14 +150,15 @@ async page => {
     if (route === '/workspace/catalog') {
       check(await page.getByRole('heading', { name: 'Productos', exact: true }).count() === 1, 'Product workspace missing');
       await page.getByText(/Disponible en Centro:/).waitFor();
-      check(await page.getByText('Stock bajo').count() === 1, 'Branch stock alert missing from products');
+      const stockWarning = page.getByText('Stock bajo', { exact: true });
+      check(await stockWarning.count() === 1 && await stockWarning.isVisible(), 'Branch stock alert missing from products');
       check(await page.getByRole('button', { name: 'Editar Manzanas' }).count() === 0, 'Product details start open');
       await page.getByText('Manzanas', { exact: true }).click();
       await page.getByRole('button', { name: 'Editar Manzanas' }).waitFor();
       check(await page.getByRole('button', { name: 'Cambiar precio de Manzanas' }).count() === 0, 'Price action outside editor');
       await page.getByRole('button', { name: 'Editar Manzanas' }).click();
-      check(await page.getByRole('button', { name: 'Cambiar precio de Manzanas' }).count() === 1, 'Price edit missing');
-      check(await page.getByRole('button', { name: 'Eliminar Manzanas' }).count() === 1, 'Product deletion missing');
+      check(await page.getByRole('textbox', { name: 'Precio nuevo de Manzanas' }).count() === 1, 'Price field missing');
+      check(await page.getByText('Eliminar Manzanas', { exact: true }).count() === 1, 'Product deletion missing');
       await page.getByRole('textbox', { name: 'Nombre de Manzanas' }).waitFor();
       results.push(await scan(route, 390, 'edit-open'));
       await page.getByRole('button', { name: 'Nuevo producto o servicio' }).click();

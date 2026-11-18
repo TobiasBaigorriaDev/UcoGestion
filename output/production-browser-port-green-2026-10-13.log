@@ -1,0 +1,11 @@
+✔ browser gates can use a separate loopback port without accepting external origins (1.4148ms)
+✔ a CLI tool error or incomplete scenario cannot produce green browser evidence (1.1363ms)
+✔ CI runs the critical browser gate and nightly expands all three engines (0.7813ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 133.5257

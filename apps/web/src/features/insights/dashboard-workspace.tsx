@@ -1,5 +1,7 @@
 'use client';
 
+import { formatStockQuantity } from '../../lib/format-stock-quantity';
+
 import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
@@ -83,7 +85,7 @@ export function DashboardWorkspace({ organizationId, role, branches, timezone, c
     {query.isFetching && <p role="status" className={styles.muted}>{query.isPending ? 'Cargando dashboard…' : 'Actualizando resumen…'}</p>}
     {query.error && <><ErrorSummary error={query.error instanceof ApiProblemError ? query.error : new ApiProblemError({ status: 0, code: 'DASHBOARD_LOAD_FAILED', message: 'No pudimos cargar el dashboard. Intentá nuevamente.' })} /><button className={styles.button} type="button" onClick={() => void query.refetch()}>Reintentar</button></>}
     {data?.role === 'EMPLOYEE' && <div className={styles.sections}><section className={styles.section}><h2>Catálogo e inventario</h2><p>{data.catalog.length} ítems activos · {data.inventory.length} existencias en sucursales autorizadas.</p>{data.catalog.length ? <ul className={styles.list}>{data.catalog.map(item => <li key={item.itemId}>{item.name}</li>)}</ul> : <p>Sin ítems activos.</p>}</section>
-      <section className={styles.section}><h2>Existencias</h2>{data.inventory.length ? <ul className={styles.list}>{data.inventory.map(item => <li key={`${item.branchId}:${item.itemId}`}><span>{data.catalog.find(entry => entry.itemId === item.itemId)?.name ?? item.itemId} · {branches.find(branch => branch.id === item.branchId)?.name ?? item.branchId}</span><strong>{item.quantity}</strong></li>)}</ul> : <p>Sin existencias para las sucursales autorizadas.</p>}</section></div>}
+      <section className={styles.section}><h2>Existencias</h2>{data.inventory.length ? <ul className={styles.list}>{data.inventory.map(item => <li key={`${item.branchId}:${item.itemId}`}><span>{data.catalog.find(entry => entry.itemId === item.itemId)?.name ?? item.itemId} · {branches.find(branch => branch.id === item.branchId)?.name ?? item.branchId}</span><strong>{formatStockQuantity(item.quantity)}</strong></li>)}</ul> : <p>Sin existencias para las sucursales autorizadas.</p>}</section></div>}
     {data && data.role !== 'EMPLOYEE' && <>
       <dl className={`${styles.metrics} ${dashboardStyles.metrics}`}>
         <div className={styles.metric}><dt>Ventas netas</dt><dd><Money value={data.sales.net} /></dd></div>
@@ -98,10 +100,10 @@ export function DashboardWorkspace({ organizationId, role, branches, timezone, c
             { id: 'sales', label: 'Ventas', value: data.sales.net }, { id: 'expenses', label: 'Gastos', value: data.expenses.net, tone: 'expense' }, { id: 'purchases', label: 'Compras', value: data.purchases.net, tone: 'purchase' },
           ]} />
           <BarChart title="Medios de pago" description="Importes aplicados a ventas, agrupados por medio de pago." items={data.paymentMethods.map(item => ({ id: item.method, label: methodNames[item.method] ?? item.method, value: item.total }))} />
-          <BarChart title="Más vendidos" description="Importe vendido por ítem. Ordenado por cantidad vendida." items={data.topItems.map(item => ({ id: item.itemId, label: item.name, detail: `Cantidad: ${item.quantity}`, value: item.total }))} />
+          <BarChart title="Más vendidos" description="Importe vendido por ítem. Ordenado por cantidad vendida." items={data.topItems.map(item => ({ id: item.itemId, label: item.name, detail: `Cantidad: ${formatStockQuantity(item.quantity)}`, value: item.total }))} />
         </div>
         <div className={styles.sections}>
-          <ListSection title="Stock bajo" note="Existencias actuales de las sucursales elegidas; no dependen del período." items={data.lowStock.map(item => ({ id: `${item.branchId}:${item.itemId}`, label: item.name, detail: `${item.quantity} de mínimo ${item.minimum}` }))} />
+          <ListSection title="Stock bajo" note="Existencias actuales de las sucursales elegidas; no dependen del período." items={data.lowStock.map(item => ({ id: `${item.branchId}:${item.itemId}`, label: item.name, detail: `${formatStockQuantity(item.quantity)} de mínimo ${formatStockQuantity(item.minimum)}` }))} />
           <ListSection title="Resumen de cajas" note="Sesiones abiertas dentro del período seleccionado." items={data.cashSummary.map(item => ({ id: `${item.branchId}:${item.status}`, label: `${branches.find(branch => branch.id === item.branchId)?.name ?? item.branchId} · ${item.status}`, detail: `${item.count} sesiones · ${formatDashboardAmount(item.expectedCash)}` }))} />
         </div>
       </>}

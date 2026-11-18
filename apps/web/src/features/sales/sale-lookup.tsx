@@ -1,4 +1,6 @@
 'use client';
+
+import { formatStockQuantity } from '../../lib/format-stock-quantity';
 import { OrganizationTime } from '../../components/organization-time';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -71,6 +73,8 @@ function SaleLookupWorkspace({ organizationId, branchId, role, branches, timezon
       await queryClient.invalidateQueries({ queryKey: ['sale-detail', organizationId] });
       await queryClient.invalidateQueries({ queryKey: ['sale-history', organizationId] });
       await queryClient.invalidateQueries({ queryKey: ['sale-trends', organizationId] });
+      await queryClient.invalidateQueries({ queryKey: ['customer-account', organizationId] });
+      await queryClient.invalidateQueries({ queryKey: ['customers', organizationId] });
     } catch (cause) { setError(problem(cause)); }
     finally { setBusy(false); }
   }
@@ -97,10 +101,11 @@ function SaleLookupWorkspace({ organizationId, branchId, role, branches, timezon
       <p><strong>Total:</strong> {sale.total} {sale.currency}</p>
       <p><strong>Confirmada:</strong> <OrganizationTime value={sale.confirmedAt} /></p>
       <h3>Ítems</h3><ul className={styles.detailList}>{sale.items.map((item, index) => <li key={index}>
-        {item.name} · {item.quantity} × {item.unitPrice} = {item.lineTotal}</li>)}</ul>
+        {item.name} · {formatStockQuantity(item.quantity)} × {item.unitPrice} = {item.lineTotal}</li>)}</ul>
       <h3>Pagos originales</h3><ul className={styles.detailList}>{sale.payments.map((payment, index) =>
         <li key={index}>{payment.method}: {payment.amount}{payment.change !== '0.00'
           ? ` · Vuelto ${payment.change}` : ''}</li>)}</ul>
+      {sale.onAccountAmount && sale.onAccountAmount !== '0.00' ? <p><strong>A cuenta en esta venta:</strong> {sale.onAccountAmount} {sale.currency}. Los cobros posteriores se consultan en Clientes.</p> : null}
       {sale.cancellation ? <p role="status"><strong>Anulación:</strong> {sale.cancellation.reason}
         {' · '}<OrganizationTime value={sale.cancellation.cancelledAt} /></p> : null}
       <ReceiptActions organizationId={organizationId} saleId={sale.id} />

@@ -1,7 +1,7 @@
 import { generateKeyPairSync, randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
-import { DeviceCertificate } from '../src/modules/offline-sync/device-certificate.js';
+import { DeviceCertificate } from '../src/core/security/device-certificate.js';
 
 describe('T185 device certificate', () => {
   const secret = randomBytes(32);

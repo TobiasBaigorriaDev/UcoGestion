@@ -28,12 +28,20 @@ const scenarios = {
   'offline-sealing': `${fixtures}offline-sealing.html`,
   'opaque-delivery': `${fixtures}opaque-delivery.html`,
   'offline-settings': `${fixtures}offline-settings.html`,
+  'pos-connection': `${fixtures}offline-settings.html?connection`,
   'offline-restrictions': `${fixtures}offline-restrictions.html`,
   'cash-exceptional': `${fixtures}cash-operations.html`,
   'branch-deactivation': `${fixtures}branch-deactivation.html`,
   'receipt-safety': 'http://127.0.0.1:4179/test-receipt.html',
 };
 const critical = ['ui-critical', 'pwa-capability', 'cash-operations', 'cash-closing', 'offline-resilience', 'offline-update'];
+
+export function resolveBrowserWebOrigin(port = '3001') {
+  if (!/^[1-9][0-9]{3,4}$/.test(port) || Number(port) < 1024 || Number(port) > 65535) {
+    throw new Error('BROWSER_WEB_PORT must be an integer from 1024 to 65535.');
+  }
+  return `http://localhost:${port}`;
+}
 
 export function readScenarioResult(stdout) {
   const response = JSON.parse(stdout);
@@ -56,6 +64,7 @@ async function waitForServer(url, child) {
 
 async function run() {
   const mode = process.argv[2] ?? 'critical';
+  const webOrigin = resolveBrowserWebOrigin(process.env.BROWSER_WEB_PORT);
   const browser = process.env.BROWSER ?? 'chromium';
   if (!['critical', 'nightly', 'compatibility'].includes(mode)) throw new Error('Invalid browser suite.');
   if (!['chromium', 'firefox', 'webkit', 'chrome', 'msedge'].includes(browser)) throw new Error('Invalid browser.');
@@ -71,7 +80,7 @@ async function run() {
   const start = (name, entry, args, cwd) => {
     const log = createWriteStream(resolve(directory, `${name}.log`)); logs.push(log);
     const child = spawn(process.execPath, [entry, ...args], { cwd, env: { ...process.env,
-      NEXT_PUBLIC_WEB_ORIGIN: 'http://localhost:3001' }, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+      NEXT_PUBLIC_WEB_ORIGIN: webOrigin }, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     child.stdout.pipe(log); child.stderr.pipe(log); children.push(child);
     return child;
   };
@@ -95,12 +104,12 @@ async function run() {
   const results = [];
   try {
     const web = start('web', require.resolve('next/dist/bin/next', { paths: [resolve(root, 'apps/web')] }),
-      ['start', '--port', '3001'], resolve(root, 'apps/web'));
+      ['start', '--port', new URL(webOrigin).port], resolve(root, 'apps/web'));
     const vite = resolve(dirname(require.resolve('vite/package.json',
       { paths: [dirname(require.resolve('vitest/package.json'))] })), 'bin/vite.js');
     const fixture = start('fixtures', vite,
       ['.', '--config', 'apps/web/test/browser/offline-update.vite.mjs', '--host', '127.0.0.1', '--port', '4179', '--strictPort'], root);
-    await Promise.all([waitForServer('http://localhost:3001', web), waitForServer(`${fixtures}pwa-capability.html`, fixture)]);
+    await Promise.all([waitForServer(webOrigin, web), waitForServer(`${fixtures}pwa-capability.html`, fixture)]);
     for (const name of selected) {
       const session = `gate-${randomUUID().slice(0, 8)}`;
       try {
@@ -115,7 +124,8 @@ async function run() {
           'async page => { const probe=await page.context().newPage();try {return {version:page.context().browser().version(),userAgent:await probe.evaluate(()=>navigator.userAgent)};}finally {await probe.close();} }')).result);
         const source = await readFile(resolve(root, `apps/web/test/browser/${name}.mjs`), 'utf8');
         const scenarioPath = resolve(directory, `${name}.mjs`);
-        await writeFile(scenarioPath, source.replaceAll('.impeccable/review/', 'output/playwright/captures/')
+        await writeFile(scenarioPath, source.replaceAll('http://localhost:3001', webOrigin)
+          .replaceAll('.impeccable/review/', 'output/playwright/captures/')
           .replace('/* __UI_VERIFY_ROUTES__ */ null', JSON.stringify(
             name === 'ui-critical' && process.env.UI_VERIFY_ROUTES
               ? process.env.UI_VERIFY_ROUTES.split(',') : null))

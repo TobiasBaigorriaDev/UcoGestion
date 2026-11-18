@@ -1243,6 +1243,38 @@ export const sales = pgTable('sales', {
     foreignColumns: [customers.organizationId, customers.id], name: 'sales_customer_tenant_fk' }),
 ]);
 
+export const customerAccounts = pgTable('customer_accounts', {
+  organizationId: uuid('organization_id').notNull(), customerId: uuid('customer_id').notNull(),
+  balance: numeric({ precision: 20, scale: 2 }).notNull().default('0'),
+  creditLimit: numeric('credit_limit', { precision: 20, scale: 2 }).notNull().default('0'),
+  version: bigint({ mode: 'number' }).notNull().default(1),
+}, table => [
+  primaryKey({ columns: [table.organizationId, table.customerId] }),
+  foreignKey({ columns: [table.organizationId, table.customerId], foreignColumns: [customers.organizationId, customers.id] }).onDelete('restrict'),
+  check('customer_accounts_balance_check', sql`${table.balance} >= 0`),
+  check('customer_accounts_credit_limit_check', sql`${table.creditLimit} >= 0`),
+]);
+
+export const customerAccountEntries = pgTable('customer_account_entries', {
+  id: uuid().primaryKey(), organizationId: uuid('organization_id').notNull(), customerId: uuid('customer_id').notNull(),
+  branchId: uuid('branch_id').notNull(), cashSessionId: uuid('cash_session_id').notNull(), deviceId: uuid('device_id').notNull(),
+  actorUserId: uuid('actor_user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  kind: text().notNull(), amount: numeric({ precision: 20, scale: 2 }).notNull(), delta: numeric({ precision: 20, scale: 2 }).notNull(),
+  balanceAfter: numeric('balance_after', { precision: 20, scale: 2 }).notNull(), currencyCode: text('currency_code').notNull(),
+  method: text(), saleId: uuid('sale_id'), originalEntryId: uuid('original_entry_id'), reason: text(),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [
+  unique().on(table.organizationId, table.customerId, table.id),
+  unique().on(table.organizationId, table.kind, table.saleId),
+  unique().on(table.organizationId, table.kind, table.originalEntryId),
+  foreignKey({ columns: [table.organizationId, table.customerId], foreignColumns: [customerAccounts.organizationId, customerAccounts.customerId] }).onDelete('restrict'),
+  foreignKey({ columns: [table.organizationId, table.branchId, table.cashSessionId, table.deviceId],
+    foreignColumns: [cashSessions.organizationId, cashSessions.branchId, cashSessions.id, cashSessions.deviceId] }).onDelete('restrict'),
+  foreignKey({ columns: [table.organizationId, table.saleId], foreignColumns: [sales.organizationId, sales.id] }).onDelete('restrict'),
+  foreignKey({ columns: [table.organizationId, table.customerId, table.originalEntryId],
+    foreignColumns: [table.organizationId, table.customerId, table.id] }).onDelete('restrict'),
+]);
+
 export const saleItems = pgTable('sale_items', {
   id: uuid().primaryKey(),
   organizationId: uuid('organization_id').notNull(),

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -9,6 +9,80 @@ import type { ReportDataset, ReportFilters } from '../src/features/insights/insi
 
 afterEach(cleanup);
 describe('reportes por rol', () => {
+  it('traduce los efectos de inventario y distingue aumentos y disminuciones', async () => {
+    const effects = ['INCREASE', 'DECREASE', 'TRANSFER_IN', 'TRANSFER_OUT'];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}>
+      <ReportsWorkspace organizationId="o1" role="EMPLOYEE" timezone="UTC" branches={[]}
+        now={new Date('2026-10-12T15:00:00Z')}
+        load={async (_organization, dataset) => ({ dataset, nextCursor: null, items: dataset === 'inventory' ? [] : effects.map((effectKind, index) => ({
+          id: String(index), branchId: 'b', itemName: `Producto ${index}`, occurredAt: '2026-10-12T13:00:00Z',
+          effectKind, delta: index % 2 === 0 ? '2.000' : '-2.000',
+        })) })} />
+    </QueryClientProvider>);
+    await userEvent.selectOptions(screen.getByLabelText('Tipo de reporte'), 'inventory-movements');
+    for (const [label, direction] of [['Ingreso', 'increase'], ['Egreso', 'decrease'],
+      ['Entrada por traslado', 'increase'], ['Salida por traslado', 'decrease']]) {
+      const effect = await screen.findByText(label!);
+      expect(effect.getAttribute('data-direction')).toBe(direction);
+      expect(effect.closest('td')?.getAttribute('data-label')).toBe('Efecto');
+    }
+    for (const effect of effects) expect(screen.queryByText(effect)).toBeNull();
+  });
+  it('genera un archivo nuevo después de READY y conserva la clave si se reintenta la nueva solicitud', async () => {
+    const queueExport = vi.fn().mockResolvedValueOnce({ id: 'previous', status: 'QUEUED' })
+      .mockRejectedValueOnce(new Error('Lost response')).mockResolvedValue({ id: 'new', status: 'QUEUED' });
+    const loadExport = vi.fn(async (_organization: string, id: string) => ({ id, status: 'READY', url: `https://example.test/${id}.pdf` }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(<QueryClientProvider client={client}>
+      <ReportsWorkspace organizationId="o1" role="EMPLOYEE" timezone="UTC" branches={[]}
+        load={async () => ({ dataset: 'inventory', items: [], nextCursor: null })}
+        queueExport={queueExport} loadExport={loadExport} />
+    </QueryClientProvider>);
+    await screen.findByText('Sin registros para los filtros elegidos.');
+    fireEvent.click(screen.getByRole('button', { name: 'Generar PDF' }));
+    await screen.findByRole('link', { name: 'Descargar PDF listo' });
+    fireEvent.click(screen.getByRole('button', { name: 'Generar PDF' }));
+    await screen.findByText('No pudimos iniciar la exportación PDF. Intentá nuevamente.');
+    fireEvent.click(screen.getByRole('button', { name: 'Generar PDF' }));
+    await waitFor(() => expect(queueExport).toHaveBeenCalledTimes(3));
+    expect(queueExport.mock.calls[1]?.[3]).not.toBe(queueExport.mock.calls[0]?.[3]);
+    expect(queueExport.mock.calls[2]?.[3]).toBe(queueExport.mock.calls[1]?.[3]);
+    view.unmount(); client.clear();
+  });
+  it('continúa consultando un PDF RUNNING hasta recibir su descarga READY', async () => {
+    const loadExport = vi.fn().mockResolvedValueOnce({ id: 'export-running', status: 'RUNNING' })
+      .mockResolvedValue({ id: 'export-running', status: 'READY', url: 'https://example.test/file.pdf' });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(<QueryClientProvider client={client}>
+      <ReportsWorkspace organizationId="o1" role="EMPLOYEE" timezone="UTC" branches={[]}
+        load={async () => ({ dataset: 'inventory', items: [], nextCursor: null })}
+        queueExport={async () => ({ id: 'export-running', status: 'QUEUED' })} loadExport={loadExport} />
+    </QueryClientProvider>);
+    await screen.findByText('Sin registros para los filtros elegidos.');
+    fireEvent.click(screen.getByRole('button', { name: 'Generar PDF' }));
+    await screen.findByText('Exportación PDF: RUNNING');
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Descargar PDF listo' })).toBeDefined(), { timeout: 4500 });
+    expect(loadExport).toHaveBeenCalledTimes(2);
+    view.unmount(); client.clear();
+  });
+  it('presenta cantidades enteras sin decimales y fracciones con coma y dos decimales en inventario', async () => {
+    const load = vi.fn().mockResolvedValue({ dataset: 'inventory', nextCursor: null, items: [
+      { id: 'i1', branchId: 'b', name: 'Yerba', quantity: '24.000', minimum: null, lowStock: false },
+      { id: 'i2', branchId: 'b', name: 'Queso cremoso', quantity: '1.235', minimum: null, lowStock: false },
+      { id: 'i3', branchId: 'b', name: 'Queso fresco', quantity: '0.500', minimum: null, lowStock: false },
+      { id: 'i4', branchId: 'b', name: 'Sin stock', quantity: '0.000', minimum: null, lowStock: false },
+    ] });
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <ReportsWorkspace organizationId="o1" role="EMPLOYEE" timezone="UTC" branches={[]} load={load} />
+    </QueryClientProvider>);
+    const table = await screen.findByRole('table');
+    expect(within(table).getByRole('cell', { name: '24' })).toBeDefined();
+    expect(within(table).getByRole('cell', { name: '1,24' })).toBeDefined();
+    expect(within(table).getByRole('cell', { name: '0,50' })).toBeDefined();
+    expect(within(table).getByRole('cell', { name: '0' })).toBeDefined();
+    expect(within(table).queryByText('1.235')).toBeNull();
+  });
   it('muestra categorías de gastos juntas en un gráfico con colores y valores accesibles', async () => {
     const load = vi.fn().mockResolvedValue({ dataset: 'expenses', items: [
       { id: 'e1', branchId: 'b', occurredAt: '2026-10-12T13:00:00Z', categoryId: 'light', categoryName: 'Luz', amount: '1500.00', currencyCode: 'ARS', status: 'CONFIRMED' },

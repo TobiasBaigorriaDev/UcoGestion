@@ -1,5 +1,7 @@
 'use client';
 
+import { formatStockQuantity } from '../../lib/format-stock-quantity';
+
 import { useState } from 'react';
 
 import { ErrorSummary } from '../../components/error-summary';
@@ -103,7 +105,7 @@ export function InventoryAdjustments({ compact = false, historyOnly = false, org
     {!compact ? <section className={styles.panel} aria-label="Ajustes confirmados"><h2>Historial de ajustes</h2>
       {adjustments.length === 0 ? <p>No hay ajustes confirmados en esta sucursal.</p> :
         <ul className={styles.rows}>{adjustments.map((adjustment) => <li className={styles.row} key={adjustment.id}>
-          <strong>{adjustment.itemName}</strong><span>{adjustment.direction === 'INCREASE' ? 'Ingreso' : 'Egreso'} de {adjustment.quantity} · {reasonLabels[adjustment.reason] ?? adjustment.reason}</span>
+          <strong>{adjustment.itemName}</strong><span>{adjustment.direction === 'INCREASE' ? 'Ingreso' : 'Egreso'} de {formatStockQuantity(adjustment.quantity)} · {reasonLabels[adjustment.reason] ?? adjustment.reason}</span>
           <span>{adjustment.compensatedBy ? 'Compensado' : adjustment.compensates ? 'Compensación confirmada' : 'Confirmado'}</span>
           {adjustment.observation ? <p>{adjustment.observation}</p> : null}
           {role !== 'CASHIER' && !adjustment.compensatedBy && !adjustment.compensates ?

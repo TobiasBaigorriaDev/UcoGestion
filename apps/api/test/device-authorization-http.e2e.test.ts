@@ -15,7 +15,7 @@ import { deliveryProofPayload } from '../src/modules/offline-sync/offline-delive
 import { configureApi } from '../src/configure-api.js';
 import { runMigrations } from '../src/database/migrate.js';
 import { createGlobalUser } from '../src/modules/auth/global-user.repository.js';
-import { DeviceCertificate } from '../src/modules/offline-sync/device-certificate.js';
+import { DeviceCertificate } from '../src/core/security/device-certificate.js';
 import { createOpenApiDocument } from '../src/core/validation/openapi.js';
 
 describe('T185 POS device HTTP authorization', () => {

@@ -64,7 +64,7 @@ it('D03 never shows confirmation on seal failure and restores the unconfirmed at
     view.unmount(); setup.db.delivery_queue.hook('creating').unsubscribe(fail);
     render(<OfflinePosWorkspace controller={controller} expired={false} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Confirmar venta sin conexión' }));
-    await waitFor(() => expect(within(screen.getByRole('region', { name: 'Confirmación de venta' })).getByText(draft.id)).toBeDefined());
+    await waitFor(() => expect(within(screen.getByRole('region', { name: 'Confirmación de venta' })).getByText(saleCodeFromId(draft.id))).toBeDefined());
     expect(await setup.db.delivery_queue.count()).toBe(2);
     await expect(setup.pos.receipt('77777777-7777-4777-8777-777777777777', draft.id)).rejects.toThrow();
   } finally { setup.db.close(); }

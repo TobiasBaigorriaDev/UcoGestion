@@ -3,7 +3,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
 
 import { normalizeEmail } from './global-user.repository.js';
-import { hashPassword, needsPasswordRehash, verifyPassword } from './password.js';
+import { hashPassword, needsPasswordRehash, verifyPassword } from '../../core/security/password.js';
 import type { PostgresRateLimitService } from './postgres-rate-limit.service.js';
 
 type GlobalIdentityDatabase = Pick<Pool, 'connect' | 'query'>;

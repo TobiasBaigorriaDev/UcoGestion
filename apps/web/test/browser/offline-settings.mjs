@@ -10,6 +10,13 @@ async page => {
   await page.getByLabel('PIN offline', { exact: true }).fill('offline-pin');
   await page.getByRole('button', { name: 'Desbloquear mi identidad' }).focus(); await page.keyboard.press('Enter');
   await page.getByRole('heading', { name: 'Mis operaciones pendientes' }).waitFor();
+  await page.getByRole('button', { name: 'Cambiar PIN offline' }).click();
+  await page.getByLabel('PIN actual', { exact: true }).fill('offline-pin');
+  await page.getByLabel('Nuevo PIN', { exact: true }).fill('replacement-offline-pin');
+  await page.getByLabel('Confirmar nuevo PIN', { exact: true }).fill('does-not-match');
+  await page.getByRole('button', { name: 'Guardar nuevo PIN' }).click();
+  await page.getByText('Revisá los campos para cambiar tu PIN.', { exact: true }).waitFor();
+  check(await page.evaluate(() => document.activeElement?.getAttribute('role') === 'alert'), 'PIN validation summary did not receive focus');
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.evaluate(() => document.fonts.ready);
@@ -17,7 +24,22 @@ async page => {
     check((await page.evaluate(() => window.axe.run(document))).violations.length === 0, 'Offline axe failed');
     await page.screenshot({ path: `output/playwright/offline-settings-${width}.png`, fullPage: true });
   }
+  await page.getByLabel('Confirmar nuevo PIN', { exact: true }).fill('replacement-offline-pin');
   const before = await page.evaluate(async () => (await window.offlineSettingsHarness.pending()).map(row => ({ id: row.id, bytes: Array.from(row.envelope) })));
+  await page.context().setOffline(true);
+  await page.getByRole('button', { name: 'Guardar nuevo PIN' }).click();
+  await page.getByText('PIN offline actualizado. Tus datos y pendientes se conservaron.', { exact: true }).waitFor();
+  check(JSON.stringify(before) === JSON.stringify(await page.evaluate(async () => (await window.offlineSettingsHarness.pending()).map(row => ({ id: row.id, bytes: Array.from(row.envelope) })))), 'PIN rotation changed pending envelopes');
+  await page.context().setOffline(false);
+  await page.goto('http://127.0.0.1:4179/apps/web/test/browser/offline-settings.html?resume');
+  await page.getByLabel('PIN offline', { exact: true }).fill('offline-pin');
+  await page.getByRole('button', { name: 'Desbloquear mi identidad' }).click();
+  await page.getByRole('alert').waitFor();
+  check(await page.getByRole('heading', { name: 'Mis operaciones pendientes' }).count() === 0, 'Old PIN unlocked private data');
+  await page.getByLabel('PIN offline', { exact: true }).fill('replacement-offline-pin');
+  await page.getByRole('button', { name: 'Desbloquear mi identidad' }).click();
+  await page.getByRole('heading', { name: 'Mis operaciones pendientes' }).waitFor();
+  check(JSON.stringify(before) === JSON.stringify(await page.evaluate(async () => (await window.offlineSettingsHarness.pending()).map(row => ({ id: row.id, bytes: Array.from(row.envelope) })))), 'Reload lost pending envelopes');
   await page.context().setOffline(true);
   await page.getByRole('button', { name: 'Sincronizar mis pendientes' }).click();
   await page.getByRole('alert').waitFor();
@@ -39,7 +61,7 @@ async page => {
   await page.context().setOffline(false);
   await page.getByRole('button', { name: 'Reintentar entrega del equipo' }).click();
   await page.getByText(/0 entregas pendientes en este equipo/).waitFor();
-  return { passed: true, scenarios: ['real-pin', 'verified-identity-queue', 'keyboard', 'mobile', 'axe-with-contrast', 'recoverable-error-exact-bytes', 'signed-ack', 'retirement', 'generic-foreign-pending', 'generic-error-no-private-data', 'generic-signed-ack'] };
+  return { passed: true, scenarios: ['real-pin', 'verified-identity-queue', 'keyboard', 'mobile', 'axe-with-contrast', 'offline-pin-change-exact-bytes', 'reload-old-pin-rejected-new-pin-decrypts', 'recoverable-error-exact-bytes', 'signed-ack', 'retirement', 'generic-foreign-pending', 'generic-error-no-private-data', 'generic-signed-ack'] };
 
   } catch (error) { throw new Error(`${error.message}; fixture errors: ${faults.join(' | ')}; UI: ${await page.locator('body').innerText()}`, { cause: error }); }
 }

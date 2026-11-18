@@ -1,0 +1,28 @@
+{
+  "mode": "critical",
+  "browser": "chromium",
+  "requestedScenario": "offline-update",
+  "expectedScenarios": [
+    "offline-update"
+  ],
+  "results": [
+    {
+      "scenario": "offline-update",
+      "browser": "chromium",
+      "version": "155.0.8059.12",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.8059.12 Safari/537.36",
+      "os": "win32 10.0.26200",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "scenarios": [
+          "worker-blocked-before-migration",
+          "worker-activation-after-migration",
+          "reload",
+          "exact-record-and-envelope-bytes",
+          "unknown-format-rollback"
+        ]
+      }
+    }
+  ]
+}

@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { readScenarioResult } from '../ops/browser/run.mjs';
+import { readScenarioResult, resolveBrowserWebOrigin } from '../ops/browser/run.mjs';
+
+test('browser gates can use a separate loopback port without accepting external origins', () => {
+  assert.equal(resolveBrowserWebOrigin(), 'http://localhost:3001');
+  assert.equal(resolveBrowserWebOrigin('3021'), 'http://localhost:3021');
+  for (const invalid of ['0', '80', '65536', '3021/path', 'https://example.com', '03021', '3021.5']) {
+    assert.throws(() => resolveBrowserWebOrigin(invalid), /BROWSER_WEB_PORT/);
+  }
+});
 
 test('a CLI tool error or incomplete scenario cannot produce green browser evidence', () => {
   const response = value => JSON.stringify({ result: JSON.stringify(value) });

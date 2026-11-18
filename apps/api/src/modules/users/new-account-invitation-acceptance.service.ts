@@ -3,7 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
 import { AuditEventWriter } from '../../core/audit/audit-event-writer.js';
-import { hashPassword } from '../auth/password.js';
+import { hashPassword } from '../../core/security/password.js';
 import { InvitationAcceptanceError } from './existing-account-invitation-acceptance.service.js';
 
 interface NewAccountInvitationAcceptanceOptions {

@@ -455,7 +455,7 @@ function ItemEditor({
   onChangeStructure: typeof changeCatalogItemStructure;
 }) {
   const [editing, setEditing] = useState(false);
-  const [mode, setMode] = useState<'closed' | 'edit' | 'price' | 'structure' | 'delete'>('closed');
+  const [nextStatus, setNextStatus] = useState<'ACTIVE' | 'INACTIVE'>(item.status);
   const [error, setError] = useState<ApiProblemError | null>(null);
   const [busy, setBusy] = useState(false);
   const edit = useForm<EditValues>({
@@ -485,7 +485,7 @@ function ItemEditor({
         barcode: values.barcode.trim() || null,
         categoryId: values.categoryId || null,
       });
-      setMode('closed');
+
       setEditing(false);
       onReload();
     } catch (cause) {
@@ -500,7 +500,7 @@ function ItemEditor({
     setBusy(true);
     try {
       await onPrice(organizationId, item.id, item.version, values.price);
-      setMode('closed');
+
       setEditing(false);
       onReload();
     } catch (cause) {
@@ -513,7 +513,6 @@ function ItemEditor({
   async function toggleStatus() {
     setError(null);
     setBusy(true);
-    const nextStatus = item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
     try {
       await onChangeStatus(organizationId, item.id, item.version, nextStatus);
       onReload();
@@ -533,7 +532,7 @@ function ItemEditor({
         baseUnit: values.baseUnit,
         ...(values.type === 'PRODUCT' ? { trackInventory: values.trackInventory } : { trackInventory: false }),
       });
-      setMode('closed');
+
       setEditing(false);
       onReload();
     } catch (cause) {
@@ -548,7 +547,7 @@ function ItemEditor({
     setBusy(true);
     try {
       await onDelete(organizationId, item.id, item.version);
-      setMode('closed');
+
       setEditing(false);
       onReload();
     } catch (cause) {
@@ -566,27 +565,13 @@ function ItemEditor({
         structure.reset({ type: item.type, baseUnit: item.baseUnit, trackInventory: item.trackInventory });
         setError(null);
         setEditing(!editing);
-        setMode(editing ? 'closed' : 'edit');
+        setNextStatus(item.status);
       }}>Editar {item.name}</button>
       {editing ? <div id={`product-editor-${item.id}`} className={catalogStyles.editorBody}>
       <ErrorSummary error={error} />
-      <div className={styles.actions}>
-        {mode !== 'edit' ? <button type="button" disabled={busy} onClick={() => setMode('edit')}>Datos de {item.name}</button> : null}
-        <button type="button" disabled={busy} onClick={() => setMode(mode === 'price' ? 'edit' : 'price')}>
-          Cambiar precio de {item.name}
-        </button>
-        <button type="button" disabled={busy} onClick={() => setMode(mode === 'structure' ? 'edit' : 'structure')}>
-          Cambiar estructura de {item.name}
-        </button>
-        <button type="button" onClick={() => void toggleStatus()} disabled={busy}>
-          {item.status === 'ACTIVE' ? `Desactivar ${item.name}` : `Activar ${item.name}`}
-        </button>
-        <button type="button" disabled={busy} onClick={() => setMode(mode === 'delete' ? 'edit' : 'delete')}>
-          Eliminar {item.name}
-        </button>
-      </div>
-      {mode === 'edit' ? (
+      <p>Guardá cada apartado para aplicar sus cambios.</p>
         <form onSubmit={edit.handleSubmit(saveEdit)} noValidate>
+          <h3>Datos del producto</h3>
           <p>
             {item.type === 'PRODUCT' ? 'Producto' : 'Servicio'} · {item.baseUnit === 'UNIT' ? 'Unidad' : 'Fraccionable'} · {item.trackInventory ? 'Control de inventario' : 'Sin control de inventario'}
           </p>
@@ -613,9 +598,8 @@ function ItemEditor({
           </div>
           <button type="submit" disabled={busy}>Guardar cambios de {item.name}</button>
         </form>
-      ) : null}
-      {mode === 'price' ? (
         <form onSubmit={price.handleSubmit(savePrice)} noValidate>
+          <h3>Precio de venta</h3>
           <label htmlFor={`price-${item.id}`}>Precio nuevo de {item.name}</label>
           <input
             id={`price-${item.id}`}
@@ -626,8 +610,6 @@ function ItemEditor({
           {price.formState.errors.price ? <p role="alert">Ingresá un importe con dos decimales, por ejemplo 150.00.</p> : null}
           <button type="submit" disabled={busy}>Guardar precio de {item.name}</button>
         </form>
-      ) : null}
-      {mode === 'structure' ? (
         <form onSubmit={structure.handleSubmit(saveStructure)} noValidate>
           <h3>Estructura de {item.name}</h3>
           <div className={styles.fields}>
@@ -658,8 +640,17 @@ function ItemEditor({
           )}
           <button type="submit" disabled={busy}>Guardar estructura de {item.name}</button>
         </form>
-      ) : null}
-      {mode === 'delete' ? (
+      <form onSubmit={event => { event.preventDefault(); void toggleStatus(); }}>
+        <h3>Disponibilidad</h3>
+        <label htmlFor={`edit-status-${item.id}`}>Estado de {item.name}</label>
+        <select id={`edit-status-${item.id}`} value={nextStatus} disabled={busy} onChange={event => setNextStatus(event.target.value === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE')}>
+          <option value="ACTIVE">Activo</option>
+          <option value="INACTIVE">Inactivo</option>
+        </select>
+        <button type="submit" disabled={busy || nextStatus === item.status}>Guardar estado de {item.name}</button>
+      </form>
+      <details className={catalogStyles.deleteSection}>
+        <summary>Eliminar {item.name}</summary>
         <div role="region" aria-label={`Confirmar eliminación de ${item.name}`}>
           <p>¿Confirmás eliminar definitivamente {item.name}?</p>
           <p>Si el ítem posee referencias históricas o incertidumbre offline, la operación será rechazada y deberás desactivarlo.</p>
@@ -667,12 +658,12 @@ function ItemEditor({
             <button type="button" onClick={() => void confirmDelete()} disabled={busy}>
               Confirmar eliminación de {item.name}
             </button>
-            <button type="button" onClick={() => setMode('closed')} disabled={busy}>
+            <button type="button" onClick={() => setEditing(false)} disabled={busy}>
               Cancelar
             </button>
           </div>
         </div>
-      ) : null}
+      </details>
       </div> : null}
     </div>
   );

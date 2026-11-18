@@ -1,4 +1,4 @@
-import type { ResourceSafety } from '../offline-sync/resource-safety.service.js';
+import type { ResourceSafety } from '../offline-sync/index.js';
 
 export type CatalogItemStatus = 'ACTIVE' | 'INACTIVE';
 export type CatalogItemType = 'PRODUCT' | 'SERVICE';

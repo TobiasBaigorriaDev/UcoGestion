@@ -16,7 +16,7 @@ createRoot(root).render(<QueryClientProvider client={new QueryClient()}>
           openedAt: `${filters.from ?? '2026-10-12'}T10:00:00-03:00`,
           status: index === 3 ? 'CANCELLED' : 'CONFIRMED', total: '45000.00', amount: '45000.00',
           categoryId: ['light', 'rent', 'water'][index % 3], categoryName: ['Luz', 'Alquiler', 'Agua'][index % 3],
-          currencyCode: 'ARS', name: 'Yerba mate', quantity: '24.000', minimum: '5.000', lowStock: false,
-          itemName: 'Yerba mate', delta: '2.000', effectKind: 'PURCHASE', expectedCash: '45000.00', difference: '0.00' })) })} />
+          currencyCode: 'ARS', name: 'Yerba mate', quantity: index === 1 ? '1.235' : index === 2 ? '0.500' : '24.000', minimum: '5.000', lowStock: false,
+          itemName: 'Yerba mate', delta: index % 2 === 0 ? '2.000' : '-2.000', effectKind: ['INCREASE', 'DECREASE', 'TRANSFER_IN', 'TRANSFER_OUT'][index % 4], expectedCash: '45000.00', difference: '0.00' })) })} />
   </main>
 </QueryClientProvider>);

@@ -1,0 +1,24 @@
+✔ browser gates can use a separate loopback port without accepting external origins (2.7748ms)
+✔ a CLI tool error or incomplete scenario cannot produce green browser evidence (2.8104ms)
+✔ CI runs the critical browser gate and nightly expands all three engines (1.0455ms)
+✔ the real Turbo build passes and hashes the origin and release ID (8189.5601ms)
+✔ the CI browser gate builds with its actual local origin (0.826ms)
+✔ rollout rejects invalid public origin before pull/migration: http://gestion.example.com (1736.4496ms)
+✔ rollout rejects invalid public origin before pull/migration: not-an-origin (939.9771ms)
+✔ rollout rejects invalid public origin before pull/migration: https://gestion.example.com/api (886.6515ms)
+✔ rollout rejects invalid public origin before pull/migration: https://gestion.example.com?token=private (834.2629ms)
+✔ rollout rejects invalid public origin before pull/migration: https://gestion.example.com#fragment (931.9865ms)
+✔ rollout rejects invalid public origin before pull/migration: https://redacted@gestion.example.com (780.8246ms)
+✔ rollout rejects invalid public origin before pull/migration: https://localhost (743.4976ms)
+✔ rollout rejects invalid public origin before pull/migration: https://127.0.0.1 (689.1705ms)
+✔ rollout rejects invalid public origin before pull/migration: https://[::1] (749.9517ms)
+✔ a public HTTPS origin passes validation and reaches the external Docker port (824.9077ms)
+✔ declares a pnpm and Turborepo workspace with the required root scripts (8.038ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9337.9565

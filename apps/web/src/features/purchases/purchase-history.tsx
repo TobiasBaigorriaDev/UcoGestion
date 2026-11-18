@@ -1,5 +1,7 @@
 'use client';
 
+import { formatStockQuantity } from '../../lib/format-stock-quantity';
+
 import { useEffect, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
@@ -135,7 +137,7 @@ export function PurchaseHistory({ organizationId, branchId, branches, timezone, 
             <small>{branchOptions.find(branch => branch.id === purchase.branchId)?.name ?? purchase.branchId}</small>
           </span>
           <span><strong className={styles.historyTotal}>{formatDashboardAmount(purchase.total)} {purchase.currency}</strong>
-            <span>{purchase.items.map(item => `${item.itemName} × ${item.quantity}`).join(' · ')}</span></span>
+            <span>{purchase.items.map(item => `${item.itemName} × ${formatStockQuantity(item.quantity)}`).join(' · ')}</span></span>
           <button type="button" onClick={() => onSelect(purchase.id)}
             aria-label={`Ver compra ${purchase.id}`}>Ver detalle</button>
         </li>)}</ul> : null}

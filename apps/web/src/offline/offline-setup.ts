@@ -40,6 +40,7 @@ export class OfflineSetup {
   private async status() { return readOfflineStatus(this.db, this.keys, await this.authorization(), this.userId); }
   readonly readStatus = () => this.status();
   readonly unlock = async (pin: string) => { await this.keys.unlock(this.userId, pin); return this.status(); };
+  readonly changePin = (currentPin: string, newPin: string) => this.keys.changePin(this.userId, currentPin, newPin);
   readonly sync = async () => {
     try { await new OpaqueDelivery(this.db).flush(); return await this.status(); }
     finally { this.notifyState(); }

@@ -4,7 +4,7 @@ import { offlineConfirmedSaleSchema, offlineGrantClaimsSchema } from '@uconext/s
 import { z } from 'zod';
 
 import { validateHistoricalSaleSnapshot } from './historical-sale-snapshot.js';
-import { DeviceCertificate, type DeviceCertificateClaims } from './device-certificate.js';
+import { DeviceCertificate, type DeviceCertificateClaims } from '../../core/security/device-certificate.js';
 import { IngestionKeyUnavailableError, type SyncEnvelopeDecryptorPort } from './sync-envelope-decryptor.js';
 
 const counter = z.string().regex(/^[1-9]\d{0,18}$/);

@@ -1,5 +1,7 @@
 'use client';
 
+import { formatStockQuantity } from '../../lib/format-stock-quantity';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { offlineSaleQuoteSchema, saleCodeFromId } from '@uconext/shared';
 import type { OfflinePosActions, OfflinePosWorkspaceData, OfflineReceipt } from '../../offline/offline-pos-actions';
@@ -105,7 +107,7 @@ export function OfflinePosWorkspace({ controller, expired }: { controller: Offli
         <button type="submit" disabled={busy || !data.configuration.cashRegisters.length}>Abrir caja sin conexión</button>
       </form> : draft && quote ? <section className={styles.panel} aria-label="Cobro offline">
         <h2>Cobro sin conexión</h2><p>Consumidor final · Total: {quote.total} {quote.currency}</p>
-        <ul>{quote.lines.map((line, index) => <li key={index}>{line.itemName} · {line.quantity} × {line.unitPrice}</li>)}</ul>
+        <ul>{quote.lines.map((line, index) => <li key={index}>{line.itemName} · {formatStockQuantity(line.quantity)} × {line.unitPrice}</li>)}</ul>
         {payments.map((payment, index) => <div key={index} className={styles.paymentRow}>
           <div><label htmlFor={`local-method-${index}`}>Medio de pago {index + 1}</label>
             <select id={`local-method-${index}`} value={payment.method} disabled={busy} onChange={event => setPayments(current => current.map((row, position) => position === index

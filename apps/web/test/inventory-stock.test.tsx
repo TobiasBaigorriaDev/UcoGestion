@@ -15,7 +15,7 @@ it('shows stock and minimum without redundant decimals and preserves actual frac
   expect(screen.getByText('Disponible: 29 unidades')).toBeTruthy();
   expect(screen.getByText('Mínimo: 30')).toBeTruthy();
   expect(screen.getByText('Disponible: 12345678901234567,25 unidades fraccionables')).toBeTruthy();
-  expect(screen.getByText('Mínimo: 0,5')).toBeTruthy();
+  expect(screen.getByText('Mínimo: 0,50')).toBeTruthy();
 });
 
 const stocks = [{ branchId: 'b1', itemId: 'i1', itemName: 'Yerba', baseUnit: 'UNIT' as const,

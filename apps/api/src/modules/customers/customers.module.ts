@@ -4,6 +4,8 @@ import { Pool } from 'pg';
 import { TenantTransaction } from '../../database/tenant-transaction.js';
 import { CustomerManagementService } from './customer-management.service.js';
 import { CustomersController } from './customers.controller.js';
+import { CustomerAccountService } from './customer-account.service.js';
+import { CustomerAccountsController } from './customer-accounts.controller.js';
 
 @Injectable()
 class CustomersDatabase implements OnModuleDestroy {
@@ -15,9 +17,11 @@ class CustomersDatabase implements OnModuleDestroy {
 }
 
 @Module({
-  controllers: [CustomersController],
+  controllers: [CustomersController, CustomerAccountsController],
   providers: [
     CustomersDatabase,
+    { provide: CustomerAccountService, useFactory: (database: CustomersDatabase) =>
+      new CustomerAccountService(new TenantTransaction(database.pool)), inject: [CustomersDatabase] },
     {
       provide: CustomerManagementService,
       useFactory: (database: CustomersDatabase) =>
@@ -25,6 +29,6 @@ class CustomersDatabase implements OnModuleDestroy {
       inject: [CustomersDatabase],
     },
   ],
-  exports: [CustomerManagementService],
+  exports: [CustomerManagementService, CustomerAccountService],
 })
 export class CustomersModule {}

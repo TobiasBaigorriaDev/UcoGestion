@@ -57,7 +57,7 @@ describe('dashboard por rol', () => {
     expect(screen.getByText('Efectivo')).toBeDefined();
     expect(screen.getByRole('region', { name: 'Actividad del período' })).toBeDefined();
     expect(screen.getByRole('region', { name: 'Medios de pago' })).toBeDefined();
-    expect(screen.getByText('Cantidad: 2.000')).toBeDefined();
+    expect(screen.getByText('Cantidad: 2')).toBeDefined();
     expect(screen.queryByText(/margen|rentabilidad/i)).toBeNull();
     await userEvent.selectOptions(screen.getByLabelText('Sucursal del dashboard'), 'b1');
     await waitFor(() => expect(load).toHaveBeenLastCalledWith('o1', expect.objectContaining({ branchId: 'b1' })));

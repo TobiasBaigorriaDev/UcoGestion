@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { runMigrations } from '../src/database/migrate.js';
 import { TenantTransaction } from '../src/database/tenant-transaction.js';
 import { DeviceAuthorizationService } from '../src/modules/cash/device-authorization.service.js';
-import { DeviceCertificate } from '../src/modules/offline-sync/device-certificate.js';
+import { DeviceCertificate } from '../src/core/security/device-certificate.js';
 import { CashOpeningPreparation } from '../src/modules/cash/cash-opening-preparation.js';
 import { CashSessionDevicePolicy } from '../src/modules/cash/cash-session-device.policy.js';
 import { CashOperationsService } from '../src/modules/cash/cash-operations.service.js';

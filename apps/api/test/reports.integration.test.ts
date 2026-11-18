@@ -10,6 +10,7 @@ import { OutboxDispatcher, OutboxWorker } from '../src/core/outbox/outbox-worker
 import type { ObjectStoragePort } from '../src/core/objects/object-storage.port.js';
 import { ReportExportService } from '../src/modules/reports/report-export.service.js';
 import { ReportsService } from '../src/modules/reports/reports.service.js';
+import { reportPdfText } from './report-pdf-text.js';
 
 describe('read-only report datasets', () => {
   let container: StartedPostgreSqlContainer;
@@ -402,6 +403,13 @@ describe('read-only report datasets', () => {
       [revoked.id])).rows[0]?.status).toBe('FAILED');
     expect(uploaded.size).toBe(1);
     expect(Buffer.from([...uploaded.values()][0] ?? []).subarray(0, 4).toString()).toBe('%PDF');
+    const uploadedPdf = [...uploaded.values()][0];
+    if (!uploadedPdf) throw new Error('Missing generated report PDF');
+    const pdfText = await reportPdfText(uploadedPdf);
+    expect(pdfText).toContain('Reporte de gastos');
+    expect(pdfText).toContain('Centro');
+    expect(pdfText).not.toContain(branchId);
+    expect(pdfText).not.toContain('Ajena');
   });
 
   it('marks an export failed atomically when rendering exhausts worker retries', async () => {

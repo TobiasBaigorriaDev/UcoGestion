@@ -1,4 +1,6 @@
 'use client';
+
+import { formatStockQuantity } from '../../lib/format-stock-quantity';
 import { OrganizationTime } from '../../components/organization-time';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -125,7 +127,7 @@ export function PurchaseLookup({ organizationId, branchId, role, paymentMethods,
         <ul className={workspaceStyles.itemList} aria-label="Productos de la compra">
           {purchase.items.map((item, index) => <li key={index}>
             <strong>{item.itemName}</strong>
-            <span>{item.quantity} × {formatDashboardAmount(item.unitCost)} {purchase.currency}</span>
+            <span>{formatStockQuantity(item.quantity)} × {formatDashboardAmount(item.unitCost)} {purchase.currency}</span>
             <span className={workspaceStyles.lineTotal}>{formatDashboardAmount(item.lineTotal)} {purchase.currency}</span>
           </li>)}
         </ul>

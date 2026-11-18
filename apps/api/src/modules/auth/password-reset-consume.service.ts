@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import type { Pool } from 'pg';
 
-import { hashPassword } from './password.js';
+import { hashPassword } from '../../core/security/password.js';
 
 interface PasswordResetConsumeInput {
   readonly password: string;

@@ -29,8 +29,7 @@ import { CsrfService } from './csrf.service.js';
 import { PublicRoute } from './public-route.decorator.js';
 import { readSessionCookie } from './session-cookie.js';
 import { SessionRevocationService } from './session-revocation.service.js';
-import { ExistingAccountInvitationAcceptanceService, InvitationAcceptanceError } from '../users/existing-account-invitation-acceptance.service.js';
-import { NewAccountInvitationAcceptanceService } from '../users/new-account-invitation-acceptance.service.js';
+import { ExistingAccountInvitationAcceptanceService, InvitationAcceptanceError, NewAccountInvitationAcceptanceService } from '../users/index.js';
 import { randomUUID } from 'node:crypto';
 
 const loginRequestSchema = z.strictObject({

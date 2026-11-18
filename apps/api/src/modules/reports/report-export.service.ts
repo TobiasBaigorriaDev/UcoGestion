@@ -8,7 +8,7 @@ import { toJsonValue } from '../../core/idempotency/idempotency.service.js';
 import { TemporaryObjectExpiredError, TemporaryObjectService } from '../../core/objects/temporary-object.service.js';
 import type { OutboxJob } from '../../core/outbox/outbox-worker.js';
 import { TenantTransaction, type TenantTransactionContext } from '../../database/tenant-transaction.js';
-import { renderReportPdf } from './report-pdf.js';
+import { renderReportPdf, reportPdfFileName } from './report-pdf.js';
 import { ReportAccessError, ReportsService, type ReportDataset, type ReportQuery,
   type ReportItem } from './reports.service.js';
 
@@ -115,8 +115,18 @@ export class ReportExportService {
       items.push(...page.items);
       cursor = page.nextCursor ? this.parseCursor(page.nextCursor) : undefined;
     } while (cursor);
-    await this.reports.authorize(client, actorContext, dataset, { ...filters, limit: 100 });
-    const pdf = await renderReportPdf(dataset, items);
+    const scope = await this.reports.authorize(client, actorContext, dataset, { ...filters, limit: 100 });
+    const organization = await client.query<{ name: string; timezone: string }>(
+      'SELECT name,timezone FROM organizations WHERE id = $1', [job.organizationId]);
+    const organizationRow = organization.rows[0];
+    if (!organizationRow) throw new ReportAccessError('REPORT_ACCESS_FORBIDDEN');
+    const branches = await client.query<{ id: string; name: string }>(
+      'SELECT id,name FROM branches WHERE organization_id = $1 AND id = ANY($2::uuid[]) ORDER BY name',
+      [job.organizationId, scope.branches]);
+    const pdfContext = { ...filters,
+      organizationName: organizationRow.name, timezone: organizationRow.timezone,
+      generatedAt: new Date(), branches: branches.rows };
+    const pdf = await renderReportPdf(dataset, items, pdfContext);
     const key = `exports/${job.organizationId}/${exportId}`;
     await this.storage.put(key, pdf, 'application/pdf');
     await this.reports.authorize(client, actorContext, dataset, { ...filters, limit: 100 });
@@ -124,7 +134,7 @@ export class ReportExportService {
       storage_key,file_name,content_type,size_bytes,expires_at)
       VALUES ($1,$2,$3,$4,$5,'application/pdf',$6,now() + interval '24 hours')
       ON CONFLICT (id) DO NOTHING`,
-    [exportId, job.organizationId, job.actorUserId, key, `${dataset}-${exportId}.pdf`, pdf.byteLength]);
+    [exportId, job.organizationId, job.actorUserId, key, reportPdfFileName(dataset, pdfContext), pdf.byteLength]);
     await client.query(`INSERT INTO outbox_jobs (id,organization_id,job_key,job_type,
       payload,actor_user_id,authorization_class,available_at)
       VALUES ($1,$2,$3,'OBJECT_FILE_CLEANUP',$4::jsonb,$5,'OBJECT_FILE_CLEANUP',

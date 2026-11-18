@@ -10,10 +10,14 @@ function subscribe(listener: () => void) {
   return () => { window.removeEventListener('online', listener); window.removeEventListener('offline', listener); };
 }
 
+export function useBusinessOnline() {
+  return useSyncExternalStore(subscribe, isBusinessOnline, () => true);
+}
+
 /** Wrap the online workspace so cached forms/reports are not operable offline.
  * The local POS surface will mount outside this boundary when integrated. */
 export function OnlineOnlyBoundary({ children }: { children: ReactNode }) {
-  const online = useSyncExternalStore(subscribe, isBusinessOnline, () => true);
+  const online = useBusinessOnline();
   const notice = useRef<HTMLDivElement>(null);
   useEffect(() => { if (!online) notice.current?.focus(); }, [online]);
   if (online) return children;

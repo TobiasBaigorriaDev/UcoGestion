@@ -57,3 +57,11 @@ test('declares a pnpm and Turborepo workspace with the required root scripts', (
   assert.match(ciWorkflowContent, /actions\/checkout@v4/);
   assert.match(ciWorkflowContent, /pnpm\/action-setup@v4/);
 });
+
+test('typecheck, lint and test build workspace dependencies first so a clean CI checkout resolves dist types', () => {
+  const turboConfig = JSON.parse(readFileSync(resolve(repositoryRoot, 'turbo.json'), 'utf8'));
+  for (const task of ['lint', 'typecheck', 'test']) {
+    assert.ok(turboConfig.tasks[task].dependsOn?.includes('^build'),
+      `${task} must depend on ^build: @uconext/shared exports types from dist`);
+  }
+});

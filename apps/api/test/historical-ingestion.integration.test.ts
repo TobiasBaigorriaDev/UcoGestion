@@ -11,11 +11,13 @@ import { TenantTransaction } from '../src/database/tenant-transaction.js';
 import { OfflineBootstrapService } from '../src/modules/offline-sync/offline-bootstrap.service.js';
 import { OfflineGrantService } from '../src/modules/offline-sync/offline-grant.service.js';
 import { RsaSyncEnvelopeDecryptor } from '../src/modules/offline-sync/sync-envelope-decryptor.js';
-import { DeviceCertificate } from '../src/modules/offline-sync/device-certificate.js';
+import { DeviceCertificate } from '../src/core/security/device-certificate.js';
 import { HistoricalEnvelopeValidator, canonicalEnvelopeJson } from '../src/modules/offline-sync/historical-envelope-validator.js';
 import { recordRevocationCheckpoint, revocationCheckpointPayload, readRevocationKnowledge } from '../src/modules/offline-sync/revocation-checkpoint.js';
 import { HistoricalDeliveryIngestion } from '../src/modules/offline-sync/historical-delivery-ingestion.js';
+import { recordOfflineReceipt } from '../src/modules/offline-sync/sync-operation-receipt.js';
 import { CashCloseService } from '../src/modules/cash/cash-close.service.js';
+import { CashOperationsService } from '../src/modules/cash/cash-operations.service.js';
 import { OfflineSaleImporter } from '../src/modules/sales/index.js';
 import { SalesOperationsService } from '../src/modules/sales/sales-operations.service.js';
 import { renderReceiptHtml, renderReceiptPdf } from '../src/modules/sales/receipt-renderer.js';
@@ -77,7 +79,24 @@ describe('historical delivery transactions',()=>{
     ingestion=new HistoricalDeliveryIngestion(transactions,new HistoricalEnvelopeValidator(certificates,custody),()=>ec.privateKey);
   });
   afterAll(async()=>{await runtime?.end();await pool?.end();await container?.stop();});
-  it('T201 imports once under original revoked actor scope and RLS with stable receipt',async()=>{
+  it('rejects older-epoch receipts without transport metadata, with another actor or outside authorization validity',async()=>{
+    await pool.query('UPDATE organizations SET config_epoch=config_epoch+1 WHERE id=$1',[org]);
+    const grant=JSON.parse(Buffer.from(String(operation.grant).split('.')[1] ?? '', 'base64url').toString());
+    const receipt={id:randomUUID(),organizationId:org,deviceId:device,grantId:grant.grantId,epoch:grant.epoch,
+      sequence:'1',previousHash:'0'.repeat(64),operationHash:'a'.repeat(64),occurredAt:String(operation.occurredAt),
+      envelope:{sessionId:String(operation.sessionId),sessionSequence:'1',kind:'cash-session-open',hash:'b'.repeat(64)}};
+    for (const [userId,input] of [[actor,{...receipt,envelope:undefined}], [randomUUID(),receipt],
+      [actor,{...receipt,occurredAt:new Date(grant.exp*1000).toISOString()}]] as const) {
+      await expect(transactions.runWithOptionalAudit({...context(),userId},async client=>({result:await recordOfflineReceipt(client,input)})))
+        .rejects.toThrow('closed or stale grant');
+    }
+    expect((await pool.query('SELECT count(*)::integer AS n FROM sync_operations')).rows[0]?.n).toBe(0);
+    expect((await pool.query('SELECT count(*)::integer AS n FROM offline_sync_sessions')).rows[0]?.n).toBe(0);
+  });
+  it('T201 imports a legitimate older-epoch envelope once under original revoked actor scope and RLS with stable receipt',async()=>{
+    // Catalog lifecycle advances the current epoch without closing existing grants.
+    // It must not invalidate operations already sealed under their signed snapshot.
+    await pool.query('UPDATE organizations SET config_epoch=config_epoch+1 WHERE id=$1',[org]);
     await pool.query("UPDATE memberships SET status='REVOKED',revoked_at=now() WHERE organization_id=$1",[org]);
     const first=await ingestion.ingest(claims,exact);
     expect(first).toMatchObject({operationId:operation.id,status:'ACKED'});
@@ -436,9 +455,9 @@ describe('historical delivery transactions',()=>{
     const config={currency:'ARS',items:[{id:legacyItem,name:'Legacy item',sku:null,barcode:null,type:'PRODUCT',baseUnit:'UNIT',trackInventory:false,price:'10.00',priceVersion:1}],
       categories:[{id:categoryId,name:'Current category'}],branches:[{id:legacyBranch,name:'Legacy'}],cashRegisters:[{id:legacyRegister,branchId:legacyBranch,name:'Legacy'}],paymentMethods:['CASH']};
     const canonical=JSON.stringify({organizationId:legacyOrg,version:1,snapshot:config});
-    const occurredAt=new Date().toISOString();
+    const bootstrapTime=new Date().toISOString();
     const bootstrapPayload=JSON.stringify({version:1,organizationId:legacyOrg,actorUserId:legacyActor,deviceId:legacyDevice,branchId:legacyBranch,
-      grantId,epoch:'1',configurationVersion:'1',configuration:config,stock:[],timezone:'UTC',role:'OWNER',permissions:{canDiscount:true},serverTime:occurredAt,
+      grantId,epoch:'1',configurationVersion:'1',configuration:config,stock:[],timezone:'UTC',role:'OWNER',permissions:{canDiscount:true},serverTime:bootstrapTime,
       ingestionKey:custody.publication(),ackKey:{keyId:'trusted',algorithm:'ES256',publicKeyPem:publicKey}});
     const bootstrap={payload:bootstrapPayload,signature:signer.sign(bootstrapPayload),signingKeyId:'trusted'};
     await pool.query(`INSERT INTO configuration_versions (id,organization_id,version,snapshot,canonical_payload,signature,signing_key_id,public_key_pem,config_epoch)
@@ -450,6 +469,9 @@ describe('historical delivery transactions',()=>{
     const proof={grantId,bootstrapHash:createHash('sha256').update(bootstrapPayload).digest('hex'),deviceSequence:'0',headHash:null};
     const grant=(await new OfflineGrantService(transactions,ec.privateKey,'trusted').issue(ctx(),{...proof,
       proof:sign('sha256',Buffer.from(offlineGrantProofPayload(proof)),{key:ec.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64')},'legacy-grant')).grant;
+    // A sale/opening can only be created after its grant is issued. Reusing
+    // bootstrap time made this fixture invalid when issue crossed a second.
+    const occurredAt=new Date().toISOString();
     const token=certificates.issue({organizationId:legacyOrg,deviceId:legacyDevice,thumbprint:certificates.thumbprint(publicKey)}), deliveryClaims=certificates.open(token);
     const opening={id:randomUUID(),actorId:legacyActor,organizationId:legacyOrg,deviceId:legacyDevice,sessionId,sequence:'1',sessionSequence:'1',previousHash:null,
       kind:'cash-session-open',grant,configVersion:'1',occurredAt,receivedAt:null,payload:{id:sessionId,actorUserId:legacyActor,branchId:legacyBranch,cashRegisterId:legacyRegister,openingCash:'10.00',currency:'ARS',openedAt:occurredAt,status:'OPEN'}};
@@ -485,4 +507,89 @@ describe('historical delivery transactions',()=>{
     expect((await pool.query('SELECT 1 FROM catalog_category_history_references WHERE source_id=$1',[id])).rowCount).toBe(0);
   });
 
+  it('RF-124 imports a conflicting signed opening and preserves every operation of both sessions through rollback and retries', async () => {
+    const conflictOrg=randomUUID(), conflictBranch=randomUUID(), conflictRegister=randomUUID();
+    const onlineDevice=randomUUID(), offlineDevice=randomUUID(), offlineSession=randomUUID(), conflictItem=randomUUID();
+    const conflictContext=()=>({organizationId:conflictOrg,userId:actor,requestId:randomUUID()});
+    await pool.query("INSERT INTO organizations(id,name,base_currency,timezone) VALUES ($1,'Conflict preservation','ARS','UTC')",[conflictOrg]);
+    await pool.query("INSERT INTO memberships(id,organization_id,user_id,role) VALUES ($1,$2,$3,'OWNER')",[randomUUID(),conflictOrg,actor]);
+    await pool.query("INSERT INTO branches(id,organization_id,name) VALUES ($1,$2,'Conflict branch')",[conflictBranch,conflictOrg]);
+    await pool.query("INSERT INTO cash_registers(id,organization_id,branch_id,name) VALUES ($1,$2,$3,'Conflict register')",[conflictRegister,conflictOrg,conflictBranch]);
+    const onlinePublicKey=generateKeyPairSync('ec',{namedCurve:'prime256v1'}).publicKey.export({type:'spki',format:'pem'}).toString();
+    for(const id of [onlineDevice,offlineDevice]) await pool.query(`INSERT INTO devices(id,organization_id,branch_id,authorized_by_user_id,
+      authorized_at,status,public_key,public_key_thumbprint) VALUES ($1,$2,$3,$4,now(),'ACTIVE',$5,$6)`,
+    [id,conflictOrg,conflictBranch,actor,id===onlineDevice ? onlinePublicKey:publicKey,
+      certificates.thumbprint(id===onlineDevice ? onlinePublicKey:publicKey)]);
+    await pool.query("INSERT INTO catalog_items(id,organization_id,name,type,base_unit,track_inventory,price,price_version) VALUES ($1,$2,'Conflict item','PRODUCT','UNIT',false,10,1)",[conflictItem,conflictOrg]);
+    const bootstrap=await new OfflineBootstrapService(transactions,signer,custody).issue(conflictContext(),{deviceId:offlineDevice,branchId:conflictBranch},randomUUID());
+    const config=JSON.parse(bootstrap.payload);
+    const proofInput={grantId:config.grantId as string,bootstrapHash:createHash('sha256').update(bootstrap.payload).digest('hex'),deviceSequence:'0',headHash:null};
+    const grant=(await new OfflineGrantService(transactions,ec.privateKey,'trusted').issue(conflictContext(),{...proofInput,
+      proof:sign('sha256',Buffer.from(offlineGrantProofPayload(proofInput)),{key:ec.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64')},randomUUID())).grant;
+    const transportCertificate=certificates.issue({organizationId:conflictOrg,deviceId:offlineDevice,thumbprint:certificates.thumbprint(publicKey)});
+    const deliveryClaims=certificates.open(transportCertificate);
+    const occurredAt=new Date().toISOString();
+    const opening={id:randomUUID(),actorId:actor,organizationId:conflictOrg,deviceId:offlineDevice,sessionId:offlineSession,
+      sequence:'1',sessionSequence:'1',previousHash:null,kind:'cash-session-open',grant,configVersion:config.configurationVersion,occurredAt,receivedAt:null,
+      payload:{id:offlineSession,actorUserId:actor,branchId:conflictBranch,cashRegisterId:conflictRegister,openingCash:'30.00',currency:'ARS',openedAt:occurredAt,status:'OPEN'}};
+    const cash=new CashOperationsService(transactions);
+    const online=await cash.open(conflictContext(),{branchId:conflictBranch,cashRegisterId:conflictRegister,deviceId:onlineDevice,openingCash:'10.00'},randomUUID());
+    const deposit=await cash.deposit(conflictContext(),{cashSessionId:online.id,deviceId:onlineDevice,amount:'8.00',reason:'Original deposit'},randomUUID());
+    const withdrawal=await cash.withdraw(conflictContext(),{cashSessionId:online.id,deviceId:onlineDevice,amount:'3.00',reason:'Original withdrawal'},randomUUID());
+    async function sessionSnapshot(id:string) {
+      const session=(await pool.query('SELECT to_jsonb(t) AS row FROM cash_sessions t WHERE id=$1',[id])).rows;
+      const movements=(await pool.query('SELECT to_jsonb(t) AS row FROM cash_movements t WHERE cash_session_id=$1 ORDER BY id',[id])).rows;
+      const sales=(await pool.query('SELECT to_jsonb(t) AS row FROM sales t WHERE cash_session_id=$1 ORDER BY id',[id])).rows;
+      const items=(await pool.query('SELECT to_jsonb(t) AS row FROM sale_items t JOIN sales s ON s.id=t.sale_id AND s.organization_id=t.organization_id WHERE s.cash_session_id=$1 ORDER BY t.id',[id])).rows;
+      const payments=(await pool.query('SELECT to_jsonb(t) AS row FROM sale_payments t JOIN sales s ON s.id=t.sale_id AND s.organization_id=t.organization_id WHERE s.cash_session_id=$1 ORDER BY t.id',[id])).rows;
+      return {session,movements,sales,items,payments};
+    }
+    const onlineBefore=await sessionSnapshot(online.id), openingBytes=seal(opening,transportCertificate);
+    const failing=new HistoricalDeliveryIngestion(transactions,new HistoricalEnvelopeValidator(certificates,custody),()=>{throw new Error('Conflict ACK unavailable');});
+    await expect(failing.ingest(deliveryClaims,openingBytes)).rejects.toThrow('Conflict ACK unavailable');
+    expect(await sessionSnapshot(offlineSession)).toEqual({session:[],movements:[],sales:[],items:[],payments:[]});
+    expect(await sessionSnapshot(online.id)).toEqual(onlineBefore);
+    const openingAck=await ingestion.ingest(deliveryClaims,openingBytes);
+    expect(openingAck?.status).toBe('ACKED');
+    expect(await ingestion.ingest(deliveryClaims,openingBytes)).toEqual(openingAck);
+    expect((await pool.query('SELECT status,expected_cash FROM cash_sessions WHERE id=$1',[offlineSession])).rows)
+      .toEqual([{status:'CONFLICTED',expected_cash:'30.00'}]);
+    const saleIds:string[]=[];
+    let previousHash=sha(canonicalEnvelopeJson(opening));
+    for(const entry of [{sequence:'2',quantity:'1',total:'10.00'},{sequence:'3',quantity:'2',total:'20.00'}]) {
+      const id=randomUUID();saleIds.push(id);
+      const sale={...opening,id,sequence:entry.sequence,sessionSequence:entry.sequence,previousHash,kind:'sale-confirm',
+        payload:{id,localReference:`CONFLICT-${entry.sequence}`,reference:null,status:'CONFIRMED',requestHash:sha(id),actorUserId:actor,deviceId:offlineDevice,
+          organizationId:conflictOrg,branchId:conflictBranch,cashSessionId:offlineSession,customerId:null,customerKind:'CONSUMER_FINAL',configurationVersion:config.configurationVersion,
+          occurredAt,receivedAt:null,quote:{schemaVersion:2,currency:'ARS',lines:[{category:null,itemId:conflictItem,itemName:'Conflict item',sku:null,barcode:null,type:'PRODUCT',baseUnit:'UNIT',
+            trackInventory:false,quantity:entry.quantity,unitPrice:'10.00',priceVersion:1,lineTotal:entry.total}],subtotal:entry.total,discount:'0.00',total:entry.total,discountEvidence:null},
+          payments:[{method:'CASH',appliedAmount:entry.total,receivedAmount:entry.total,changeAmount:'0.00'}],audit:{action:'sale.confirmed.offline',actorUserId:actor,grantId:config.grantId},
+          receipt:{label:'Comprobante no fiscal',branchName:'Conflict branch'},result:{id,operationId:id,localReference:`CONFLICT-${entry.sequence}`,total:entry.total,change:'0.00'}}};
+      const bytes=seal(sale,transportCertificate), ack=await ingestion.ingest(deliveryClaims,bytes);
+      expect(ack?.status).toBe('ACKED');
+      const beforeReplay=await sessionSnapshot(offlineSession);
+      expect(await ingestion.ingest(deliveryClaims,bytes)).toEqual(ack);
+      expect(await sessionSnapshot(offlineSession)).toEqual(beforeReplay);
+      expect(await sessionSnapshot(online.id)).toEqual(onlineBefore);
+      previousHash=sha(canonicalEnvelopeJson(sale));
+    }
+    const offlineAfter=await sessionSnapshot(offlineSession);
+    expect(offlineAfter.sales.map(row=>row.row.id).sort()).toEqual([...saleIds].sort());
+    expect(offlineAfter.items).toHaveLength(2);expect(offlineAfter.payments).toHaveLength(2);
+    expect((await pool.query('SELECT source_id FROM cash_movements WHERE cash_session_id=$1 ORDER BY source_id',[offlineSession])).rows)
+      .toEqual([...saleIds].sort().map(source_id=>({source_id})));
+    expect((await pool.query('SELECT source_id FROM cash_movements WHERE cash_session_id=$1 ORDER BY source_id',[online.id])).rows)
+      .toEqual([deposit.id,withdrawal.id].sort().map(source_id=>({source_id})));
+    expect((await pool.query('SELECT id,status,expected_cash FROM cash_sessions WHERE cash_register_id=$1 ORDER BY id',[conflictRegister])).rows)
+      .toEqual([{id:online.id,status:'OPEN',expected_cash:'15.00'},{id:offlineSession,status:'CONFLICTED',expected_cash:'60.00'}].sort((a,b)=>a.id.localeCompare(b.id)));
+    expect((await pool.query('SELECT count(*)::integer AS n FROM sales WHERE organization_id=$1',[conflictOrg])).rows).toEqual([{n:2}]);
+    expect((await pool.query('SELECT id,status FROM sync_operations WHERE organization_id=$1 ORDER BY id',[conflictOrg])).rows)
+      .toEqual([opening.id,...saleIds].sort().map(id=>({id,status:'ACKED'})));
+    expect((await pool.query('SELECT operation_id,status FROM offline_delivery_results WHERE organization_id=$1 ORDER BY operation_id',[conflictOrg])).rows)
+      .toEqual([opening.id,...saleIds].sort().map(operation_id=>({operation_id,status:'ACKED'})));
+    const openingEvents=await pool.query('SELECT actor_user_id,branch_id,device_id,entity_id FROM audit_events WHERE organization_id=$1 AND action=$2',[conflictOrg,'cash.session.opened.offline']);
+    expect(openingEvents.rows).toEqual([{actor_user_id:actor,branch_id:conflictBranch,device_id:offlineDevice,entity_id:offlineSession}]);
+    const saleEvents=await pool.query('SELECT entity_id FROM audit_events WHERE organization_id=$1 AND action=$2 ORDER BY entity_id',[conflictOrg,'sale.confirmed.offline']);
+    expect(saleEvents.rows).toEqual([...saleIds].sort().map(entity_id=>({entity_id})));
+  });
 });

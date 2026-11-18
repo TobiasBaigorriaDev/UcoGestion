@@ -1,0 +1,30 @@
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+ ❯ test/historical-ingestion.integration.test.ts (17 tests | 1 failed) 10149ms
+     × RF-124 imports a conflicting signed opening and preserves every operation of both sessions through rollback and retries 32ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/historical-ingestion.integration.test.ts > historical delivery transactions > RF-124 imports a conflicting signed opening and preserves every operation of both sessions through rollback and retries
+error: duplicate key value violates unique constraint "devices_organization_thumbprint_key"
+ ❯ ../../node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.0/node_modules/pg-pool/index.js:45:11
+ ❯ test/historical-ingestion.integration.test.ts:515:51
+    513|     await pool.query("INSERT INTO branches(id,organization_id,name) VA…
+    514|     await pool.query("INSERT INTO cash_registers(id,organization_id,br…
+    515|     for(const id of [onlineDevice,offlineDevice]) await pool.query(`IN…
+       |                                                   ^
+    516|       authorized_at,status,public_key,public_key_thumbprint) VALUES ($…
+    517|     [id,conflictOrg,conflictBranch,actor,publicKey,certificates.thumbp…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 16 passed (17)
+   Start at  12:57:23
+   Duration  16.05s (transform 1.40s, setup 0ms, import 5.40s, tests 10.15s, environment 0ms)
+
+undefined
+C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\api:
+[ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL] Command failed with exit code 1: vitest run --config vitest.config.mts test/historical-ingestion.integration.test.ts

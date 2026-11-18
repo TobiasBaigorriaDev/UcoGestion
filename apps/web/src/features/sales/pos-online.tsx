@@ -24,6 +24,7 @@ export function PosOnline({ organizationId, branchId, role, items }: {
   return <section className={styles.page}>
     <header><h1>Venta online</h1><p>Agregá productos, revisá el total y confirmá el cobro.</p></header>
     {sale ? <ConfirmedSale saleId={sale.id} total={sale.total}>
+      {typeof sale.receipt.onAccountAmount === 'string' && sale.receipt.onAccountAmount !== '0.00' ? <p>A cuenta del cliente: {sale.receipt.onAccountAmount} {String(sale.receipt.currency ?? '')}</p> : null}
       <ReceiptActions organizationId={organizationId} saleId={sale.id} />
     </ConfirmedSale> : null}
     <div className={styles.layout}>

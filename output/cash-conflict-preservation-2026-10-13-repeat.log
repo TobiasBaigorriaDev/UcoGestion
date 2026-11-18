@@ -1,0 +1,32 @@
+
+ RUN  v4.1.11 C:/Users/tobib/OneDrive/Escritorio/Uco Digital/UcoGestion/apps/api
+
+ ❯ test/historical-ingestion.integration.test.ts (17 tests | 1 failed) 11868ms
+     × RF-124 imports a conflicting signed opening and preserves every operation of both sessions through rollback and retries 463ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/historical-ingestion.integration.test.ts > historical delivery transactions > RF-124 imports a conflicting signed opening and preserves every operation of both sessions through rollback and retries
+Error: OFFLINE_ENVELOPE_INVALID
+ ❯ HistoricalEnvelopeValidator.open src/modules/offline-sync/historical-envelope-validator.ts:119:21
+    117|       return { operation: inner.operation, certificate, operationHash:…
+    118|         envelopeHash: createHash('sha256').update(exactEnvelope).diges…
+    119|     } catch { throw new Error('OFFLINE_ENVELOPE_INVALID'); }
+       |                     ^
+    120|     finally { cek.fill(0); }
+    121|   }
+ ❯ src/modules/offline-sync/historical-delivery-ingestion.ts:48:20
+ ❯ TenantTransaction.runWithOptionalAudit src/database/tenant-transaction.ts:111:38
+ ❯ test/historical-ingestion.integration.test.ts:565:56
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 16 passed (17)
+   Start at  12:58:20
+   Duration  18.71s (transform 1.54s, setup 0ms, import 6.22s, tests 11.87s, environment 0ms)
+
+undefined
+C:\Users\tobib\OneDrive\Escritorio\Uco Digital\UcoGestion\apps\api:
+[ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL] Command failed with exit code 1: vitest run --config vitest.config.mts test/historical-ingestion.integration.test.ts

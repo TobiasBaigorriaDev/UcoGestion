@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
 import type { PoolClient } from 'pg';
-import { arePaymentsValidForSale, subtractMoney, sumMoney, validatePositiveMoney } from '@uconext/shared';
+import { calculateSaleSettlement, subtractMoney, sumMoney, validatePositiveMoney } from '@uconext/shared';
 
 import { AuditEventWriter } from '../../core/audit/audit-event-writer.js';
 import type { TenantTransactionContext } from '../../database/tenant-transaction.js';
 import { CashSessionDevicePolicy } from '../cash/index.js';
 import { lockCategorySnapshots } from '../catalog/index.js';
+import { CustomerAccountService } from '../customers/index.js';
 import type { SalesQuote } from './sales-quote.service.js';
 
 export interface ConfirmedSaleInput {
@@ -18,6 +19,7 @@ export interface ConfirmedSaleInput {
   readonly customerId: string | null;
   readonly quote: SalesQuote;
   readonly payments: readonly SalePaymentInput[];
+  readonly onAccount?: boolean | undefined;
 }
 
 export interface SalePaymentInput {
@@ -65,8 +67,13 @@ export class SalesPersistence {
       WHERE organization_id = $1 AND id = $2 AND status = 'ACTIVE'`, [context.organizationId, input.customerId])).rows[0];
     if (input.customerId !== null && !customer) throw new SaleCustomerError();
 
-    if (!arePaymentsValidForSale(input.quote.total, input.payments.map((payment) => payment.appliedAmount))) {
-      throw new SalePaymentError('SALE_PAYMENTS_INVALID', 'Los pagos deben cubrir exactamente el total.');
+    let settlement;
+    try { settlement = calculateSaleSettlement(input.quote.total, input.payments.map(payment => payment.appliedAmount), input.onAccount === true); }
+    catch { throw new SalePaymentError('SALE_PAYMENTS_INVALID', 'Revisá los pagos. La diferencia solo puede quedar a cuenta de un cliente identificado.'); }
+    if (input.onAccount && input.customerId === null) throw new SaleCustomerError();
+    const accounts = new CustomerAccountService();
+    if (settlement.onAccountAmount !== '0.00' && input.customerId !== null) {
+      await accounts.prepareCharge(client, context, input.customerId, settlement.onAccountAmount);
     }
     const paymentMethods = [...new Set(input.payments.map((payment) => payment.method))].sort();
     for (const method of paymentMethods) {
@@ -120,7 +127,7 @@ export class SalesPersistence {
       organization: { name: snapshot.name, profile: snapshot.profile },
       branch: { name: snapshot.branch_name }, customer: customer ?? null,
       currency: input.quote.currency, subtotal: input.quote.subtotal, discount: input.quote.discount,
-      total: input.quote.total,
+      total: input.quote.total, ...settlement,
       items: input.quote.lines.map((line) => ({ ...line, name: items.get(line.itemId)?.name,
         unit: items.get(line.itemId)?.base_unit,
         category: categorySnapshots.get(items.get(line.itemId)?.category_id ?? '') ?? null,
@@ -157,6 +164,10 @@ export class SalesPersistence {
         applied_amount, received_amount, change_amount, currency_code) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [randomUUID(), context.organizationId, input.id, payment.method, payment.appliedAmount,
         payment.receivedAmount, payment.changeAmount, input.quote.currency]);
+    }
+    if (settlement.onAccountAmount !== '0.00' && input.customerId !== null) {
+      await accounts.recordCharge(client, context, { customerId: input.customerId, amount: settlement.onAccountAmount,
+        saleId: input.id, branchId: input.branchId, cashSessionId: input.cashSessionId, deviceId: input.deviceId, currency: input.quote.currency });
     }
     const cashApplied = sumMoney(preparedPayments.filter((payment) => payment.method === 'CASH')
       .map((payment) => payment.appliedAmount));
