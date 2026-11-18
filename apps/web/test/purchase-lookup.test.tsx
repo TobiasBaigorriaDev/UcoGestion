@@ -65,7 +65,7 @@ it('presents the selected purchase as a scannable document with item costs and s
   const detail = await screen.findByRole('region', { name: 'Detalle de compra' });
   expect(detail.querySelector('h2')?.textContent).toBe('Detalle de compra');
   expect(screen.getByText('Proveedor', { selector: 'dt' }).nextElementSibling?.textContent).toBe('Proveedor');
-  expect(screen.getByText('Total de la compra', { selector: 'dt' }).nextElementSibling?.textContent).toContain('3,00 ARS');
+  expect(screen.getByText('Total de la compra', { selector: 'dt' }).nextElementSibling?.textContent).toContain('$ 3,00');
   expect(screen.getByRole('list', { name: 'Productos de la compra' }).textContent).toContain('Producto');
   expect(screen.getByRole('heading', { name: 'Registrar pago' })).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Anulación total' })).toBeTruthy();

@@ -51,7 +51,7 @@ describe('T152B sale lookup', () => {
       <SaleLookup organizationId="org" branchId="branch" role="OWNER" timezone="America/Argentina/Buenos_Aires"
         branches={[{ id: 'branch', name: 'Principal' }, { id: 'other', name: 'Secundaria' }]} />
     </QueryClientProvider>);
-    expect(await screen.findByText('25,00 ARS')).toBeDefined();
+    expect(await screen.findByText('$ 25,00')).toBeDefined();
     expect(view.container.querySelectorAll('svg polyline').length).toBe(2);
     expect(mocks.loadSaleTrends).toHaveBeenCalledWith('org',
       expect.objectContaining({ groupBy: 'HOUR' }));
@@ -74,7 +74,7 @@ describe('T152B sale lookup', () => {
     const view = render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <SaleLookup organizationId="org" branchId="branch" role="OWNER" />
     </QueryClientProvider>);
-    await screen.findByText('120,00 ARS');
+    await screen.findByText('$ 120,00');
     for (const chart of view.container.querySelectorAll('svg:has(polyline)')) {
       expect(chart.querySelectorAll('[data-axis="value"]')).toHaveLength(5);
       expect(chart.querySelectorAll('[data-axis="time"]')).toHaveLength(5);
@@ -91,7 +91,7 @@ describe('T152B sale lookup', () => {
     const view = render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <SaleLookup organizationId="org" branchId="branch" role="OWNER" timezone="America/Argentina/Buenos_Aires" />
     </QueryClientProvider>);
-    await screen.findByText('Máximo: 0,00 ARS');
+    await screen.findByText('Máximo: $ 0,00');
     for (const chart of view.container.querySelectorAll('section[aria-label="Dinero vendido"], section[aria-label="Cantidad de ventas"]')) {
       expect(chart.querySelectorAll('svg circle')).toHaveLength(13);
       expect(chart.querySelectorAll('tbody tr')).toHaveLength(13);

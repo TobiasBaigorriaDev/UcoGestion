@@ -19,7 +19,7 @@ it('T218C freezes before reconciliation, shows the refreshed known expected and 
   render(<CashExceptional organizationId={org} branchId={org} actorUserId={org} role="OWNER" session={session} localDeviceId={device}
     onPrepare={prepare} onRead={read} onCommand={command} onFinish={finish} onReload={vi.fn()}/>);
   await userEvent.click(screen.getByRole('button',{name:'Preparar conciliación'}));
-  await screen.findByText('Esperado conocido al preparar: 12.00 ARS');expect(prepare).toHaveBeenCalledBefore(read);
+  await screen.findByText('Esperado conocido al preparar: $ 12,00');expect(prepare).toHaveBeenCalledBefore(read);
   await userEvent.type(screen.getByRole('textbox',{name:'Efectivo contado'}),'13.00');
   await userEvent.type(screen.getByRole('textbox',{name:'Motivo u observación'}),'Conciliación independiente');
   await userEvent.click(screen.getByRole('button',{name:'Confirmar conciliación'}));expect(command).not.toHaveBeenCalled();
@@ -55,8 +55,8 @@ it('T218C distinguishes original exceptional snapshot from late values and requi
     lateData:{marker:'LATE_RECOVERED_OPERATIONS',throughOperationId:operation,sequence:'2',receivedAt:'2026-10-07T00:00:00Z',count:'1',status:'PENDING_REVIEW'}};
   const props={organizationId:org,branchId:org,actorUserId:org,role:'ADMIN' as const,session:final,onCommand:command,onReload:vi.fn()};
   const view=render(<CashExceptional {...props}/>);
-  expect(screen.getByText('Esperado conocido del snapshot original: 10.00 ARS')).toBeTruthy();
-  expect(screen.getByText('Esperado conocido actualizado: 30.00 ARS')).toBeTruthy();
+  expect(screen.getByText('Esperado conocido del snapshot original: $ 10,00')).toBeTruthy();
+  expect(screen.getByText('Esperado conocido actualizado: $ 30,00')).toBeTruthy();
   expect(screen.getByText('Contado original: no registrado.')).toBeTruthy();
   await userEvent.click(screen.getByRole('checkbox',{name:/Revisé las operaciones recuperadas/}));
   await userEvent.click(screen.getByRole('button',{name:'Confirmar revisión de datos tardíos'}));
@@ -64,5 +64,5 @@ it('T218C distinguishes original exceptional snapshot from late values and requi
   expect(command).toHaveBeenCalledWith('review-late-data',{cashSessionId:id,throughOperationId:operation,note:''},expect.any(String));
   view.rerender(<CashExceptional {...props} session={{...final,expectedCash:'50.00',lateData:{...final.lateData!,throughOperationId:next,sequence:'3',count:'2'}}}/>);
   expect(screen.getByRole('button',{name:'Confirmar revisión de datos tardíos'})).toBeTruthy();
-  expect(screen.getByText('Esperado conocido del snapshot original: 10.00 ARS')).toBeTruthy();
+  expect(screen.getByText('Esperado conocido del snapshot original: $ 10,00')).toBeTruthy();
 });

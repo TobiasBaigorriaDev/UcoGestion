@@ -1,5 +1,6 @@
 'use client';
 
+import { formatMoney } from '../../lib/format';
 import { formatStockQuantity } from '../../lib/format-stock-quantity';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -106,7 +107,7 @@ export function OfflinePosWorkspace({ controller, expired }: { controller: Offli
         <label htmlFor="local-opening">Efectivo inicial</label><input id="local-opening" inputMode="decimal" value={opening} onChange={event => setOpening(event.target.value)} />
         <button type="submit" disabled={busy || !data.configuration.cashRegisters.length}>Abrir caja sin conexión</button>
       </form> : draft && quote ? <section className={styles.panel} aria-label="Cobro offline">
-        <h2>Cobro sin conexión</h2><p>Consumidor final · Total: {quote.total} {quote.currency}</p>
+        <h2>Cobro sin conexión</h2><p>Consumidor final · Total: {formatMoney(quote.total, quote.currency)}</p>
         <ul>{quote.lines.map((line, index) => <li key={index}>{line.itemName} · {formatStockQuantity(line.quantity)} × {line.unitPrice}</li>)}</ul>
         {payments.map((payment, index) => <div key={index} className={styles.paymentRow}>
           <div><label htmlFor={`local-method-${index}`}>Medio de pago {index + 1}</label>

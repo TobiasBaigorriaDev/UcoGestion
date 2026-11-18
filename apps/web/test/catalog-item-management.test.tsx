@@ -338,7 +338,7 @@ it('reveals product details and stock controls only after selecting the product'
     stocks={[{ branchId: 'branch-a', itemId: item.id, itemName: item.name, baseUnit: 'UNIT', quantity: '2.000', threshold: null, lowStock: false }]}
     onReload={vi.fn()} />);
   expect(screen.queryByRole('button', { name: 'Editar Yerba' })).toBeNull();
-  expect(screen.getByText('Precio: 100.00')).toBeTruthy();
+  expect(screen.getByText('$ 100,00')).toBeTruthy();
   expect(screen.getByText('2 unidades')).toBeTruthy();
   await userEvent.click(screen.getByText('Yerba', { exact: true }));
   await openProduct('Yerba');

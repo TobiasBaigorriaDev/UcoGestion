@@ -1,5 +1,6 @@
 'use client';
 
+import { formatMoney } from '../../lib/format';
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -400,7 +401,7 @@ export function CatalogItemManagement({
                   onToggle={event => { const open = event.currentTarget.open; setExpanded(current => ({ ...current, [item.id]: open })); }}>
                   <summary className={catalogStyles.productSummary}>
                     <strong>{item.name}</strong>
-                <span className={catalogStyles.productPrice}>{item.price === null ? 'Sin precio' : `Precio: ${item.price}`}</span>
+                <span className={catalogStyles.productPrice}>{item.price === null ? 'Sin precio' : formatMoney(item.price)}</span>
                 <CatalogStockSummary item={item} branchName={branchName} stocks={stocks} failed={stockFailed} />
                   <svg className={catalogStyles.expandIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
                   </summary>

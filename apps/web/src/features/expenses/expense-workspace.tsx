@@ -7,16 +7,22 @@ import { ErrorSummary } from '../../components/error-summary';
 import { ApiProblemError } from '../../lib/api/client';
 import { cancelExpense, createExpense, loadExpense, type ExpenseDetail } from './expenses-api';
 import styles from '../identity/management.module.css';
+import { formatMoney, paymentMethodLabel } from '../../lib/format';
+import { parseMoneyInput } from '../../lib/money-input';
+import { loadReport } from '../insights/insights-api';
+import { ExpenseHistory, type ExpenseHistoryLoader } from './expense-history';
+
+const loadExpenseHistory: ExpenseHistoryLoader = (organizationId, filters) => loadReport(organizationId, 'expenses', filters);
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const money = /^(?:0|[1-9]\d{0,17})\.\d{2}$/;
 
 export function ExpenseWorkspace({ organizationId, branchId, role, categories, paymentMethods, sessions,
-  onCreate = createExpense, onLoad = loadExpense, onCancel = cancelExpense }: {
+  onCreate = createExpense, onLoad = loadExpense, onCancel = cancelExpense, loadHistory = loadExpenseHistory }: {
   organizationId: string; branchId: string; role: 'OWNER' | 'ADMIN' | 'CASHIER';
   categories: readonly { id: string; name: string }[];
   paymentMethods: readonly string[];
   sessions: readonly { id: string; deviceId: string; registerName: string }[];
+  loadHistory?: ExpenseHistoryLoader;
   onCreate?: typeof createExpense; onLoad?: typeof loadExpense; onCancel?: typeof cancelExpense;
 }) {
   const [categoryId, setCategoryId] = useState('');
@@ -30,10 +36,12 @@ export function ExpenseWorkspace({ organizationId, branchId, role, categories, p
   const [error, setError] = useState<ApiProblemError | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [refresh, setRefresh] = useState(0);
+  const parsedAmount = parseMoneyInput(amount);
   const createKey = useRef<string | null>(null), cancelKey = useRef<string | null>(null);
   const selectedSession = sessions.find((session) => session.id === sessionId);
   const allowedMethods = role === 'CASHIER' ? paymentMethods.filter((entry) => entry === 'CASH') : paymentMethods;
-  const canCreate = !!categoryId && !!concept.trim() && money.test(amount) && amount !== '0.00'
+  const canCreate = !!categoryId && !!concept.trim() && parsedAmount !== null && parsedAmount !== '0.00'
     && allowedMethods.includes(method) && (method !== 'CASH' || !!selectedSession);
   const cashCancellation = detail?.method === 'CASH';
   const canCancel = role !== 'CASHIER' && detail?.status === 'CONFIRMED' && !!reason.trim()
@@ -48,10 +56,10 @@ export function ExpenseWorkspace({ organizationId, branchId, role, categories, p
     const key = createKey.current ?? crypto.randomUUID(); createKey.current = key;
     setBusy(true); setError(null); setSuccess(null);
     try {
-      const result = await onCreate(organizationId, { branchId, categoryId, concept: concept.trim(),
-        amount, method, ...(method === 'CASH' && selectedSession
+      await onCreate(organizationId, { branchId, categoryId, concept: concept.trim(),
+        amount: parsedAmount ?? amount, method, ...(method === 'CASH' && selectedSession
           ? { cashSessionId: selectedSession.id, deviceId: selectedSession.deviceId } : {}) }, key);
-      setSuccess(`Gasto registrado · ${result.id}`); createKey.current = null;
+      setSuccess('Gasto registrado.'); createKey.current = null; setRefresh(value => value + 1);
       setCategoryId(''); setConcept(''); setAmount(''); setMethod(role === 'CASHIER' ? 'CASH' : ''); setSessionId('');
     } catch (cause) { setError(problem(cause)); }
     finally { setBusy(false); }
@@ -71,6 +79,12 @@ export function ExpenseWorkspace({ organizationId, branchId, role, categories, p
     } catch (cause) { setError(problem(cause)); }
     finally { setBusy(false); }
   }
+  async function open(id: string) {
+    setError(null); setDetail(null); cancelKey.current = null; setBusy(true);
+    try { setDetail(await onLoad(organizationId, id)); }
+    catch (cause) { setError(problem(cause)); }
+    finally { setBusy(false); }
+  }
   async function submitCancel() {
     if (!detail || !canCancel) return;
     const key = cancelKey.current ?? crypto.randomUUID(); cancelKey.current = key;
@@ -79,13 +93,13 @@ export function ExpenseWorkspace({ organizationId, branchId, role, categories, p
       await onCancel(organizationId, detail.id, { reason: reason.trim(),
         ...(cashCancellation && selectedSession
           ? { cashSessionId: selectedSession.id, deviceId: selectedSession.deviceId } : {}) }, key);
-      setDetail(await onLoad(organizationId, detail.id)); cancelKey.current = null; setReason('');
+      setDetail(await onLoad(organizationId, detail.id)); cancelKey.current = null; setReason(''); setRefresh(value => value + 1);
     } catch (cause) { setError(problem(cause)); }
     finally { setBusy(false); }
   }
   return <section className={styles.page} aria-labelledby="expenses-heading">
     <header className={styles.heading}><h1 id="expenses-heading">Gastos</h1>
-      <p>Registrá gastos y consultá su historial en la sucursal seleccionada.</p></header>
+      <p>{role === 'CASHIER' ? 'Registrá los gastos pagados con el efectivo de tu caja.' : 'Registrá gastos y revisá los de la sucursal.'}</p></header>
     <ErrorSummary error={error} />
     <form className={styles.panel} onSubmit={(event) => void submitCreate(event)}>
       <h2>Registrar gasto</h2><div className={styles.fields}>
@@ -102,36 +116,39 @@ export function ExpenseWorkspace({ organizationId, branchId, role, categories, p
           : <div><label htmlFor="expense-method">Medio de pago</label><select id="expense-method" value={method}
             onChange={(event) => { setMethod(event.target.value); setSessionId(''); createKey.current = null; }}>
             <option value="">Seleccioná un medio</option>{allowedMethods.map((entry) =>
-              <option key={entry} value={entry}>{entry}</option>)}</select></div>}
-        {method === 'CASH' ? <div><label htmlFor="expense-session">Sesión de caja</label>
+              <option key={entry} value={entry}>{paymentMethodLabel(entry)}</option>)}</select></div>}
+        {method === 'CASH' ? <div><label htmlFor="expense-session">Turno de caja</label>
           <select id="expense-session" value={sessionId} onChange={(event) => { setSessionId(event.target.value); createKey.current = null; }}>
-            <option value="">Seleccioná una sesión</option>{sessions.map((session) =>
+            <option value="">Elegí un turno abierto</option>{sessions.map((session) =>
               <option key={session.id} value={session.id}>{session.registerName}</option>)}</select>
-          {!sessions.length ? <p role="alert">Abrí una sesión válida en esta sucursal para registrar efectivo.</p> : null}</div> : null}
+          {!sessions.length ? <p role="alert">Abrí un turno de caja en esta sucursal para pagar en efectivo.</p> : null}</div> : null}
       </div>
       {success ? <p role="status">{success}</p> : null}
       <button type="submit" disabled={busy || !canCreate}>{busy ? 'Registrando…' : 'Registrar gasto'}</button>
     </form>
-    <form className={styles.panel} onSubmit={(event) => void search(event)}>
+    {role !== 'CASHIER' ? <ExpenseHistory organizationId={organizationId} branchId={branchId} load={loadHistory}
+      onOpen={(id) => void open(id)} refresh={refresh} /> : null}
+    <details className={styles.panel} open={role === 'CASHIER' || undefined}><summary>Buscar un gasto por su ID</summary>
+    <form onSubmit={(event) => void search(event)}>
       <h2>Consultar gasto</h2><label htmlFor="expense-id">ID de gasto</label>
       <input id="expense-id" value={typedId} onChange={(event) => setTypedId(event.target.value)} />
-      <button type="submit" disabled={busy}>Consultar gasto</button></form>
-    {detail ? <section className={styles.panel} aria-label="Detalle de gasto"><h2>Gasto {detail.id}</h2>
+      <button type="submit" disabled={busy}>Consultar gasto</button></form></details>
+    {detail ? <section className={styles.panel} aria-label="Detalle de gasto"><h2>{detail.concept}</h2>
       <p><strong>Estado:</strong> {detail.status === 'CANCELLED' ? 'Anulado' : 'Confirmado'}</p>
       <p><strong>Concepto:</strong> {detail.concept}</p>
-      <p><strong>Importe:</strong> {detail.amount} {detail.currency}</p>
-      <p><strong>Medio histórico:</strong> {detail.method}</p>
+      <p><strong>Importe:</strong> <span>{formatMoney(detail.amount, detail.currency)}</span></p>
+      <p><strong>Medio de pago:</strong> {paymentMethodLabel(detail.method)}</p>
       <p><strong>Registrado:</strong> <OrganizationTime value={detail.occurredAt} /></p>
       {detail.cancellation ? <p role="status"><strong>Anulación:</strong> {detail.cancellation.reason}
         {' · '}<OrganizationTime value={detail.cancellation.cancelledAt} /></p> : null}
       {role !== 'CASHIER' && detail.status === 'CONFIRMED' ? <div><h3>Anular gasto</h3>
         <label htmlFor="expense-reason">Motivo de anulación</label><textarea id="expense-reason"
           maxLength={500} value={reason} onChange={(event) => { setReason(event.target.value); cancelKey.current = null; }} />
-        {cashCancellation ? <><label htmlFor="expense-return-session">Sesión para devolver efectivo</label>
+        {cashCancellation ? <><label htmlFor="expense-return-session">Turno para devolver el efectivo</label>
           <select id="expense-return-session" value={sessionId} onChange={(event) => { setSessionId(event.target.value); cancelKey.current = null; }}>
-            <option value="">Seleccioná una sesión</option>{sessions.map((session) =>
+            <option value="">Elegí un turno abierto</option>{sessions.map((session) =>
               <option key={session.id} value={session.id}>{session.registerName}</option>)}</select>
-          {!sessions.length ? <p role="alert">Abrí una sesión válida para devolver el efectivo.</p> : null}</> : null}
+          {!sessions.length ? <p role="alert">Abrí un turno de caja para devolver el efectivo.</p> : null}</> : null}
         <button type="button" disabled={busy || !canCancel} onClick={() => void submitCancel()}>
           {busy ? 'Anulando…' : 'Anular gasto'}</button></div> : null}
     </section> : null}

@@ -101,8 +101,8 @@ describe('reportes por rol', () => {
     expect(within(legend).getByText('Alquiler')).toBeDefined();
     await userEvent.click(within(chart).getByText('Ver valores por hora'));
     expect(within(chart).getByRole('columnheader', { name: 'Luz' })).toBeDefined();
-    expect(within(chart).getByText('1.500,00 ARS')).toBeDefined();
-    expect(within(chart).getByText('3.000,00 ARS')).toBeDefined();
+    expect(within(chart).getByText('$ 1.500,00')).toBeDefined();
+    expect(within(chart).getByText('$ 3.000,00')).toBeDefined();
     expect((await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toEqual([]);
   });
   it('ofrece solo datasets autorizados y permite filtrar', async () => {
@@ -166,8 +166,8 @@ describe('reportes por rol', () => {
         branches={[{ id: 'b', name: 'Centro' }]} load={load} now={new Date('2026-10-12T15:00:00Z')} />
     </QueryClientProvider>);
     const chart = await screen.findByRole('region', { name: 'Importe neto · ARS' });
-    expect(within(chart).getByText('0,30 ARS')).toBeDefined();
-    expect(within(chart).queryByText('999,00 ARS')).toBeNull();
+    expect(within(chart).getByText('$ 0,30')).toBeDefined();
+    expect(within(chart).queryByText('$ 999,00')).toBeNull();
     expect(container.querySelectorAll('svg polyline')).toHaveLength(2);
     expect(within(chart).getAllByRole('row', { hidden: true })).toHaveLength(14);
     expect((await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })).violations).toEqual([]);

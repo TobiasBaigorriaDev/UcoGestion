@@ -12,7 +12,7 @@ import styles from './management.module.css';
 
 const roleSchema = z.enum(['OWNER', 'ADMIN', 'CASHIER', 'EMPLOYEE']);
 const branchSchema = z.object({ id: z.string(), name: z.string(), status: z.enum(['ACTIVE', 'INACTIVE']) });
-const memberSchema = z.object({ id: z.string(), email: z.string(), role: roleSchema, status: z.enum(['ACTIVE', 'INACTIVE', 'REVOKED']), version: z.number().int(), branchIds: z.array(z.string()), hasOutsideScope: z.boolean() });
+const memberSchema = z.object({ id: z.string(), userId: z.string().optional(), email: z.string(), role: roleSchema, status: z.enum(['ACTIVE', 'INACTIVE', 'REVOKED']), version: z.number().int(), branchIds: z.array(z.string()), hasOutsideScope: z.boolean() });
 const invitationSchema = z.object({ id: z.string(), email: z.string(), role: roleSchema, status: z.string(), expiresAt: z.string(), branchIds: z.array(z.string()) });
 const dataSchema = z.object({ actorRole: roleSchema, branches: z.array(branchSchema), memberships: z.array(memberSchema), invitations: z.array(invitationSchema) });
 const inviteSchema = z.object({ email: z.email(), role: roleSchema });

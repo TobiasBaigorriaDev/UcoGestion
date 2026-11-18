@@ -1,5 +1,6 @@
 'use client';
 
+import { formatMoney } from '../../lib/format';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
@@ -11,7 +12,7 @@ import { downloadReportCsv, loadReport, loadReportExport, queueReportExport,
 import type { ReportExport } from './insights-api';
 import styles from './insights.module.css';
 import reportStyles from './reports-workspace.module.css';
-import { dashboardPeriodRange, dashboardRangeLabel, formatDashboardAmount, type DashboardPreset } from './dashboard-presentation';
+import { dashboardPeriodRange, dashboardRangeLabel, type DashboardPreset } from './dashboard-presentation';
 import { buildReportTrends, loadReportChartRows, reportChartRange, reportRangeFilters } from './report-trends';
 import { TrendChart } from './trend-chart';
 
@@ -192,10 +193,10 @@ export function ReportsWorkspace({ organizationId, role, branches, timezone, loa
         <div className={reportStyles.charts}>
           {trends.amounts.map(series => <TrendChart key={series.currency} headingLevel={3}
             title={dataset === 'expenses' ? `Gastos por categoría · ${series.currency}` : `Importe neto · ${series.currency}`} currency={series.currency}
-            labels={trends.labels} values={series.values} display={series.values.map(value => `${formatDashboardAmount(value)} ${series.currency}`)}
+            labels={trends.labels} values={series.values} display={series.values.map(value => `${formatMoney(value, series.currency)}`)}
             {...(dataset === 'expenses' ? { series: trends.categories.filter(category => category.currency === series.currency).map(category => ({
               id: category.id, name: category.name, values: category.values,
-              display: category.values.map(value => `${formatDashboardAmount(value)} ${series.currency}`),
+              display: category.values.map(value => `${formatMoney(value, series.currency)}`),
             })) } : {})} />)}
           <TrendChart headingLevel={3} title={dataset === 'cash' ? 'Sesiones de caja' : dataset === 'inventory-movements' ? 'Movimientos de inventario' : 'Operaciones no anuladas'}
             labels={trends.labels} values={trends.counts} display={trends.counts} />
@@ -205,13 +206,13 @@ export function ReportsWorkspace({ organizationId, role, branches, timezone, loa
     {query.error && <><ErrorSummary error={query.error instanceof ApiProblemError ? query.error : new ApiProblemError({ status: 0, code: 'REPORT_LOAD_FAILED', message: 'No pudimos cargar el reporte. Intentá nuevamente.' })} /><button type="button" className={styles.button} onClick={() => void query.refetch()}>Reintentar</button></>}
     {query.data && !query.error && <section className={styles.section}>
       <div className={reportStyles.resultHeader}><h2>{labels[dataset]}</h2><p>{appliedLabel} · {items.length} registros cargados</p></div>
-      {query.data.pages[0]?.net !== undefined && <p>Importe neto: <strong>{formatDashboardAmount(query.data.pages[0].net)}</strong>. Las operaciones anuladas permanecen visibles con su estado.</p>}
+      {query.data.pages[0]?.net !== undefined && <p>Importe neto: <strong>{formatMoney(query.data.pages[0].net, String(items[0]?.currencyCode ?? 'ARS'))}</strong>. Las operaciones anuladas permanecen visibles con su estado.</p>}
       {items.length ? <div className={styles.tableWrap}><table className={`${styles.table} ${reportStyles.table}`}><caption>Registros del reporte con los filtros aplicados</caption><thead><tr>{fields[dataset].map((field) => <th scope="col" key={field}>{columnLabels[field]}</th>)}</tr></thead><tbody>{items.map((item) => <tr key={`${item.branchId}:${item.id}`}>{fields[dataset].map((field) => <td key={field} data-label={columnLabels[field]}>{field === 'branchId' ? branches.find((branch) => branch.id === item.branchId)?.name ?? item.branchId
         : field === 'status' ? <span className={reportStyles.status} data-cancelled={item.status === 'CANCELLED'}>{displayField(field, item[field], timezone)}</span>
         : field === 'effectKind' ? <span className={reportStyles.effect} data-direction={inventoryEffect(item[field]).direction}>{inventoryEffect(item[field]).label}</span>
         : ['quantity', 'minimum', 'delta'].includes(field) && typeof item[field] === 'string'
           ? formatStockQuantity(item[field])
-        : (field === 'total' || field === 'amount' || field === 'expectedCash' || field === 'difference') && typeof item[field] === 'string' ? formatDashboardAmount(item[field])
+        : (field === 'total' || field === 'amount' || field === 'expectedCash' || field === 'difference') && typeof item[field] === 'string' ? formatMoney(item[field], String(item.currencyCode ?? 'ARS'))
         : displayField(field, item[field], timezone)}</td>)}</tr>)}</tbody></table></div> : <p>Sin registros para los filtros elegidos.</p>}
       {query.hasNextPage && <button type="button" className={styles.button} disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>{query.isFetchingNextPage ? 'Cargando…' : 'Cargar más registros'}</button>}
     </section>}

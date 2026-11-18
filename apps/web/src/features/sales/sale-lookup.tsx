@@ -1,5 +1,6 @@
 'use client';
 
+import { formatMoney, paymentMethodLabel } from '../../lib/format';
 import { formatStockQuantity } from '../../lib/format-stock-quantity';
 import { OrganizationTime } from '../../components/organization-time';
 
@@ -98,14 +99,14 @@ function SaleLookupWorkspace({ organizationId, branchId, role, branches, timezon
     {sale ? <section ref={detailRegion} tabIndex={-1} className={styles.panel} aria-labelledby="sale-detail-heading">
       <h2 id="sale-detail-heading">Venta {saleCodeFromId(sale.id)}</h2>
       <p><strong>Estado:</strong> {sale.status === 'CANCELLED' ? 'Anulada' : 'Confirmada'}</p>
-      <p><strong>Total:</strong> {sale.total} {sale.currency}</p>
+      <p><strong>Total:</strong> {formatMoney(sale.total, sale.currency)}</p>
       <p><strong>Confirmada:</strong> <OrganizationTime value={sale.confirmedAt} /></p>
       <h3>Ítems</h3><ul className={styles.detailList}>{sale.items.map((item, index) => <li key={index}>
-        {item.name} · {formatStockQuantity(item.quantity)} × {item.unitPrice} = {item.lineTotal}</li>)}</ul>
+        {item.name} · {formatStockQuantity(item.quantity)} × {formatMoney(item.unitPrice, sale.currency)} = {formatMoney(item.lineTotal, sale.currency)}</li>)}</ul>
       <h3>Pagos originales</h3><ul className={styles.detailList}>{sale.payments.map((payment, index) =>
-        <li key={index}>{payment.method}: {payment.amount}{payment.change !== '0.00'
-          ? ` · Vuelto ${payment.change}` : ''}</li>)}</ul>
-      {sale.onAccountAmount && sale.onAccountAmount !== '0.00' ? <p><strong>A cuenta en esta venta:</strong> {sale.onAccountAmount} {sale.currency}. Los cobros posteriores se consultan en Clientes.</p> : null}
+        <li key={index}>{paymentMethodLabel(payment.method)}: {formatMoney(payment.amount, sale.currency)}{payment.change !== '0.00'
+          ? ` · Vuelto ${formatMoney(payment.change, sale.currency)}` : ''}</li>)}</ul>
+      {sale.onAccountAmount && sale.onAccountAmount !== '0.00' ? <p><strong>A cuenta en esta venta:</strong> {formatMoney(sale.onAccountAmount, sale.currency)}. Los cobros posteriores se consultan en Clientes.</p> : null}
       {sale.cancellation ? <p role="status"><strong>Anulación:</strong> {sale.cancellation.reason}
         {' · '}<OrganizationTime value={sale.cancellation.cancelledAt} /></p> : null}
       <ReceiptActions organizationId={organizationId} saleId={sale.id} />

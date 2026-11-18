@@ -66,7 +66,7 @@ async page=>{
   check(results.has(exceptionalKey) && results.size===2,'Exceptional retry duplicated the closure');
   session={...session,expectedCash:'30.00',lateData:{marker:'LATE_RECOVERED_OPERATIONS',throughOperationId:op,sequence:'2',count:'1',status:'PENDING_REVIEW',receivedAt:'2026-10-07T01:00:00Z'}};
   await page.reload();await page.getByRole('combobox',{name:'Ver turnos'}).selectOption('FINAL');
-  await page.getByText('Esperado conocido actualizado: 30.00 ARS').waitFor();
+  await page.getByText('Esperado conocido actualizado: $ 30,00').waitFor();
   await page.getByRole('checkbox',{name:/Revisé las operaciones recuperadas/}).check();await audit('late');
   await page.getByRole('button',{name:'Confirmar revisión de datos tardíos'}).click();
   await page.getByText('Datos tardíos revisados. La completitud sigue siendo desconocida.').waitFor();
@@ -74,10 +74,10 @@ async page=>{
   session={...session,expectedCash:'50.00',lateData:{...session.lateData,throughOperationId:'00000000-0000-4000-8000-000000000009',sequence:'3',count:'2',status:'PENDING_REVIEW'}};
   await page.reload();await page.getByRole('combobox',{name:'Ver turnos'}).selectOption('FINAL');
   await page.getByRole('button',{name:'Confirmar revisión de datos tardíos'}).waitFor();
-  await page.getByText('Esperado conocido del snapshot original: 10.00 ARS').waitFor();
+  await page.getByText('Esperado conocido del snapshot original: $ 10,00').waitFor();
   await page.context().setOffline(true);await page.getByRole('heading',{name:'Esta pantalla necesita conexión'}).waitFor();
   await page.context().setOffline(false);await page.reload();await page.getByRole('combobox',{name:'Ver turnos'}).selectOption('FINAL');
-  await page.getByText('Esperado conocido actualizado: 50.00 ARS').waitFor();
+  await page.getByText('Esperado conocido actualizado: $ 50,00').waitFor();
   return {passed:true,scenarios:['conflict-confirmation','bound-device','unrecoverable-normal-denied','optional-count-not-zero','lost-exceptional-retry',
     'immutable-original-snapshot','late-cutoff-review','new-data-new-review','permanent-unknown','keyboard','axe-3states-desktop-mobile','network-return']};
 }

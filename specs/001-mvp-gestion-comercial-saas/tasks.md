@@ -495,3 +495,15 @@ Solo cambia la presentación. Los comandos, las claves de reintento, los locks, 
   - «Faltan/Sobran $» antes de confirmar y cancelación explícita del cierre;
   - los mismos comandos `begin-close`, `final-sync`, `close` y `abort-close` [RF-155].
 - [x] D08-T08: Importes de caja en formato argentino (entrada y salida), pruebas y gate de navegador.
+
+### D08 — fase 3: listados legibles (solicitud explícita 2026-11-16)
+
+- [x] D08-T09: Historial de gastos en lista para OWNER/ADMIN:
+  - reutiliza la lectura autorizada `GET /reports/expenses` (RF-146–RF-150), con filtros de fecha y estado, paginación por cursor y total del período;
+  - abrir una fila muestra el detalle existente con su anulación;
+  - CASHIER conserva el alta y la consulta por ID [RF-207–RF-210].
+- [x] D08-T10: Auditoría legible:
+  - acciones traducidas, persona por correo y filtros por acción y persona en lugar de texto libre o UUID;
+  - los eventos automáticos del sistema quedan ocultos por defecto con un control visible para mostrarlos.
+  - Contrato aditivo `userId` en `GET /users/management`, con la misma visibilidad por rol y sucursal [RF-140, RF-282].
+- [x] D08-T11: Formato `$` en compras, ventas, gastos, reportes y caja excepcional; medios de pago y estados traducidos [RF-152–RF-154].

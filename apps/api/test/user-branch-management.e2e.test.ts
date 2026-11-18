@@ -71,8 +71,13 @@ describe('user and branch management HTTP', () => {
     await request(app.getHttpServer()).post('/api/v1/branches').set('Origin', origin)
       .set('Cookie', admin.cookie).set('X-Organization-Id', organizationId).set('X-CSRF-Token', admin.csrfToken)
       .set('Idempotency-Key', 'admin-branch-denied').send({ name: 'Otra' }).expect(403);
-    expect((await request(app.getHttpServer()).get('/api/v1/users/management').set('Cookie', admin.cookie)
-      .set('X-Organization-Id', organizationId).expect(200)).body.actorRole).toBe('ADMIN');
+    const managed = (await request(app.getHttpServer()).get('/api/v1/users/management').set('Cookie', admin.cookie)
+      .set('X-Organization-Id', organizationId).expect(200)).body as { actorRole: string; memberships: { email: string; role: string; userId: string }[] };
+    expect(managed.actorRole).toBe('ADMIN');
+    // D08: userId lets the audit show people by email, under the same visibility (ADMIN still cannot see the OWNER).
+    const adminUserId = (await pool.query<{ id: string }>("SELECT id FROM users WHERE email_normalized = 'ui-admin@example.com'")).rows[0]?.id;
+    expect(managed.memberships).toContainEqual(expect.objectContaining({ email: 'ui-admin@example.com', userId: adminUserId }));
+    expect(managed.memberships.some(member => member.role === 'OWNER')).toBe(false);
     await request(app.getHttpServer()).post('/api/v1/users/invitations').set('Origin', origin)
       .set('Cookie', admin.cookie).set('X-Organization-Id', organizationId).set('X-CSRF-Token', admin.csrfToken)
       .set('Idempotency-Key', 'admin-owner-denied').send({ email: 'new-owner@example.com', role: 'OWNER', branchIds: [] }).expect(403);

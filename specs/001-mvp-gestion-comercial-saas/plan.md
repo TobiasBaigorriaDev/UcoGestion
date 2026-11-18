@@ -1205,3 +1205,14 @@ Verificación:
 - Un equipo sin dispositivo autorizado muestra la acción «Habilitar este equipo» (`/workspace/offline`) para OWNER/ADMIN, que son los roles que autoriza el backend; CASHIER recibe la indicación de pedírselo.
 - El cierre se presenta en cuatro pasos sobre los mismos comandos: «Empezar el cierre», «Revisar ventas pendientes», contar y «Confirmar cierre». También está «Cancelar el cierre».
 - Los importes se aceptan como `2.500,50` y se muestran como `$ 2.500,50`.
+
+### 26.2 D08 fase 3 — Listados legibles
+
+- **Gastos:** OWNER/ADMIN ven «Historial de gastos» desde la lectura de reportes ya autorizada, sin endpoints nuevos. Seleccionar un gasto abre el detalle existente.
+- **Auditoría:**
+  - un diccionario en la web traduce `entity_type.action`; los códigos desconocidos se muestran tal cual, con un rótulo genérico;
+  - la persona se resuelve con `userId` de `/users/management`, un campo aditivo con la misma regla de visibilidad;
+  - si no es visible, se muestra «Otra persona»;
+  - los eventos `outbox.*` y `configuration.*` se ocultan por defecto con «Mostrar también eventos automáticos»;
+  - no cambia el endpoint `/audit` ni sus permisos.
+- **Formato:** `formatMoney` y `paymentMethodLabel` en compras, historiales, gastos y reportes.

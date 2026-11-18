@@ -19,11 +19,11 @@ it('T173B limits cashier to cash, active category and own session', async () => 
   const create = vi.fn().mockResolvedValue({ id, branchId: 'branch', categoryId: 'cat', concept: 'Luz',
     amount: '2.00', method: 'CASH', currency: 'ARS', actorUserId: 'user', occurredAt: '2026-09-27T00:00:00Z' });
   const { container } = render(<ExpenseWorkspace {...props} role="CASHIER" onCreate={create} />);
-  expect(screen.queryByRole('option', { name: 'TRANSFER' })).toBeNull();
+  expect(screen.queryByRole('option', { name: 'Transferencia' })).toBeNull();
   await userEvent.selectOptions(screen.getByLabelText('Categoría de gasto'), 'cat');
   await userEvent.type(screen.getByLabelText('Concepto'), 'Luz');
   await userEvent.type(screen.getByLabelText('Importe'), '2.00');
-  await userEvent.selectOptions(screen.getByLabelText('Sesión de caja'), 'session');
+  await userEvent.selectOptions(screen.getByLabelText('Turno de caja'), 'session');
   await userEvent.click(screen.getByRole('button', { name: 'Registrar gasto' }));
   expect(create).toHaveBeenCalledWith('org', { branchId: 'branch', categoryId: 'cat', concept: 'Luz',
     amount: '2.00', method: 'CASH', cashSessionId: 'session', deviceId: 'device' }, expect.any(String));
@@ -38,7 +38,7 @@ it('T173B shows actionable cash error without clearing the form', async () => {
   await userEvent.type(screen.getByLabelText('Concepto'), 'Luz');
   await userEvent.type(screen.getByLabelText('Importe'), '2.00');
   await userEvent.selectOptions(screen.getByLabelText('Medio de pago'), 'CASH');
-  await userEvent.selectOptions(screen.getByLabelText('Sesión de caja'), 'session');
+  await userEvent.selectOptions(screen.getByLabelText('Turno de caja'), 'session');
   await userEvent.click(screen.getByRole('button', { name: 'Registrar gasto' }));
   expect(await screen.findByText(/Registrá un ingreso/i)).toBeTruthy();
   expect((screen.getByLabelText('Importe') as HTMLInputElement).value).toBe('2.00');
@@ -55,7 +55,7 @@ it('T173B cancels cash expense using a valid session and hides repeat cancellati
   await userEvent.type(screen.getByLabelText('ID de gasto'), id);
   await userEvent.click(screen.getByRole('button', { name: 'Consultar gasto' }));
   await userEvent.type(await screen.findByLabelText('Motivo de anulación'), 'Error');
-  await userEvent.selectOptions(screen.getByLabelText('Sesión para devolver efectivo'), 'session');
+  await userEvent.selectOptions(screen.getByLabelText('Turno para devolver el efectivo'), 'session');
   await userEvent.click(screen.getByRole('button', { name: 'Anular gasto' }));
   expect(cancel).toHaveBeenCalledWith('org', id, { reason: 'Error', cashSessionId: 'session',
     deviceId: 'device' }, expect.any(String));
